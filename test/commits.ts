@@ -40,12 +40,25 @@ describe('parseConventionalCommits', () => {
 
   it('can parse a breaking change', async () => {
     const commits = [
-      {sha: 'sha1', message: 'fix!: some feature', files: ['path1/file1.txt']},
+      {sha: 'sha1', message: 'fix!: some breaking fix', files: ['path1/file1.txt']},
     ];
     const conventionalCommits = parseConventionalCommits(commits);
     expect(conventionalCommits).lengthOf(1);
     expect(conventionalCommits[0].type).to.equal('fix');
     expect(conventionalCommits[0].scope).is.null;
+    expect(conventionalCommits[0].breaking).to.be.true;
+  });
+
+  it('can parse multiple commit messages from a single commit', async () => {
+    const commits = [
+      {sha: 'sha1', message: 'feat: some feature\nfix: some bugfix', files: ['path1/file1.txt']},
+    ];
+    const conventionalCommits = parseConventionalCommits(commits);
+    expect(conventionalCommits).lengthOf(2);
+    expect(conventionalCommits[0].type).to.equal('fix');
+    expect(conventionalCommits[0].scope).is.null;
+    expect(conventionalCommits[1].type).to.equal('feat');
+    expect(conventionalCommits[1].scope).is.null;
   });
 
   // it('ignores reverted commits', async () => {
