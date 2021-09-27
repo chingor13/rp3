@@ -42,6 +42,7 @@ export class Repository {
     const commits = await this.github.commitsSinceSha(
       lastMergedReleasePullRequest?.sha
     );
+    console.log(commits);
     return 123;
   }
 

@@ -13,12 +13,98 @@
 // limitations under the License.
 
 import {VersioningStrategy} from '../versioning-strategy';
-import {Commit} from '../commit';
+import {ConventionalCommit} from '../commit';
 import {Version} from '../version';
+import {logger} from '../util/logger';
+import * as semver from 'semver';
+import {ReleaseType} from 'semver';
+
+export interface ChangelogSection {
+  type: string;
+  section: string;
+  hidden?: boolean;
+}
+
+interface DefaultVersioningStrategyOptions {
+  bumpMinorPreMajor?: boolean;
+  bumpPatchForMinorPreMajor?: boolean;
+  changelogSections?: ChangelogSection[];
+}
 
 export class DefaultVersioningStrategy implements VersioningStrategy {
-  bump(version: Version, _commits: Commit[]): Version {
-    // FIXME
+  bumpMinorPreMajor: boolean;
+  bumpPatchForMinorPreMajor: boolean;
+  changelogSections?: ChangelogSection[];
+  constructor(options: DefaultVersioningStrategyOptions = {}) {
+    this.bumpMinorPreMajor = options.bumpMinorPreMajor === true;
+    this.bumpPatchForMinorPreMajor = options.bumpPatchForMinorPreMajor === true;
+    this.changelogSections = options.changelogSections;
+  }
+
+  private async guessReleaseType(
+    commits: ConventionalCommit[],
+  ): Promise<ReleaseType> {
+    // iterate through list of commits and find biggest commit type
+    let breaking = 0;
+    let features = 0;
+    for (const commit of commits) {
+      if (commit.breaking) {
+        breaking++;
+      } else if (commit.type === 'feat' || commit.type === 'feature') {
+        features++;
+      }
+    }
+    if (breaking > 0) {
+      return 'major';
+    }
+    if (features > 0) { 
+      return 'minor';
+    }
+    return 'patch';
+  }
+
+  async bump(
+    version: Version,
+    commits: ConventionalCommit[]
+  ): Promise<Version> {
+    let bumpType = await this.guessReleaseType(commits);
+    if (semver.lt(version.toString(), 'v1.0.0')) {
+      if (this.bumpMinorPreMajor && bumpType === 'major') {
+        bumpType = 'minor';
+      } else if (this.bumpPatchForMinorPreMajor && bumpType === 'minor') {
+        bumpType = 'patch';
+      }
+    }
+
+    switch (bumpType) {
+      case 'major':
+        return new Version(
+          version.major + 1,
+          0,
+          0,
+          version.preRelease,
+          version.build
+        );
+      case 'minor':
+        return new Version(
+          version.major,
+          version.minor + 1,
+          0,
+          version.preRelease,
+          version.build
+        );
+      case 'patch':
+        return new Version(
+          version.major,
+          version.minor,
+          version.patch + 1,
+          version.preRelease,
+          version.build
+        );
+      default:
+        logger.warn(`Unhandled bump type: ${bumpType}`);
+    }
+
     return version;
   }
 }

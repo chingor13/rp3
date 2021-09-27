@@ -34,6 +34,7 @@ export interface ConventionalCommit extends Commit {
   type: string;
   scope: string | null;
   bareMessage: string;
+  breaking: boolean;
 }
 
 // TODO(@bcoe): now that we walk the actual AST of conventional commits
@@ -109,6 +110,7 @@ export function parseConventionalCommits(
           type: parsedCommit.type,
           scope: parsedCommit.scope,
           bareMessage: parsedCommit.subject,
+          breaking: parsedCommit.notes.length > 0,
         });
       }
     } catch (_err) {

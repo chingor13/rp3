@@ -13,8 +13,8 @@
 // limitations under the License.
 
 import {Version} from './version';
-import {Commit} from './commit';
+import {ConventionalCommit} from './commit';
 
 export interface VersioningStrategy {
-  bump(version: Version, commits: Commit[]): Version;
+  bump(version: Version, commits: ConventionalCommit[]): Promise<Version>;
 }

@@ -21,12 +21,12 @@ export class GitHub {
   }
 
   async lastMergedPRByHeadBranch(
-    branchName: string
+    _branchName: string
   ): Promise<PullRequest | undefined> {
     return undefined;
   }
 
-  async commitsSinceSha(sha?: string): Promise<Commit[]> {
+  async commitsSinceSha(_sha?: string): Promise<Commit[]> {
     return [];
   }
 }
