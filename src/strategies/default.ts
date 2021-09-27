@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Strategy } from "../strategy";
-import { ReleasePullRequest } from "../release-pull-request";
-import { Release } from "../release";
-import { GitHub } from "../github";
+import {Strategy} from '../strategy';
+import {ReleasePullRequest} from '../release-pull-request';
+import {Release} from '../release';
+import {GitHub} from '../github';
 
 const DEFAULT_LABELS = ['autorelease: pending'];
 interface StrategyOptions {
@@ -60,5 +60,5 @@ export class DefaultStrategy implements Strategy {
       notes: 'FIXME',
       sha: 'abc123',
     };
-  }  
+  }
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Update } from "./update";
+import {Update} from './update';
 
 export interface ReleasePullRequest {
   title: string;

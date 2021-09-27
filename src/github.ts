@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { PullRequest } from "./pull_request";
-import { Commit } from "./commit";
+import {PullRequest} from './pull_request';
+import {Commit} from './commit';
 
 export class GitHub {
   async getDefaultBranch(): Promise<string> {
     return 'FIXME';
   }
 
-  async lastMergedPRByHeadBranch(branchName: string): Promise<PullRequest | undefined> {
+  async lastMergedPRByHeadBranch(
+    branchName: string
+  ): Promise<PullRequest | undefined> {
     return undefined;
   }
 

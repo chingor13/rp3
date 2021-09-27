@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-const VERSION_REGEX = /(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)(-(?<preRelease>[^+]+))?(\+(?<build>.*))?/;
+const VERSION_REGEX =
+  /(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)(-(?<preRelease>[^+]+))?(\+(?<build>.*))?/;
 
 export class Version {
   major: number;
@@ -21,14 +22,20 @@ export class Version {
   preRelease?: string;
   build?: string;
 
-  constructor(major: number, minor: number, patch: number, preRelease?: string, build?: string) {
+  constructor(
+    major: number,
+    minor: number,
+    patch: number,
+    preRelease?: string,
+    build?: string
+  ) {
     this.major = major;
     this.minor = minor;
     this.patch = patch;
     this.preRelease = preRelease;
     this.build = build;
   }
-  
+
   static parse(versionString: string): Version {
     const match = versionString.match(VERSION_REGEX);
     if (!match?.groups) {

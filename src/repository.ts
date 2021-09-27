@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { GitHub } from "./github";
-import { BranchName } from "./util/branch-name";
+import {GitHub} from './github';
+import {BranchName} from './util/branch-name';
 
-const RELEASE_PLEASE_CONFIG = `release-please-config.json`;
-const RELEASE_PLEASE_MANIFEST = `.release-please-manifest.json`;
+const RELEASE_PLEASE_CONFIG = 'release-please-config.json';
+const RELEASE_PLEASE_MANIFEST = '.release-please-manifest.json';
 interface RepositoryOptions {
   github: GitHub;
   configFile?: string;
@@ -37,8 +37,11 @@ export class Repository {
   async createPullRequest(): Promise<number> {
     const targetBranch = await this.github.getDefaultBranch();
     const branchName = BranchName.ofTargetBranch(targetBranch);
-    const lastMergedReleasePullRequest = await this.github.lastMergedPRByHeadBranch(branchName.toString());
-    const commits = await this.github.commitsSinceSha(lastMergedReleasePullRequest?.sha);
+    const lastMergedReleasePullRequest =
+      await this.github.lastMergedPRByHeadBranch(branchName.toString());
+    const commits = await this.github.commitsSinceSha(
+      lastMergedReleasePullRequest?.sha
+    );
     return 123;
   }
 

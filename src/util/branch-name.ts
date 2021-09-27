@@ -17,7 +17,7 @@
 // or instance methods/properties.
 
 // import {RELEASE_PLEASE} from '../constants';
-const RELEASE_PLEASE = "release-please";
+const RELEASE_PLEASE = 'release-please';
 
 type BranchNameType = typeof BranchName;
 
