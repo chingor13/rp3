@@ -14,6 +14,7 @@
 
 import {PullRequest} from './pull_request';
 import {Commit} from './commit';
+import {Release} from './release';
 
 export class GitHub {
   async getDefaultBranch(): Promise<string> {
@@ -28,5 +29,14 @@ export class GitHub {
 
   async commitsSinceSha(_sha?: string): Promise<Commit[]> {
     return [];
+  }
+
+  async lastRelease(component?: string): Promise<Release | undefined> {
+    return {
+      tag: 'v1.2.3',
+      component: component || null,
+      notes: 'FIXME',
+      sha: 'abc123',
+    };
   }
 }
