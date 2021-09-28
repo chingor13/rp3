@@ -40,7 +40,11 @@ describe('parseConventionalCommits', () => {
 
   it('can parse a breaking change', async () => {
     const commits = [
-      {sha: 'sha1', message: 'fix!: some breaking fix', files: ['path1/file1.txt']},
+      {
+        sha: 'sha1',
+        message: 'fix!: some breaking fix',
+        files: ['path1/file1.txt'],
+      },
     ];
     const conventionalCommits = parseConventionalCommits(commits);
     expect(conventionalCommits).lengthOf(1);
@@ -51,7 +55,11 @@ describe('parseConventionalCommits', () => {
 
   it('can parse multiple commit messages from a single commit', async () => {
     const commits = [
-      {sha: 'sha1', message: 'feat: some feature\nfix: some bugfix', files: ['path1/file1.txt']},
+      {
+        sha: 'sha1',
+        message: 'feat: some feature\nfix: some bugfix',
+        files: ['path1/file1.txt'],
+      },
     ];
     const conventionalCommits = parseConventionalCommits(commits);
     expect(conventionalCommits).lengthOf(2);

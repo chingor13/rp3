@@ -41,8 +41,8 @@ export class DefaultVersioningStrategy implements VersioningStrategy {
     this.changelogSections = options.changelogSections;
   }
 
-  private async guessReleaseType(
-    commits: ConventionalCommit[],
+  protected async guessReleaseType(
+    commits: ConventionalCommit[]
   ): Promise<ReleaseType> {
     // iterate through list of commits and find biggest commit type
     let breaking = 0;
@@ -57,25 +57,13 @@ export class DefaultVersioningStrategy implements VersioningStrategy {
     if (breaking > 0) {
       return 'major';
     }
-    if (features > 0) { 
+    if (features > 0) {
       return 'minor';
     }
     return 'patch';
   }
 
-  async bump(
-    version: Version,
-    commits: ConventionalCommit[]
-  ): Promise<Version> {
-    let bumpType = await this.guessReleaseType(commits);
-    if (semver.lt(version.toString(), 'v1.0.0')) {
-      if (this.bumpMinorPreMajor && bumpType === 'major') {
-        bumpType = 'minor';
-      } else if (this.bumpPatchForMinorPreMajor && bumpType === 'minor') {
-        bumpType = 'patch';
-      }
-    }
-
+  protected doBump(version: Version, bumpType: ReleaseType): Version {
     switch (bumpType) {
       case 'major':
         return new Version(
@@ -104,7 +92,22 @@ export class DefaultVersioningStrategy implements VersioningStrategy {
       default:
         logger.warn(`Unhandled bump type: ${bumpType}`);
     }
-
     return version;
+  }
+
+  async bump(
+    version: Version,
+    commits: ConventionalCommit[]
+  ): Promise<Version> {
+    let bumpType = await this.guessReleaseType(commits);
+    if (semver.lt(version.toString(), 'v1.0.0')) {
+      if (this.bumpMinorPreMajor && bumpType === 'major') {
+        bumpType = 'minor';
+      } else if (this.bumpPatchForMinorPreMajor && bumpType === 'minor') {
+        bumpType = 'patch';
+      }
+    }
+
+    return this.doBump(version, bumpType);
   }
 }
