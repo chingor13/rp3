@@ -81,8 +81,16 @@ export class ReleaseNotes {
     preset.writerOpts.mainTemplate =
       this.mainTemplate || preset.writerOpts.mainTemplate;
 
+    const changelogCommits = commits.map(commit => {
+      return {
+        ...commit,
+        header: commit.message,
+        notes: [],
+      };
+    });
+
     return conventionalChangelogWriter
-      .parseArray(commits, context, preset.writerOpts)
+      .parseArray(changelogCommits, context, preset.writerOpts)
       .trim();
   }
 }

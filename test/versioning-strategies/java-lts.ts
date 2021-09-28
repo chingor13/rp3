@@ -28,6 +28,8 @@ describe('JavaLTSVersioningStrategy', () => {
         type: 'feat',
         scope: null,
         bareMessage: 'some feature',
+        notes: [],
+        references: [],
         breaking: false,
       },
       {
@@ -37,6 +39,8 @@ describe('JavaLTSVersioningStrategy', () => {
         type: 'fix',
         scope: null,
         bareMessage: 'some bugfix',
+        notes: [{title: 'BREAKING CHANGE', text: 'some bugfix'}],
+        references: [],
         breaking: true,
       },
       {
@@ -46,6 +50,8 @@ describe('JavaLTSVersioningStrategy', () => {
         type: 'docs',
         scope: null,
         bareMessage: 'some documentation',
+        notes: [],
+        references: [],
         breaking: false,
       },
     ];
@@ -94,6 +100,8 @@ describe('JavaLTSVersioningStrategy', () => {
         type: 'feat',
         scope: null,
         bareMessage: 'some feature',
+        notes: [],
+        references: [],
         breaking: false,
       },
       {
@@ -103,6 +111,8 @@ describe('JavaLTSVersioningStrategy', () => {
         type: 'fix',
         scope: null,
         bareMessage: 'some bugfix',
+        notes: [],
+        references: [],
         breaking: false,
       },
       {
@@ -112,6 +122,8 @@ describe('JavaLTSVersioningStrategy', () => {
         type: 'docs',
         scope: null,
         bareMessage: 'some documentation',
+        notes: [],
+        references: [],
         breaking: false,
       },
     ];
@@ -159,6 +171,8 @@ describe('JavaLTSVersioningStrategy', () => {
         type: 'fix',
         scope: null,
         bareMessage: 'some bugfix',
+        notes: [],
+        references: [],
         breaking: false,
       },
       {
@@ -168,6 +182,8 @@ describe('JavaLTSVersioningStrategy', () => {
         type: 'docs',
         scope: null,
         bareMessage: 'some documentation',
+        notes: [],
+        references: [],
         breaking: false,
       },
     ];

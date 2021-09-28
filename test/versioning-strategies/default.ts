@@ -28,6 +28,8 @@ describe('DefaultVersioningStrategy', () => {
         type: 'feat',
         scope: null,
         bareMessage: 'some feature',
+        notes: [],
+        references: [],
         breaking: false,
       },
       {
@@ -37,6 +39,8 @@ describe('DefaultVersioningStrategy', () => {
         type: 'fix',
         scope: null,
         bareMessage: 'some bugfix',
+        notes: [{title: 'BREAKING CHANGE', text: 'some bugfix'}],
+        references: [],
         breaking: true,
       },
       {
@@ -46,6 +50,8 @@ describe('DefaultVersioningStrategy', () => {
         type: 'docs',
         scope: null,
         bareMessage: 'some documentation',
+        notes: [],
+        references: [],
         breaking: false,
       },
     ];
@@ -80,6 +86,8 @@ describe('DefaultVersioningStrategy', () => {
         type: 'feat',
         scope: null,
         bareMessage: 'some feature',
+        notes: [],
+        references: [],
         breaking: false,
       },
       {
@@ -89,6 +97,8 @@ describe('DefaultVersioningStrategy', () => {
         type: 'fix',
         scope: null,
         bareMessage: 'some bugfix',
+        notes: [],
+        references: [],
         breaking: false,
       },
       {
@@ -98,6 +108,8 @@ describe('DefaultVersioningStrategy', () => {
         type: 'docs',
         scope: null,
         bareMessage: 'some documentation',
+        notes: [],
+        references: [],
         breaking: false,
       },
     ];
@@ -131,6 +143,8 @@ describe('DefaultVersioningStrategy', () => {
         type: 'fix',
         scope: null,
         bareMessage: 'some bugfix',
+        notes: [],
+        references: [],
         breaking: false,
       },
       {
@@ -140,6 +154,8 @@ describe('DefaultVersioningStrategy', () => {
         type: 'docs',
         scope: null,
         bareMessage: 'some documentation',
+        notes: [],
+        references: [],
         breaking: false,
       },
     ];

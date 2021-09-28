@@ -51,6 +51,9 @@ describe('parseConventionalCommits', () => {
     expect(conventionalCommits[0].type).to.equal('fix');
     expect(conventionalCommits[0].scope).is.null;
     expect(conventionalCommits[0].breaking).to.be.true;
+    expect(conventionalCommits[0].notes).lengthOf(1);
+    expect(conventionalCommits[0].notes[0].title).to.equal('BREAKING CHANGE');
+    expect(conventionalCommits[0].notes[0].text).to.equal('some breaking fix');
   });
 
   it('can parse multiple commit messages from a single commit', async () => {

@@ -17,6 +17,8 @@ import {logger} from './util/logger';
 import {
   ConventionalChangelogCommit,
   parser,
+  Note,
+  Reference,
 } from '@conventional-commits/parser';
 import toConventionalChangelogFormat from './util/to-conventional-changelog-format';
 
@@ -33,6 +35,8 @@ export interface Commit {
 export interface ConventionalCommit extends Commit {
   type: string;
   scope: string | null;
+  notes: Note[];
+  references: Reference[];
   bareMessage: string;
   breaking: boolean;
 }
@@ -110,6 +114,8 @@ export function parseConventionalCommits(
           type: parsedCommit.type,
           scope: parsedCommit.scope,
           bareMessage: parsedCommit.subject,
+          notes: parsedCommit.notes,
+          references: parsedCommit.references,
           breaking: parsedCommit.notes.length > 0,
         });
       }

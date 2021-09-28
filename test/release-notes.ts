@@ -26,6 +26,8 @@ describe('ReleaseNotes', () => {
       type: 'feat',
       scope: null,
       bareMessage: 'some feature',
+      notes: [],
+      references: [],
       breaking: false,
     },
     {
@@ -35,6 +37,8 @@ describe('ReleaseNotes', () => {
       type: 'fix',
       scope: null,
       bareMessage: 'some bugfix',
+      notes: [{title: 'BREAKING CHANGE', text: 'some bugfix'}],
+      references: [],
       breaking: true,
     },
     {
@@ -44,6 +48,8 @@ describe('ReleaseNotes', () => {
       type: 'docs',
       scope: null,
       bareMessage: 'some documentation',
+      notes: [],
+      references: [],
       breaking: false,
     },
   ];
