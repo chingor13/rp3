@@ -15,8 +15,9 @@
 import {describe, it} from 'mocha';
 
 import {expect} from 'chai';
-import {JavaLTSVersioningStrategy} from '../../src/versioning-strategies/java-lts';
+import {ServicePackVersioningStrategy} from '../../src/versioning-strategies/service-pack';
 import {Version} from '../../src/version';
+import {JavaSnapshot} from '../../src/versioning-strategies/java-snapshot';
 
 describe('JavaLTSVersioningStrategy', () => {
   describe('with breaking change', () => {
@@ -56,35 +57,37 @@ describe('JavaLTSVersioningStrategy', () => {
       },
     ];
     it('should bump to snapshot', async () => {
-      const strategy = new JavaLTSVersioningStrategy({});
+      const strategy = new JavaSnapshot(new ServicePackVersioningStrategy({}));
       const oldVersion = Version.parse('1.2.3');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('1.2.3-sp.1-SNAPSHOT');
     });
 
     it('can bump a major', async () => {
-      const strategy = new JavaLTSVersioningStrategy({});
+      const strategy = new JavaSnapshot(new ServicePackVersioningStrategy({}));
       const oldVersion = Version.parse('1.2.3-sp.1-SNAPSHOT');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('1.2.3-sp.1');
     });
 
     it('can bump a major on pre major for breaking change', async () => {
-      const strategy = new JavaLTSVersioningStrategy({});
+      const strategy = new JavaSnapshot(new ServicePackVersioningStrategy({}));
       const oldVersion = Version.parse('0.1.2-sp.1-SNAPSHOT');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('0.1.2-sp.1');
     });
 
     it('can bump a minor pre major for breaking change', async () => {
-      const strategy = new JavaLTSVersioningStrategy({bumpMinorPreMajor: true});
+      const strategy = new JavaSnapshot(
+        new ServicePackVersioningStrategy({bumpMinorPreMajor: true})
+      );
       const oldVersion = Version.parse('0.1.2-sp.1-SNAPSHOT');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('0.1.2-sp.1');
     });
 
     it('can bump to next snapshot', async () => {
-      const strategy = new JavaLTSVersioningStrategy({});
+      const strategy = new JavaSnapshot(new ServicePackVersioningStrategy({}));
       const oldVersion = Version.parse('1.2.3-sp.1');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('1.2.3-sp.2-SNAPSHOT');
@@ -128,35 +131,37 @@ describe('JavaLTSVersioningStrategy', () => {
       },
     ];
     it('should bump to snapshot', async () => {
-      const strategy = new JavaLTSVersioningStrategy({});
+      const strategy = new JavaSnapshot(new ServicePackVersioningStrategy({}));
       const oldVersion = Version.parse('1.2.3');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('1.2.3-sp.1-SNAPSHOT');
     });
 
     it('can bump a minor', async () => {
-      const strategy = new JavaLTSVersioningStrategy({});
+      const strategy = new JavaSnapshot(new ServicePackVersioningStrategy({}));
       const oldVersion = Version.parse('1.2.3-sp.1-SNAPSHOT');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('1.2.3-sp.1');
     });
 
     it('can bump a minor on pre major for breaking change', async () => {
-      const strategy = new JavaLTSVersioningStrategy({});
+      const strategy = new JavaSnapshot(new ServicePackVersioningStrategy({}));
       const oldVersion = Version.parse('0.1.2-sp.1-SNAPSHOT');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('0.1.2-sp.1');
     });
 
     it('can bump a minor pre major for breaking change', async () => {
-      const strategy = new JavaLTSVersioningStrategy({bumpMinorPreMajor: true});
+      const strategy = new JavaSnapshot(
+        new ServicePackVersioningStrategy({bumpMinorPreMajor: true})
+      );
       const oldVersion = Version.parse('0.1.2-sp.1-SNAPSHOT');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('0.1.2-sp.1');
     });
 
     it('can bump to next snapshot', async () => {
-      const strategy = new JavaLTSVersioningStrategy({});
+      const strategy = new JavaSnapshot(new ServicePackVersioningStrategy({}));
       const oldVersion = Version.parse('1.2.3-sp.1');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('1.2.3-sp.2-SNAPSHOT');
@@ -188,35 +193,37 @@ describe('JavaLTSVersioningStrategy', () => {
       },
     ];
     it('should bump to snapshot', async () => {
-      const strategy = new JavaLTSVersioningStrategy({});
+      const strategy = new JavaSnapshot(new ServicePackVersioningStrategy({}));
       const oldVersion = Version.parse('1.2.3');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('1.2.3-sp.1-SNAPSHOT');
     });
 
     it('can bump a patch', async () => {
-      const strategy = new JavaLTSVersioningStrategy({});
+      const strategy = new JavaSnapshot(new ServicePackVersioningStrategy({}));
       const oldVersion = Version.parse('1.2.3-sp.1-SNAPSHOT');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('1.2.3-sp.1');
     });
 
     it('can bump a patch on pre major for breaking change', async () => {
-      const strategy = new JavaLTSVersioningStrategy({});
+      const strategy = new JavaSnapshot(new ServicePackVersioningStrategy({}));
       const oldVersion = Version.parse('0.1.2-sp.1-SNAPSHOT');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('0.1.2-sp.1');
     });
 
     it('can bump a patch pre major for breaking change', async () => {
-      const strategy = new JavaLTSVersioningStrategy({bumpMinorPreMajor: true});
+      const strategy = new JavaSnapshot(
+        new ServicePackVersioningStrategy({bumpMinorPreMajor: true})
+      );
       const oldVersion = Version.parse('0.1.2-sp.1-SNAPSHOT');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('0.1.2-sp.1');
     });
 
     it('can bump to next snapshot', async () => {
-      const strategy = new JavaLTSVersioningStrategy({});
+      const strategy = new JavaSnapshot(new ServicePackVersioningStrategy({}));
       const oldVersion = Version.parse('1.2.3-sp.1');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('1.2.3-sp.2-SNAPSHOT');

@@ -14,7 +14,9 @@
 
 import {Version} from './version';
 import {ConventionalCommit} from './commit';
+import {ReleaseType} from 'semver';
 
 export interface VersioningStrategy {
-  bump(version: Version, commits: ConventionalCommit[]): Promise<Version>;
+  bump(version: Version, commits: ConventionalCommit[]): Version;
+  doBump(version: Version, bumpType: ReleaseType): Version;
 }

@@ -14,31 +14,12 @@
 
 import {Version} from '../version';
 import {ReleaseType} from 'semver';
-import {ConventionalCommit} from '../commit';
 import {DefaultVersioningStrategy} from './default';
 
 const LTS_PATTERN = /sp\.(\d+)(-SNAPSHOT)?/;
 
-export class JavaLTSVersioningStrategy extends DefaultVersioningStrategy {
-  async bump(
-    version: Version,
-    commits: ConventionalCommit[]
-  ): Promise<Version> {
-    // If the previous version was not an LTS release, bump with an LTS snapshot
-    if (!version.preRelease?.includes('sp.')) {
-      return new Version(
-        version.major,
-        version.minor,
-        version.patch,
-        'sp.1-SNAPSHOT',
-        version.build
-      );
-    }
-
-    return super.bump(version, commits);
-  }
-
-  protected doBump(version: Version, _bumpType: ReleaseType): Version {
+export class ServicePackVersioningStrategy extends DefaultVersioningStrategy {
+  doBump(version: Version, _bumpType: ReleaseType): Version {
     const match = version.preRelease?.match(LTS_PATTERN);
     if (match) {
       const spNumber = Number(match[1]);
@@ -55,7 +36,7 @@ export class JavaLTSVersioningStrategy extends DefaultVersioningStrategy {
           version.major,
           version.minor,
           version.patch,
-          `sp.${spNumber + 1}-SNAPSHOT`,
+          `sp.${spNumber + 1}`,
           version.build
         );
       }
@@ -64,7 +45,7 @@ export class JavaLTSVersioningStrategy extends DefaultVersioningStrategy {
       version.major,
       version.minor,
       version.patch,
-      'sp.1-SNAPSHOT',
+      'sp.1',
       version.build
     );
   }

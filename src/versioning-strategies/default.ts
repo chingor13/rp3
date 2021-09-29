@@ -41,9 +41,7 @@ export class DefaultVersioningStrategy implements VersioningStrategy {
     this.changelogSections = options.changelogSections;
   }
 
-  protected async guessReleaseType(
-    commits: ConventionalCommit[]
-  ): Promise<ReleaseType> {
+  protected guessReleaseType(commits: ConventionalCommit[]): ReleaseType {
     // iterate through list of commits and find biggest commit type
     let breaking = 0;
     let features = 0;
@@ -63,7 +61,7 @@ export class DefaultVersioningStrategy implements VersioningStrategy {
     return 'patch';
   }
 
-  protected doBump(version: Version, bumpType: ReleaseType): Version {
+  doBump(version: Version, bumpType: ReleaseType): Version {
     switch (bumpType) {
       case 'major':
         return new Version(
@@ -95,11 +93,8 @@ export class DefaultVersioningStrategy implements VersioningStrategy {
     return version;
   }
 
-  async bump(
-    version: Version,
-    commits: ConventionalCommit[]
-  ): Promise<Version> {
-    let bumpType = await this.guessReleaseType(commits);
+  bump(version: Version, commits: ConventionalCommit[]): Version {
+    let bumpType = this.guessReleaseType(commits);
     if (semver.lt(version.toString(), 'v1.0.0')) {
       if (this.bumpMinorPreMajor && bumpType === 'major') {
         bumpType = 'minor';
