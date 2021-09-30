@@ -41,7 +41,10 @@ export class DefaultVersioningStrategy implements VersioningStrategy {
     this.changelogSections = options.changelogSections;
   }
 
-  protected guessReleaseType(commits: ConventionalCommit[]): ReleaseType {
+  determineReleaseType(
+    version: Version,
+    commits: ConventionalCommit[]
+  ): ReleaseType {
     // iterate through list of commits and find biggest commit type
     let breaking = 0;
     let features = 0;
@@ -52,17 +55,25 @@ export class DefaultVersioningStrategy implements VersioningStrategy {
         features++;
       }
     }
+    let releaseType: ReleaseType = 'patch';
     if (breaking > 0) {
-      return 'major';
+      releaseType = 'major';
+    } else if (features > 0) {
+      releaseType = 'minor';
     }
-    if (features > 0) {
-      return 'minor';
+
+    if (semver.lt(version.toString(), 'v1.0.0')) {
+      if (this.bumpMinorPreMajor && releaseType === 'major') {
+        releaseType = 'minor';
+      } else if (this.bumpPatchForMinorPreMajor && releaseType === 'minor') {
+        releaseType = 'patch';
+      }
     }
-    return 'patch';
+    return releaseType;
   }
 
-  doBump(version: Version, bumpType: ReleaseType): Version {
-    switch (bumpType) {
+  doBump(version: Version, releaseType: ReleaseType): Version {
+    switch (releaseType) {
       case 'major':
         return new Version(
           version.major + 1,
@@ -88,21 +99,12 @@ export class DefaultVersioningStrategy implements VersioningStrategy {
           version.build
         );
       default:
-        logger.warn(`Unhandled bump type: ${bumpType}`);
+        logger.warn(`Unhandled bump type: ${releaseType}`);
     }
     return version;
   }
 
   bump(version: Version, commits: ConventionalCommit[]): Version {
-    let bumpType = this.guessReleaseType(commits);
-    if (semver.lt(version.toString(), 'v1.0.0')) {
-      if (this.bumpMinorPreMajor && bumpType === 'major') {
-        bumpType = 'minor';
-      } else if (this.bumpPatchForMinorPreMajor && bumpType === 'minor') {
-        bumpType = 'patch';
-      }
-    }
-
-    return this.doBump(version, bumpType);
+    return this.doBump(version, this.determineReleaseType(version, commits));
   }
 }

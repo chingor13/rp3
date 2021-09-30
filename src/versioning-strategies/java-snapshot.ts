@@ -17,15 +17,38 @@ import {Version} from '../version';
 import {ConventionalCommit} from '../commit';
 import {ReleaseType} from 'semver';
 
+function isSnapshot(version: Version): boolean {
+  return !!version.preRelease?.includes('SNAPSHOT');
+}
+
+function removeSnapshot(version: Version): Version {
+  return new Version(
+    version.major,
+    version.minor,
+    version.patch,
+    version.preRelease
+      ? version.preRelease.replace(/-?SNAPSHOT/, '')
+      : undefined,
+    version.build
+  );
+}
+
 export class JavaSnapshot implements VersioningStrategy {
   strategy: VersioningStrategy;
   constructor(strategy: VersioningStrategy) {
     this.strategy = strategy;
   }
 
+  determineReleaseType(
+    version: Version,
+    commits: ConventionalCommit[]
+  ): ReleaseType {
+    return this.strategy.determineReleaseType(version, commits);
+  }
+
   bump(version: Version, commits: ConventionalCommit[]): Version {
     // If the previous version was not a snapshot, bump with a snapshot
-    if (!version.preRelease?.includes('SNAPSHOT')) {
+    if (!isSnapshot(version)) {
       const nextPatch = this.strategy.doBump(version, 'patch');
       nextPatch.preRelease = nextPatch.preRelease
         ? `${nextPatch.preRelease}-SNAPSHOT`
@@ -33,14 +56,15 @@ export class JavaSnapshot implements VersioningStrategy {
       return nextPatch;
     }
 
-    const newVersion = this.strategy.bump(version, commits);
-    if (newVersion.preRelease) {
-      newVersion.preRelease = newVersion.preRelease.replace(/-?SNAPSHOT/, '');
+    const releaseType = this.determineReleaseType(version, commits);
+    if (releaseType !== 'patch') {
+      version = this.doBump(version, releaseType);
     }
-    return newVersion;
+
+    return removeSnapshot(version);
   }
 
-  doBump(version: Version, bumpType: ReleaseType): Version {
-    return this.strategy.doBump(version, bumpType);
+  doBump(version: Version, releaseType: ReleaseType): Version {
+    return this.strategy.doBump(version, releaseType);
   }
 }

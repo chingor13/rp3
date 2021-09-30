@@ -14,12 +14,10 @@
 
 import {Version} from '../version';
 import {ReleaseType} from 'semver';
-import {DefaultVersioningStrategy} from './default';
 import {ConventionalCommit} from '../commit';
+import {DefaultVersioningStrategy} from './default';
 
-const SERVICE_PACK_PATTERN = /sp\.(\d+)/;
-
-export class ServicePackVersioningStrategy extends DefaultVersioningStrategy {
+export class AlwaysBumpPatch extends DefaultVersioningStrategy {
   determineReleaseType(
     _version: Version,
     _commits: ConventionalCommit[]
@@ -27,24 +25,11 @@ export class ServicePackVersioningStrategy extends DefaultVersioningStrategy {
     return 'patch';
   }
 
-  doBump(version: Version, _releaseType: ReleaseType): Version {
-    const match = version.preRelease?.match(SERVICE_PACK_PATTERN);
-    if (match) {
-      const spNumber = Number(match[1]);
-      return new Version(
-        version.major,
-        version.minor,
-        version.patch,
-        `sp.${spNumber + 1}`,
-        version.build
-      );
-    }
-    return new Version(
-      version.major,
-      version.minor,
-      version.patch,
-      'sp.1',
-      version.build
-    );
+  doBump(version: Version, _bumpType: ReleaseType): Version {
+    return super.doBump(version, 'patch');
+  }
+
+  bump(version: Version, _commits: ConventionalCommit[]): Version {
+    return this.doBump(version, 'patch');
   }
 }

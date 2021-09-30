@@ -17,9 +17,9 @@ import {describe, it} from 'mocha';
 import {expect} from 'chai';
 import {Version} from '../../src/version';
 import {JavaSnapshot} from '../../src/versioning-strategies/java-snapshot';
-import {DefaultVersioningStrategy} from '../../src/versioning-strategies/default';
+import {AlwaysBumpPatch} from '../../src/versioning-strategies/always-bump-patch';
 
-describe('JavaVersioningStrategy', () => {
+describe('JavaBackportVersioningStrategy', () => {
   describe('with breaking change', () => {
     const commits = [
       {
@@ -57,32 +57,33 @@ describe('JavaVersioningStrategy', () => {
       },
     ];
     it('should bump to snapshot', async () => {
-      const strategy = new JavaSnapshot(new DefaultVersioningStrategy({}));
+      const strategy = new JavaSnapshot(new AlwaysBumpPatch({}));
       const oldVersion = Version.parse('1.2.3');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('1.2.4-SNAPSHOT');
     });
+
     it('can bump a major', async () => {
-      const strategy = new JavaSnapshot(new DefaultVersioningStrategy({}));
+      const strategy = new JavaSnapshot(new AlwaysBumpPatch({}));
       const oldVersion = Version.parse('1.2.3-SNAPSHOT');
       const newVersion = await strategy.bump(oldVersion, commits);
-      expect(newVersion.toString()).to.equal('2.0.0');
+      expect(newVersion.toString()).to.equal('1.2.3');
     });
 
     it('can bump a major on pre major for breaking change', async () => {
-      const strategy = new JavaSnapshot(new DefaultVersioningStrategy({}));
+      const strategy = new JavaSnapshot(new AlwaysBumpPatch({}));
       const oldVersion = Version.parse('0.1.2-SNAPSHOT');
       const newVersion = await strategy.bump(oldVersion, commits);
-      expect(newVersion.toString()).to.equal('1.0.0');
+      expect(newVersion.toString()).to.equal('0.1.2');
     });
 
     it('can bump a minor pre major for breaking change', async () => {
       const strategy = new JavaSnapshot(
-        new DefaultVersioningStrategy({bumpMinorPreMajor: true})
+        new AlwaysBumpPatch({bumpMinorPreMajor: true})
       );
       const oldVersion = Version.parse('0.1.2-SNAPSHOT');
       const newVersion = await strategy.bump(oldVersion, commits);
-      expect(newVersion.toString()).to.equal('0.2.0');
+      expect(newVersion.toString()).to.equal('0.1.2');
     });
   });
 
@@ -123,28 +124,29 @@ describe('JavaVersioningStrategy', () => {
       },
     ];
     it('should bump to snapshot', async () => {
-      const strategy = new JavaSnapshot(new DefaultVersioningStrategy({}));
+      const strategy = new JavaSnapshot(new AlwaysBumpPatch({}));
       const oldVersion = Version.parse('1.2.3');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('1.2.4-SNAPSHOT');
     });
+
     it('can bump a minor', async () => {
-      const strategy = new JavaSnapshot(new DefaultVersioningStrategy({}));
+      const strategy = new JavaSnapshot(new AlwaysBumpPatch({}));
       const oldVersion = Version.parse('1.2.3-SNAPSHOT');
       const newVersion = await strategy.bump(oldVersion, commits);
-      expect(newVersion.toString()).to.equal('1.3.0');
+      expect(newVersion.toString()).to.equal('1.2.3');
     });
-    it('can bump a minor pre-major', async () => {
-      const strategy = new JavaSnapshot(new DefaultVersioningStrategy({}));
+
+    it('can bump a minor on pre major for breaking change', async () => {
+      const strategy = new JavaSnapshot(new AlwaysBumpPatch({}));
       const oldVersion = Version.parse('0.1.2-SNAPSHOT');
       const newVersion = await strategy.bump(oldVersion, commits);
-      expect(newVersion.toString()).to.equal('0.2.0');
+      expect(newVersion.toString()).to.equal('0.1.2');
     });
-    it('can bump a patch pre-major', async () => {
+
+    it('can bump a minor pre major for breaking change', async () => {
       const strategy = new JavaSnapshot(
-        new DefaultVersioningStrategy({
-          bumpPatchForMinorPreMajor: true,
-        })
+        new AlwaysBumpPatch({bumpMinorPreMajor: true})
       );
       const oldVersion = Version.parse('0.1.2-SNAPSHOT');
       const newVersion = await strategy.bump(oldVersion, commits);
@@ -177,16 +179,33 @@ describe('JavaVersioningStrategy', () => {
       },
     ];
     it('should bump to snapshot', async () => {
-      const strategy = new JavaSnapshot(new DefaultVersioningStrategy({}));
+      const strategy = new JavaSnapshot(new AlwaysBumpPatch({}));
       const oldVersion = Version.parse('1.2.3');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('1.2.4-SNAPSHOT');
     });
+
     it('can bump a patch', async () => {
-      const strategy = new JavaSnapshot(new DefaultVersioningStrategy({}));
+      const strategy = new JavaSnapshot(new AlwaysBumpPatch({}));
       const oldVersion = Version.parse('1.2.3-SNAPSHOT');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('1.2.3');
+    });
+
+    it('can bump a patch on pre major for breaking change', async () => {
+      const strategy = new JavaSnapshot(new AlwaysBumpPatch({}));
+      const oldVersion = Version.parse('0.1.2-SNAPSHOT');
+      const newVersion = await strategy.bump(oldVersion, commits);
+      expect(newVersion.toString()).to.equal('0.1.2');
+    });
+
+    it('can bump a patch pre major for breaking change', async () => {
+      const strategy = new JavaSnapshot(
+        new AlwaysBumpPatch({bumpMinorPreMajor: true})
+      );
+      const oldVersion = Version.parse('0.1.2-SNAPSHOT');
+      const newVersion = await strategy.bump(oldVersion, commits);
+      expect(newVersion.toString()).to.equal('0.1.2');
     });
   });
 });
