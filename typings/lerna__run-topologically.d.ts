@@ -12,28 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Version, VersionsMap} from './version';
+/**
+ * skeleton only representing what we use.
+ */
+declare module '@lerna/run-topologically' {
+  import {Package} from '@lerna/package';
+  namespace runTopologically {
+    interface Options {
+      concurrency: number;
+      graphType: 'allDependencies' | 'dependencies';
+      rejectCycles: boolean;
+    }
+    function runTopologically(
+      packages: Package[],
+      runner: (pkg: Package) => Promise<Package>,
+      opts: Options
+    ): Promise<Package[]>;
+  }
 
-export interface UpdateOptions {
-  version: Version;
-  versionsMap?: VersionsMap;
-}
-
-export interface Update {
-  // If provided, skip looking up the file
-  cachedFileContents?: string; // FIXME
-
-  // Whether or not we should create the file if it is missing.
-  // Defaults to `true`.
-  createIfMissing: boolean;
-
-  // Path to the file in the repository to update
-  path: string;
-
-  // How to update the file
-  updater: Updater;
-}
-
-export interface Updater {
-  updateContent(content: string | undefined): string;
+  export = runTopologically;
 }

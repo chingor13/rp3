@@ -12,28 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Version, VersionsMap} from './version';
+import detectIndent = require('detect-indent');
 
-export interface UpdateOptions {
-  version: Version;
-  versionsMap?: VersionsMap;
-}
-
-export interface Update {
-  // If provided, skip looking up the file
-  cachedFileContents?: string; // FIXME
-
-  // Whether or not we should create the file if it is missing.
-  // Defaults to `true`.
-  createIfMissing: boolean;
-
-  // Path to the file in the repository to update
-  path: string;
-
-  // How to update the file
-  updater: Updater;
-}
-
-export interface Updater {
-  updateContent(content: string | undefined): string;
+export function jsonStringify(
+  parsed: object,
+  content: string,
+  replacer?: (string | number)[]
+): string {
+  return `${content.slice(0, content.indexOf('{'))}${JSON.stringify(
+    parsed,
+    replacer,
+    detectIndent(content.trim()).indent
+  )}${content.slice(content.lastIndexOf('}') + 1)}`;
 }

@@ -12,28 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Version, VersionsMap} from './version';
+import {jsonStringify} from '../util/json-stringify';
+import {DefaultUpdater} from './default';
 
-export interface UpdateOptions {
-  version: Version;
-  versionsMap?: VersionsMap;
-}
-
-export interface Update {
-  // If provided, skip looking up the file
-  cachedFileContents?: string; // FIXME
-
-  // Whether or not we should create the file if it is missing.
-  // Defaults to `true`.
-  createIfMissing: boolean;
-
-  // Path to the file in the repository to update
-  path: string;
-
-  // How to update the file
-  updater: Updater;
-}
-
-export interface Updater {
-  updateContent(content: string | undefined): string;
+export class ReleasePleaseManifest extends DefaultUpdater {
+  updateContent(content: string): string {
+    const parsed: Record<string, string> = JSON.parse(content);
+    for (const [path, version] of this.versionsMap!) {
+      parsed[path] = version.toString();
+    }
+    return jsonStringify(parsed, content, Object.keys(parsed).sort());
+  }
 }

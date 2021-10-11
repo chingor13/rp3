@@ -12,28 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Version, VersionsMap} from './version';
+import * as yaml from 'js-yaml';
+import {logger} from '../../util/logger';
+import {DefaultUpdater} from '../default';
 
-export interface UpdateOptions {
-  version: Version;
-  versionsMap?: VersionsMap;
-}
-
-export interface Update {
-  // If provided, skip looking up the file
-  cachedFileContents?: string; // FIXME
-
-  // Whether or not we should create the file if it is missing.
-  // Defaults to `true`.
-  createIfMissing: boolean;
-
-  // Path to the file in the repository to update
-  path: string;
-
-  // How to update the file
-  updater: Updater;
-}
-
-export interface Updater {
-  updateContent(content: string | undefined): string;
+export class ChartYaml extends DefaultUpdater {
+  updateContent(content: string): string {
+    const data = yaml.load(content, {json: true});
+    if (data === null || data === undefined) {
+      return '';
+    }
+    const parsed = JSON.parse(JSON.stringify(data));
+    logger.info(`updating from ${parsed.version} to ${this.version}`);
+    parsed.version = this.version;
+    return yaml.dump(parsed);
+  }
 }

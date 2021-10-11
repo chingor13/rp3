@@ -12,28 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Version, VersionsMap} from './version';
+import {Updater, UpdateOptions} from '../update';
+import {Version, VersionsMap} from '../version';
 
-export interface UpdateOptions {
+/**
+ * This updater writes a plain file with the version string as the
+ * only content.
+ */
+export class DefaultUpdater implements Updater {
   version: Version;
   versionsMap?: VersionsMap;
-}
-
-export interface Update {
-  // If provided, skip looking up the file
-  cachedFileContents?: string; // FIXME
-
-  // Whether or not we should create the file if it is missing.
-  // Defaults to `true`.
-  createIfMissing: boolean;
-
-  // Path to the file in the repository to update
-  path: string;
-
-  // How to update the file
-  updater: Updater;
-}
-
-export interface Updater {
-  updateContent(content: string | undefined): string;
+  constructor(options: UpdateOptions) {
+    this.version = options.version;
+    this.versionsMap = options.versionsMap;
+  }
+  updateContent(_content: string): string {
+    return this.version + '\n';
+  }
 }
