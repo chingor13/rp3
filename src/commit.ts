@@ -17,7 +17,7 @@ const visit = require('unist-util-visit');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const visitWithAncestors = require('unist-util-visit-parents');
 const NUMBER_REGEX = /^[0-9]+$/;
-import {PullRequest} from './pull_request';
+import {PullRequest} from './pull-request';
 import {logger} from './util/logger';
 
 import * as parser from '@conventional-commits/parser';

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {PullRequest} from './pull_request';
+import {PullRequest} from './pull-request';
 import {Commit} from './commit';
 import {Release} from './release';
 
