@@ -13,9 +13,9 @@
 // limitations under the License.
 
 import {describe, it} from 'mocha';
-
 import {expect} from 'chai';
 import {ReleaseNotes} from '../src/release-notes';
+import snapshot = require('snap-shot-it');
 
 describe('ReleaseNotes', () => {
   const commits = [
@@ -65,7 +65,7 @@ describe('ReleaseNotes', () => {
       const releaseNotes = new ReleaseNotes();
       const notes = await releaseNotes.buildNotes(commits, notesOptions);
       expect(notes).to.is.string;
-      console.log(notes);
+      snapshot(notes);
     });
   });
 });
