@@ -177,12 +177,6 @@ export class GitHub {
     return data.default_branch;
   }
 
-  async lastMergedPRByHeadBranch(
-    _branchName: string
-  ): Promise<PullRequest | undefined> {
-    return undefined;
-  }
-
   /**
    * Returns the list of commits to the default branch after the provided filter
    * query has been satified.
@@ -596,6 +590,11 @@ export class GitHub {
       }
       throw err;
     }
+  }
+
+  async getFileJson<T>(path: string, branch: string): Promise<T> {
+    const content = await this.getFileContentsOnBranch(path, branch);
+    return JSON.parse(content.parsedContent);
   }
 
   /**

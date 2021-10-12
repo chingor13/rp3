@@ -16,37 +16,87 @@ import {GitHub} from './github';
 import {JavaYoshi} from './strategies/java-yoshi';
 import {Repository} from './repository';
 import {Strategy} from './strategy';
+import {
+  parseConfig,
+  parseManifest,
+  Manifest,
+  RepositoryPackage,
+  ReleaserConfig,
+} from './manifest';
 
 const RELEASE_PLEASE_CONFIG = 'release-please-config.json';
 const RELEASE_PLEASE_MANIFEST = '.release-please-manifest.json';
 
-interface ReleasePleaseOptions {
-  github: GitHub;
-  configFile?: string;
-  manifestFile?: string;
-}
-
 export class ReleasePlease {
   repository: Repository;
   github: GitHub;
-  configFile: string;
-  manifestFile: string;
+  repositoryPackages: RepositoryPackage[];
+  manifest: Manifest;
+  targetBranch: string;
 
-  constructor(options: ReleasePleaseOptions) {
-    this.repository = options.github.repository;
-    this.github = options.github;
-    this.configFile = options.configFile || RELEASE_PLEASE_CONFIG;
-    this.manifestFile = options.manifestFile || RELEASE_PLEASE_MANIFEST;
+  constructor(
+    github: GitHub,
+    targetBranch: string,
+    repositoryPackages: RepositoryPackage[],
+    manifest: Manifest
+  ) {
+    this.repository = github.repository;
+    this.github = github;
+    this.targetBranch = targetBranch;
+    this.repositoryPackages = repositoryPackages;
+    this.manifest = manifest;
+  }
+
+  static async fromManifest(
+    github: GitHub,
+    targetBranch: string,
+    configFile: string = RELEASE_PLEASE_CONFIG,
+    manifestFile: string = RELEASE_PLEASE_MANIFEST
+  ): Promise<ReleasePlease> {
+    const [repositoryPackages, manifest] = await Promise.all([
+      parseConfig(github, configFile, targetBranch),
+      parseManifest(github, manifestFile, targetBranch),
+    ]);
+    return new ReleasePlease(
+      github,
+      targetBranch,
+      repositoryPackages,
+      manifest
+    );
+  }
+
+  static async fromConfig(
+    github: GitHub,
+    targetBranch: string,
+    config: ReleaserConfig
+  ): Promise<ReleasePlease> {
+    const repositoryPackages: RepositoryPackage[] = [{path: '.', config}];
+    const manifest: Manifest = {};
+    return new ReleasePlease(
+      github,
+      targetBranch,
+      repositoryPackages,
+      manifest
+    );
   }
 
   async createPullRequests(): Promise<number[]> {
-    const strategy = new JavaYoshi({
-      targetBranch: 'main',
-      github: this.github,
-    });
-    return await Promise.all([
-      this.createPullRequest(strategy, 'main', undefined),
-    ]);
+    const promises: Promise<number>[] = [];
+    for (const repositoryPackage of this.repositoryPackages) {
+      const strategy = new JavaYoshi({
+        targetBranch: this.targetBranch,
+        github: this.github,
+        path: repositoryPackage.path,
+      });
+      promises.push(
+        this.createPullRequest(
+          strategy,
+          this.targetBranch,
+          repositoryPackage.config.packageName
+        )
+      );
+    }
+    return await Promise.all(promises);
   }
 
   async createPullRequest(

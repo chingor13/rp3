@@ -14,8 +14,7 @@
 
 import {Strategy} from './strategy';
 import {JavaYoshi} from './strategies/java-yoshi';
-import {GitHub, GitHubOptions, OctokitAPIs} from './github';
-import {Repository} from './repository';
+import {GitHub, OctokitAPIs} from './github';
 
 // Factory shared by GitHub Action and CLI for creating Release PRs
 // and GitHub Releases:
