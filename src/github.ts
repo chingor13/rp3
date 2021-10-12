@@ -390,7 +390,7 @@ export class GitHub {
    * @returns {MergedGitHubPR[]} - List of merged pull requests
    * @throws {GitHubAPIError} on an API error
    */
-  private findMergedPullRequests = wrapAsync(
+  findMergedPullRequests = wrapAsync(
     async (
       targetBranch?: string,
       page = 1,
@@ -490,7 +490,7 @@ export class GitHub {
    * @returns {GitHubFileContents}
    * @throws {GitHubAPIError} on other API errors
    */
-  private getFileContentsWithSimpleAPI = wrapAsync(
+  getFileContentsWithSimpleAPI = wrapAsync(
     async (
       path: string,
       ref: string,
@@ -525,7 +525,7 @@ export class GitHub {
    * @returns {GitHubFileContents}
    * @throws {GitHubAPIError} on other API errors
    */
-  private getFileContentsWithDataAPI = wrapAsync(
+  getFileContentsWithDataAPI = wrapAsync(
     async (path: string, branch: string): Promise<GitHubFileContents> => {
       const options: RequestOptionsType = {
         owner: this.owner,
