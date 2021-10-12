@@ -152,11 +152,29 @@ export class GitHub {
       repository: {
         owner: options.owner,
         repo: options.repo,
-        defaultBranch: options.defaultBranch ?? 'main',
+        defaultBranch:
+          options.defaultBranch ??
+          (await GitHub.defaultBranch(
+            options.owner,
+            options.repo,
+            apis.octokit
+          )),
       },
       octokitAPIs: apis,
     };
     return new GitHub(opts);
+  }
+
+  static async defaultBranch(
+    owner: string,
+    repo: string,
+    octokit: OctokitType
+  ): Promise<string> {
+    const {data} = await octokit.repos.get({
+      repo,
+      owner,
+    });
+    return data.default_branch;
   }
 
   async lastMergedPRByHeadBranch(

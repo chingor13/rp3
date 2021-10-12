@@ -41,7 +41,11 @@ describe('GitHub', () => {
   beforeEach(async () => {
     // Reset this before each test so we get a consistent
     // set of requests (some things are cached).
-    github = await GitHub.create({owner: 'fake', repo: 'fake', defaultBranch: 'main'});
+    github = await GitHub.create({
+      owner: 'fake',
+      repo: 'fake',
+      defaultBranch: 'main',
+    });
 
     // This shared nock will take care of some common requests.
     req = getNock();
