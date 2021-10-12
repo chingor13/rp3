@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {DefaultStrategy, StrategyOptions} from './default';
 import {Update} from '../update';
 import {VersionsManifest} from '../updaters/java/versions-manifest';
 import {Version} from '../version';
 import {JavaUpdate} from '../updaters/java/java-update';
+import {Strategy, StrategyOptions} from '../strategy';
 
 interface JavaStrategyOptions extends StrategyOptions {
   extraFiles?: string[];
 }
 
-export class JavaYoshi extends DefaultStrategy {
+export class JavaYoshi extends Strategy {
   extraFiles: string[];
 
   constructor(options: JavaStrategyOptions) {

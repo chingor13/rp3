@@ -21,7 +21,6 @@ const RELEASE_PLEASE_CONFIG = 'release-please-config.json';
 const RELEASE_PLEASE_MANIFEST = '.release-please-manifest.json';
 
 interface ReleasePleaseOptions {
-  repository: Repository;
   github: GitHub;
   configFile?: string;
   manifestFile?: string;
@@ -34,7 +33,7 @@ export class ReleasePlease {
   manifestFile: string;
 
   constructor(options: ReleasePleaseOptions) {
-    this.repository = options.repository;
+    this.repository = options.github.repository;
     this.github = options.github;
     this.configFile = options.configFile || RELEASE_PLEASE_CONFIG;
     this.manifestFile = options.manifestFile || RELEASE_PLEASE_MANIFEST;
@@ -42,7 +41,6 @@ export class ReleasePlease {
 
   async createPullRequests(): Promise<number[]> {
     const strategy = new JavaYoshi({
-      repository: this.repository,
       targetBranch: 'main',
       github: this.github,
     });

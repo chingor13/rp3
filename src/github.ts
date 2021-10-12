@@ -32,6 +32,7 @@ type OctokitType = InstanceType<typeof Octokit>;
 // https://github.com/octokit/types.ts/issues/25.
 import {PromiseValue} from 'type-fest';
 import {logger} from './util/logger';
+import {Repository} from './repository';
 type GitGetTreeResponse = PromiseValue<
   ReturnType<InstanceType<typeof Octokit>['git']['getTree']>
 >['data'];
@@ -50,10 +51,15 @@ export interface OctokitAPIs {
   octokit: OctokitType;
 }
 
-interface GitHubOptions {
+export interface GitHubOptions {
+  repository: Repository;
+  octokitAPIs: OctokitAPIs;
+}
+
+interface GitHubCreateOptions {
   owner: string;
   repo: string;
-  defaultBranch: string;
+  defaultBranch?: string;
   apiUrl?: string;
   graphqlUrl?: string;
   octokitAPIs?: OctokitAPIs;
@@ -105,50 +111,52 @@ interface PullRequestHistory {
 }
 
 export class GitHub {
-  owner: string;
-  repo: string;
-  defaultBranch: string;
+  repository: Repository;
   octokit: OctokitType;
-  token?: string;
-  probotMode: boolean;
   request: RequestFunctionType;
   graphql: Function;
-  apiUrl: string;
-  graphqlUrl: string;
 
   constructor(options: GitHubOptions) {
-    this.owner = options.owner;
-    this.repo = options.repo;
-    this.defaultBranch = options.defaultBranch;
-    this.token = options.token;
-    this.apiUrl = options.apiUrl || GH_API_URL;
-    this.graphqlUrl = options.graphqlUrl || GH_GRAPHQL_URL;
+    this.repository = options.repository;
+    this.octokit = options.octokitAPIs.octokit;
+    this.request = options.octokitAPIs.request;
+    this.graphql = options.octokitAPIs.graphql;
+  }
 
-    if (options.octokitAPIs === undefined) {
-      this.probotMode = false;
-      this.octokit = new Octokit({
-        baseUrl: options.apiUrl,
-        auth: this.token,
-      });
-      const defaults: RequestOptionsType = {
-        baseUrl: this.apiUrl,
+  static async create(options: GitHubCreateOptions): Promise<GitHub> {
+    const apiUrl = options.apiUrl ?? GH_API_URL;
+    const graphqlUrl = options.graphqlUrl ?? GH_GRAPHQL_URL;
+    const releasePleaseVersion = require('../../package.json').version;
+    const apis = options.octokitAPIs ?? {
+      octokit: new Octokit({
+        baseUrl: apiUrl,
+        auth: options.token,
+      }),
+      request: request.defaults({
+        baseUrl: apiUrl,
         headers: {
-          'user-agent': `release-please/${
-            require('../../package.json').version
-          }`,
-          Authorization: `token ${this.token}`,
+          'user-agent': `release-please/${releasePleaseVersion}`,
+          Authorization: `token ${options.token}`,
         },
-      };
-      this.request = request.defaults(defaults);
-      this.graphql = graphql;
-    } else {
-      // for the benefit of probot applications, we allow a configured instance
-      // of octokit to be passed in as a parameter.
-      this.probotMode = true;
-      this.octokit = options.octokitAPIs.octokit;
-      this.request = options.octokitAPIs.request;
-      this.graphql = options.octokitAPIs.graphql;
-    }
+      }),
+      graphql: graphql.defaults({
+        baseUrl: graphqlUrl,
+        headers: {
+          'user-agent': `release-please/${releasePleaseVersion}`,
+          Authorization: `token ${options.token}`,
+          'content-type': 'application/vnd.github.v3+json',
+        },
+      }),
+    };
+    const opts = {
+      repository: {
+        owner: options.owner,
+        repo: options.repo,
+        defaultBranch: options.defaultBranch ?? 'main',
+      },
+      octokitAPIs: apis,
+    };
+    return new GitHub(opts);
   }
 
   async lastMergedPRByHeadBranch(
@@ -190,8 +198,8 @@ export class GitHub {
   /**
    * Iterate through commit history with a max number of results scanned.
    *
-   * @param targetBranch {string} target branch of commit
-   * @param maxResults {number} maxResults - Limit the number of results searched.
+   * @param {string} targetBranch target branch of commit
+   * @param {number} maxResults maxResults - Limit the number of results searched.
    *   Defaults to unlimited.
    * @yields {CommitWithPullRequest}
    * @throws {GitHubAPIError} on an API error
@@ -263,8 +271,8 @@ export class GitHub {
         }
       }`,
       cursor,
-      owner: this.owner,
-      repo: this.repo,
+      owner: this.repository.owner,
+      repo: this.repository.repo,
       num: 25,
       targetBranch,
     });
@@ -322,7 +330,7 @@ export class GitHub {
     ) => {
       while (maxRetries >= 0) {
         try {
-          return await this.makeGraphqlRequest(opts);
+          return await this.graphql(opts);
         } catch (err) {
           if (err.status !== 502) {
             throw err;
@@ -333,26 +341,10 @@ export class GitHub {
     }
   );
 
-  private async makeGraphqlRequest(_opts: {
-    [key: string]: string | number | null | undefined;
-  }) {
-    let opts = Object.assign({}, _opts);
-    if (!this.probotMode) {
-      opts = Object.assign(opts, {
-        url: `${this.graphqlUrl}/graphql`,
-        headers: {
-          authorization: `token ${this.token}`,
-          'content-type': 'application/vnd.github.v3+json',
-        },
-      });
-    }
-    return this.graphql(opts);
-  }
-
   /**
    * Iterate through merged pull requests with a max number of results scanned.
    *
-   * @param maxResults {number} maxResults - Limit the number of results searched.
+   * @param {number} maxResults maxResults - Limit the number of results searched.
    *   Defaults to unlimited.
    * @yields {MergedGitHubPR}
    * @throws {GitHubAPIError} on an API error
@@ -397,14 +389,14 @@ export class GitHub {
       perPage = 100
     ): Promise<PullRequest[]> => {
       if (!targetBranch) {
-        targetBranch = this.defaultBranch;
+        targetBranch = this.repository.defaultBranch;
       }
       // TODO: is sorting by updated better?
       const pullsResponse = (await this.request(
         `GET /repos/:owner/:repo/pulls?state=closed&per_page=${perPage}&page=${page}&base=${targetBranch}&sort=created&direction=desc`,
         {
-          owner: this.owner,
-          repo: this.repo,
+          owner: this.repository.owner,
+          repo: this.repository.repo,
         }
       )) as {data: PullsListResponseItems};
 
@@ -479,7 +471,10 @@ export class GitHub {
    * @throws {GitHubAPIError} on other API errors
    */
   async getFileContents(path: string): Promise<GitHubFileContents> {
-    return await this.getFileContentsOnBranch(path, this.defaultBranch);
+    return await this.getFileContentsOnBranch(
+      path,
+      this.repository.defaultBranch
+    );
   }
 
   /**
@@ -498,8 +493,8 @@ export class GitHub {
     ): Promise<GitHubFileContents> => {
       ref = isBranch ? fullyQualifyBranchRef(ref) : ref;
       const options: RequestOptionsType = {
-        owner: this.owner,
-        repo: this.repo,
+        owner: this.repository.owner,
+        repo: this.repository.repo,
         path,
         ref,
       };
@@ -528,8 +523,8 @@ export class GitHub {
   getFileContentsWithDataAPI = wrapAsync(
     async (path: string, branch: string): Promise<GitHubFileContents> => {
       const options: RequestOptionsType = {
-        owner: this.owner,
-        repo: this.repo,
+        owner: this.repository.owner,
+        repo: this.repository.repo,
         branch,
       };
       const repoTree: OctokitResponse<GitGetTreeResponse> = await this.request(
@@ -547,8 +542,8 @@ export class GitHub {
       const resp = await this.request(
         'GET /repos/:owner/:repo/git/blobs/:sha',
         {
-          owner: this.owner,
-          repo: this.repo,
+          owner: this.repository.owner,
+          repo: this.repository.repo,
           sha: blobDescriptor.sha,
         }
       );
@@ -600,7 +595,11 @@ export class GitHub {
     filename: string,
     prefix?: string
   ): Promise<string[]> {
-    return this.findFilesByFilenameAndRef(filename, this.defaultBranch, prefix);
+    return this.findFilesByFilenameAndRef(
+      filename,
+      this.repository.defaultBranch,
+      prefix
+    );
   }
 
   /**
@@ -626,8 +625,8 @@ export class GitHub {
       const response: {
         data: GitGetTreeResponse;
       } = await this.octokit.git.getTree({
-        owner: this.owner,
-        repo: this.repo,
+        owner: this.repository.owner,
+        repo: this.repository.repo,
         tree_sha: ref,
         recursive: 'true',
       });
