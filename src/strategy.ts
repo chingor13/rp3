@@ -14,8 +14,10 @@
 
 import {ReleasePullRequest} from './release-pull-request';
 import {Release} from './release';
+import {Commit} from './commit';
+import {PullRequest} from './pull-request';
 
 export interface Strategy {
-  buildReleasePullRequest(): Promise<ReleasePullRequest>;
-  buildRelease(): Promise<Release>;
+  buildReleasePullRequest(commits: Commit[]): Promise<ReleasePullRequest>;
+  buildRelease(mergedPullRequest: PullRequest): Promise<Release>;
 }

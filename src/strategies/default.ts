@@ -17,15 +17,18 @@ import {ReleasePullRequest} from '../release-pull-request';
 import {Release} from '../release';
 import {GitHub} from '../github';
 import {Version} from '../version';
-import {parseConventionalCommits} from '../commit';
+import {parseConventionalCommits, Commit} from '../commit';
 import {VersioningStrategy} from '../versioning-strategy';
 import {DefaultVersioningStrategy} from '../versioning-strategies/default';
 import {PullRequestTitle} from '../util/pull-request-title';
 import {ReleaseNotes} from '../release-notes';
 import {Update} from '../update';
+import {Repository} from '../repository';
+import {PullRequest} from '../pull-request';
+import {BranchName} from '../util/branch-name';
 
 const DEFAULT_LABELS = ['autorelease: pending', 'type: release'];
-interface StrategyOptions {
+export interface StrategyOptions {
   path?: string;
   labels?: string[];
   bumpMinorPreMajor?: boolean;
@@ -34,6 +37,7 @@ interface StrategyOptions {
   component?: string;
   versioningStrategy?: VersioningStrategy;
   targetBranch: string;
+  repository: Repository;
 }
 
 export class DefaultStrategy implements Strategy {
@@ -45,6 +49,7 @@ export class DefaultStrategy implements Strategy {
   component: string | undefined;
   versioningStrategy: VersioningStrategy;
   targetBranch: string;
+  repository: Repository;
 
   constructor(options: StrategyOptions) {
     this.bumpMinorPreMajor = options.bumpMinorPreMajor || false;
@@ -56,36 +61,45 @@ export class DefaultStrategy implements Strategy {
     this.versioningStrategy =
       options.versioningStrategy || new DefaultVersioningStrategy({});
     this.targetBranch = options.targetBranch;
+    this.repository = options.repository;
   }
 
   async buildUpdates(): Promise<Update[]> {
     return [];
   }
 
-  async buildReleasePullRequest(): Promise<ReleasePullRequest> {
-    const latestRelease = await this.github.lastRelease(this.component);
-    const commits = await this.github.commitsSinceSha(latestRelease?.sha);
-    const latestReleaseVersion = Version.parse(latestRelease?.tag || '1.0.0');
+  async buildReleasePullRequest(
+    commits: Commit[],
+    latestRelease?: Release
+  ): Promise<ReleasePullRequest> {
+    // const latestRelease = await this.github.lastRelease(this.component);
+    // const commits = await this.github.commitsSinceSha(latestRelease?.sha);
+    const latestReleaseVersion = latestRelease
+      ? Version.parse(latestRelease.tag)
+      : undefined;
     const conventionalCommits = parseConventionalCommits(commits);
 
-    const newVersion = await this.versioningStrategy.bump(
-      latestReleaseVersion,
-      conventionalCommits
-    );
+    const newVersion = latestReleaseVersion
+      ? (await this.versioningStrategy.bump(
+          latestReleaseVersion,
+          conventionalCommits
+        )).toString()
+      : '1.0.0';
+    const newVersionTag = `v${newVersion}`;
     const pullRequestTitle = PullRequestTitle.ofComponentTargetBranchVersion(
       this.component || '',
       this.targetBranch,
-      newVersion.toString()
+      newVersion
     );
     const releaseNotes = new ReleaseNotes();
     const releaseNotesBody = await releaseNotes.buildNotes(
       conventionalCommits,
       {
-        owner: 'googleapis',
-        repository: 'java-asset',
-        version: '1.2.3',
-        previousTag: 'v1.2.2',
-        currentTag: 'v1.2.3',
+        owner: this.repository.owner,
+        repository: this.repository.repo,
+        version: newVersion,
+        previousTag: latestRelease?.tag,
+        currentTag: newVersionTag,
       }
     );
     const updates = await this.buildUpdates();
@@ -98,12 +112,24 @@ export class DefaultStrategy implements Strategy {
     };
   }
 
-  async buildRelease(): Promise<Release> {
+  async buildRelease(mergedPullRequest: PullRequest): Promise<Release> {
+    const pullRequestTitle = PullRequestTitle.parse(mergedPullRequest.title);
+    if (!pullRequestTitle) {
+      throw new Error(`Bad pull request title: ${mergedPullRequest.title}`);
+    }
+    const branchName = BranchName.parse(mergedPullRequest.headBranchName);
+    if (!branchName) {
+      throw new Error(`Bad branch name: ${mergedPullRequest.headBranchName}`);
+    }
+    if (!mergedPullRequest.sha) {
+      throw new Error('Pull request should have been merged');
+    }
+
     return {
-      tag: 'v1.2.3',
-      component: null,
+      tag: `v${pullRequestTitle.getVersion()}`,
+      component: branchName.getComponent() || '',
       notes: 'FIXME',
-      sha: 'abc123',
+      sha: mergedPullRequest.sha,
     };
   }
 }

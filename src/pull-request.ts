@@ -13,6 +13,8 @@
 // limitations under the License.
 
 export interface PullRequest {
+  headBranchName: string;
+  baseBranchName: string;
   number: number;
   title: string;
   body: string;
