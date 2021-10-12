@@ -1,4 +1,3 @@
-exports['JavaUpdate updateContent updates an LTS snapshot version 1'] = `
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
@@ -6,13 +5,13 @@ exports['JavaUpdate updateContent updates an LTS snapshot version 1'] = `
   <parent>
     <groupId>com.google.auth</groupId>
     <artifactId>google-auth-library-parent</artifactId>
-    <version>0.16.2-sp.1</version><!-- {x-version-update:google-auth-library-parent:current} -->
+    <version>0.16.2-sp.1-SNAPSHOT</version><!-- {x-version-update:google-auth-library-parent:current} -->
     <relativePath>../pom.xml</relativePath>
   </parent>
 
   <groupId>com.google.auth</groupId>
   <artifactId>google-auth-library-appengine</artifactId>
-  <version>0.16.2-sp.1</version><!-- {x-version-update:google-auth-library-parent:current} -->
+  <version>0.16.2-sp.1-SNAPSHOT</version><!-- {x-version-update:google-auth-library-parent:current} -->
   <name>Google Auth Library for Java - Google App Engine</name>
 
   <distributionManagement>
@@ -80,4 +79,3 @@ exports['JavaUpdate updateContent updates an LTS snapshot version 1'] = `
     </dependency>
   </dependencies>
 </project>
-`

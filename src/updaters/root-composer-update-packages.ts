@@ -30,7 +30,7 @@ export class RootComposerUpdatePackages extends DefaultUpdater {
         logger.info(
           `updating ${key} from ${parsed.replace[key]} to ${version}`
         );
-        parsed.replace[key] = version;
+        parsed.replace[key] = version.toString();
       }
     }
     return jsonStringify(parsed, content);

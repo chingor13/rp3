@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import {DefaultUpdater} from '../default';
+import {logger} from '../../util/logger';
 
 const INLINE_UPDATE_REGEX = /{x-version-update:([\w\-_]+):(current|released)}/;
 const BLOCK_START_REGEX =
@@ -22,6 +23,10 @@ const VERSION_REGEX = /\d+\.\d+\.\d+(-\w+(\.\d+)?)?(-SNAPSHOT)?/;
 
 export class JavaUpdate extends DefaultUpdater {
   updateContent(content: string): string {
+    if (!this.versionsMap) {
+      logger.warn('missing versions map');
+      return content;
+    }
     const newLines: string[] = [];
     let blockPackageName: string | null = null;
     content.split(/\r?\n/).forEach(line => {

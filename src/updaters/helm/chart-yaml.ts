@@ -24,7 +24,7 @@ export class ChartYaml extends DefaultUpdater {
     }
     const parsed = JSON.parse(JSON.stringify(data));
     logger.info(`updating from ${parsed.version} to ${this.version}`);
-    parsed.version = this.version;
+    parsed.version = this.version.toString();
     return yaml.dump(parsed);
   }
 }

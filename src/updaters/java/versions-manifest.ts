@@ -14,11 +14,16 @@
 
 import {JavaUpdate} from './java-update';
 import {VersionsMap, Version} from '../../version';
+import {logger} from '../../util/logger';
 
 export class VersionsManifest extends JavaUpdate {
   updateContent(content: string): string {
+    if (!this.versionsMap) {
+      logger.warn('missing versions map');
+      return content;
+    }
     let newContent = content;
-    this.versionsMap!.forEach((version, packageName) => {
+    this.versionsMap.forEach((version, packageName) => {
       newContent = this.updateSingleVersion(
         newContent,
         packageName,

@@ -20,7 +20,7 @@ export class EsyJson extends DefaultUpdater {
   updateContent(content: string): string {
     const parsed = JSON.parse(content);
     logger.info(`updating from ${parsed.version} to ${this.version}`);
-    parsed.version = this.version;
+    parsed.version = this.version.toString();
     return jsonStringify(parsed, content);
   }
 }

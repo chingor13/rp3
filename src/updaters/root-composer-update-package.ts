@@ -27,7 +27,7 @@ export class RootComposerUpdatePackage extends DefaultUpdater {
       for (let [key, version] of this.versionsMap.entries()) {
         version = version || '1.0.0';
         logger.info(`updating ${key} from ${parsed[key]} to ${version}`);
-        parsed[key] = version;
+        parsed[key] = version.toString();
       }
     }
     return JSON.stringify(parsed, null, 4) + '\n';
