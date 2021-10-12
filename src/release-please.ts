@@ -15,6 +15,7 @@
 import {GitHub} from './github';
 import {JavaYoshi} from './strategies/java-yoshi';
 import {Repository} from './repository';
+import {Strategy} from './strategy';
 
 const RELEASE_PLEASE_CONFIG = 'release-please-config.json';
 const RELEASE_PLEASE_MANIFEST = '.release-please-manifest.json';
@@ -39,16 +40,47 @@ export class ReleasePlease {
     this.manifestFile = options.manifestFile || RELEASE_PLEASE_MANIFEST;
   }
 
-  async createPullRequest(): Promise<number> {
+  async createPullRequests(): Promise<number[]> {
     const strategy = new JavaYoshi({
       repository: this.repository,
       targetBranch: 'main',
       github: this.github,
     });
-    const component = undefined; // FIXME
-    const latestRelease = await this.github.lastRelease(component);
-    const commits = await this.github.commitsSinceSha(latestRelease?.sha);
-    const releasePullRequest = await strategy.buildReleasePullRequest(commits, latestRelease);
+    return await Promise.all([
+      this.createPullRequest(strategy, 'main', undefined),
+    ]);
+  }
+
+  async createPullRequest(
+    strategy: Strategy,
+    targetBranch: string,
+    component?: string
+  ): Promise<number> {
+    const lastMergedReleasePullRequest =
+      await this.github.findMergedPullRequest(
+        targetBranch,
+        mergedPullRequest => {
+          if (component) {
+            // TODO: make sure component matches the pull request
+          }
+          // make sure pull request looks like a release
+          return mergedPullRequest.labels.includes('type: release');
+        }
+      );
+    const latestRelease = lastMergedReleasePullRequest
+      ? await strategy.buildRelease(lastMergedReleasePullRequest)
+      : undefined;
+
+    const commits = await this.github.commitsSince(
+      targetBranch,
+      (commit, _pullRequest) => {
+        return commit.sha === lastMergedReleasePullRequest?.sha;
+      }
+    );
+    const releasePullRequest = await strategy.buildReleasePullRequest(
+      commits,
+      latestRelease
+    );
     console.log(releasePullRequest);
     return 123;
   }

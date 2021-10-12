@@ -14,7 +14,6 @@
 
 import {PullRequest} from './pull-request';
 import {Commit} from './commit';
-import {Release} from './release';
 
 import {OctokitResponse} from '@octokit/types';
 import {Octokit} from '@octokit/rest';
@@ -32,8 +31,12 @@ type OctokitType = InstanceType<typeof Octokit>;
 // around this,. See: https://github.com/octokit/rest.js/issues/1624
 // https://github.com/octokit/types.ts/issues/25.
 import {PromiseValue} from 'type-fest';
+import {logger} from './util/logger';
 type GitGetTreeResponse = PromiseValue<
   ReturnType<InstanceType<typeof Octokit>['git']['getTree']>
+>['data'];
+type PullsListResponseItems = PromiseValue<
+  ReturnType<InstanceType<typeof Octokit>['pulls']['list']>
 >['data'];
 
 // Extract some types from the `request` package.
@@ -61,6 +64,44 @@ export interface GitHubFileContents {
   sha: string;
   content: string;
   parsedContent: string;
+}
+
+type CommitFilter = (commit: Commit, pullRequest?: PullRequest) => boolean;
+type MergedPullRequestFilter = (filter: PullRequest) => boolean;
+
+interface GraphQLCommit {
+  sha: string;
+  message: string;
+  associatedPullRequests: {
+    nodes: {
+      number: number;
+      title: string;
+      body: string;
+      baseRefName: string;
+      headRefName: string;
+      labels: {
+        nodes: {
+          name: string;
+        }[];
+      };
+      mergeCommit?: {
+        oid: string;
+      };
+    }[];
+  };
+}
+
+interface CommitWithPullRequest {
+  commit: Commit;
+  pullRequest?: PullRequest;
+}
+
+interface PullRequestHistory {
+  pageInfo: {
+    hasNextPage: boolean;
+    endCursor: string | undefined;
+  };
+  data: CommitWithPullRequest[];
 }
 
 export class GitHub {
@@ -110,27 +151,324 @@ export class GitHub {
     }
   }
 
-  async getDefaultBranch(): Promise<string> {
-    return 'FIXME';
-  }
-
   async lastMergedPRByHeadBranch(
     _branchName: string
   ): Promise<PullRequest | undefined> {
     return undefined;
   }
 
-  async commitsSinceSha(_sha?: string): Promise<Commit[]> {
-    return [];
+  /**
+   * Returns the list of commits to the default branch after the provided filter
+   * query has been satified.
+   *
+   * @param {string} targetBranch target branch of commit
+   * @param {CommitFilter} filter - Callback function that returns whether a
+   *   commit/pull request matches certain criteria
+   * @param {number} maxResults - Limit the number of results searched.
+   *   Defaults to unlimited.
+   * @returns {Commit[]} - List of commits to current branch
+   * @throws {GitHubAPIError} on an API error
+   */
+  async commitsSince(
+    targetBranch: string,
+    filter: CommitFilter,
+    maxResults: number = Number.MAX_SAFE_INTEGER
+  ): Promise<Commit[]> {
+    const commits: Commit[] = [];
+    const generator = this.mergeCommitIterator(targetBranch, maxResults);
+    for await (const commitWithPullRequest of generator) {
+      if (
+        filter(commitWithPullRequest.commit, commitWithPullRequest.pullRequest)
+      ) {
+        break;
+      }
+      commits.push(commitWithPullRequest.commit);
+    }
+    return commits;
   }
 
-  async lastRelease(component?: string): Promise<Release | undefined> {
+  /**
+   * Iterate through commit history with a max number of results scanned.
+   *
+   * @param targetBranch {string} target branch of commit
+   * @param maxResults {number} maxResults - Limit the number of results searched.
+   *   Defaults to unlimited.
+   * @yields {CommitWithPullRequest}
+   * @throws {GitHubAPIError} on an API error
+   */
+  private async *mergeCommitIterator(
+    targetBranch: string,
+    maxResults: number = Number.MAX_SAFE_INTEGER
+  ) {
+    let cursor: string | undefined = undefined;
+    let results = 0;
+    while (results < maxResults) {
+      const response: PullRequestHistory | null =
+        await this.mergeCommitsGraphQL(targetBranch, cursor);
+      // no response usually means that the branch can't be found
+      if (!response) {
+        break;
+      }
+      for (let i = 0; i < response.data.length; i++) {
+        results += 1;
+        yield response.data[i];
+      }
+      if (!response.pageInfo.hasNextPage) {
+        break;
+      }
+      cursor = response.pageInfo.endCursor;
+    }
+  }
+
+  private async mergeCommitsGraphQL(
+    targetBranch: string,
+    cursor?: string
+  ): Promise<PullRequestHistory | null> {
+    const response = await this.graphqlRequest({
+      query: `query pullRequestsSince($owner: String!, $repo: String!, $num: Int!, $targetBranch: String!, $cursor: String) {
+        repository(owner: $owner, name: $repo) {
+          ref(qualifiedName: $targetBranch) {
+            target {
+              ... on Commit {
+                history(first: $num, after: $cursor) {
+                  nodes {
+                    associatedPullRequests(first: 10) {
+                      nodes {
+                        number
+                        title
+                        baseRefName
+                        headRefName
+                        labels(first: 10) {
+                          nodes {
+                            name
+                          }
+                        }
+                        body
+                        mergeCommit {
+                          oid
+                        }
+                      }
+                    }
+                    sha: oid
+                    message
+                  }
+                  pageInfo {
+                    hasNextPage
+                    endCursor
+                  }
+                }
+              }
+            }
+          }
+        }
+      }`,
+      cursor,
+      owner: this.owner,
+      repo: this.repo,
+      num: 25,
+      targetBranch,
+    });
+
+    // if the branch does exist, return null
+    if (!response.repository.ref) {
+      logger.warn(
+        `Could not find commits for branch ${targetBranch} - it likely does not exist.`
+      );
+      return null;
+    }
+    const history = response.repository.ref.target.history;
+    const commits = (history.nodes || []) as GraphQLCommit[];
     return {
-      tag: 'v1.2.3',
-      component: component || null,
-      notes: 'FIXME',
-      sha: 'abc123',
+      pageInfo: history.pageInfo,
+      data: commits.map(graphCommit => {
+        const commit = {
+          sha: graphCommit.sha,
+          message: graphCommit.message,
+          files: [] as string[],
+        };
+        const pullRequest = graphCommit.associatedPullRequests.nodes.find(
+          pr => {
+            return pr.mergeCommit && pr.mergeCommit.oid === graphCommit.sha;
+          }
+        );
+        if (pullRequest) {
+          return {
+            commit,
+            pullRequest: {
+              sha: commit.sha,
+              number: pullRequest.number,
+              baseBranchName: pullRequest.baseRefName,
+              headBranchName: pullRequest.headRefName,
+              title: pullRequest.title,
+              body: pullRequest.body,
+              labels: pullRequest.labels.nodes.map(node => node.name),
+              files: [], // FIXME
+            },
+          };
+        }
+        return {
+          commit,
+        };
+      }),
     };
+  }
+
+  private graphqlRequest = wrapAsync(
+    async (
+      opts: {
+        [key: string]: string | number | null | undefined;
+      },
+      maxRetries = 1
+    ) => {
+      while (maxRetries >= 0) {
+        try {
+          return await this.makeGraphqlRequest(opts);
+        } catch (err) {
+          if (err.status !== 502) {
+            throw err;
+          }
+        }
+        maxRetries -= 1;
+      }
+    }
+  );
+
+  private async makeGraphqlRequest(_opts: {
+    [key: string]: string | number | null | undefined;
+  }) {
+    let opts = Object.assign({}, _opts);
+    if (!this.probotMode) {
+      opts = Object.assign(opts, {
+        url: `${this.graphqlUrl}/graphql`,
+        headers: {
+          authorization: `token ${this.token}`,
+          'content-type': 'application/vnd.github.v3+json',
+        },
+      });
+    }
+    return this.graphql(opts);
+  }
+
+  /**
+   * Iterate through merged pull requests with a max number of results scanned.
+   *
+   * @param maxResults {number} maxResults - Limit the number of results searched.
+   *   Defaults to unlimited.
+   * @yields {MergedGitHubPR}
+   * @throws {GitHubAPIError} on an API error
+   */
+  async *mergedPullRequestIterator(
+    targetBranch: string,
+    maxResults: number = Number.MAX_SAFE_INTEGER
+  ) {
+    let page = 1;
+    const results = 0;
+    while (results < maxResults) {
+      const pullRequests = await this.findMergedPullRequests(
+        targetBranch,
+        page
+      );
+      // no response usually means we ran out of results
+      if (pullRequests.length === 0) {
+        break;
+      }
+      for (let i = 0; i < pullRequests.length; i++) {
+        yield pullRequests[i];
+      }
+      page += 1;
+    }
+  }
+
+  /**
+   * Return a list of merged pull requests. The list is not guaranteed to be sorted
+   * by merged_at, but is generally most recent first.
+   *
+   * @param {string} targetBranch - Base branch of the pull request. Defaults to
+   *   the configured default branch.
+   * @param {number} page - Page of results. Defaults to 1.
+   * @param {number} perPage - Number of results per page. Defaults to 100.
+   * @returns {MergedGitHubPR[]} - List of merged pull requests
+   * @throws {GitHubAPIError} on an API error
+   */
+  private findMergedPullRequests = wrapAsync(
+    async (
+      targetBranch?: string,
+      page = 1,
+      perPage = 100
+    ): Promise<PullRequest[]> => {
+      if (!targetBranch) {
+        targetBranch = this.defaultBranch;
+      }
+      // TODO: is sorting by updated better?
+      const pullsResponse = (await this.request(
+        `GET /repos/:owner/:repo/pulls?state=closed&per_page=${perPage}&page=${page}&base=${targetBranch}&sort=created&direction=desc`,
+        {
+          owner: this.owner,
+          repo: this.repo,
+        }
+      )) as {data: PullsListResponseItems};
+
+      // TODO: distinguish between no more pages and a full page of
+      // closed, non-merged pull requests. At page size of 100, this unlikely
+      // to matter
+
+      if (!pullsResponse.data) {
+        return [];
+      }
+
+      return (
+        pullsResponse.data
+          // only return merged pull requests
+          .filter(pull => {
+            return !!pull.merged_at;
+          })
+          .map(pull => {
+            const labels = pull.labels
+              ? pull.labels.map(l => {
+                  return l.name + '';
+                })
+              : [];
+            return {
+              sha: pull.merge_commit_sha!, // already filtered non-merged
+              number: pull.number,
+              baseBranchName: pull.base.ref,
+              headBranchName: pull.head.ref,
+              labels,
+              title: pull.title,
+              body: pull.body + '',
+              files: [], // FIXME
+            };
+          })
+      );
+    }
+  );
+
+  /**
+   * Helper to find the first merged pull request that matches the
+   * given criteria. The helper will paginate over all pull requests
+   * merged into the specified target branch.
+   *
+   * @param {string} targetBranch - Base branch of the pull request
+   * @param {MergedPullRequestFilter} filter - Callback function that
+   *   returns whether a pull request matches certain criteria
+   * @param {number} maxResults - Limit the number of results searched.
+   *   Defaults to unlimited.
+   * @returns {MergedGitHubPR | undefined} - Returns the first matching
+   *   pull request, or `undefined` if no matching pull request found.
+   * @throws {GitHubAPIError} on an API error
+   */
+  async findMergedPullRequest(
+    targetBranch: string,
+    filter: MergedPullRequestFilter,
+    maxResults: number = Number.MAX_SAFE_INTEGER
+  ): Promise<PullRequest | undefined> {
+    const generator = this.mergedPullRequestIterator(targetBranch, maxResults);
+    for await (const mergedPullRequest of generator) {
+      if (filter(mergedPullRequest)) {
+        return mergedPullRequest;
+      }
+    }
+    return undefined;
   }
 
   /**

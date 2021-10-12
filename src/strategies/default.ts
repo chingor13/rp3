@@ -72,18 +72,18 @@ export class DefaultStrategy implements Strategy {
     commits: Commit[],
     latestRelease?: Release
   ): Promise<ReleasePullRequest> {
-    // const latestRelease = await this.github.lastRelease(this.component);
-    // const commits = await this.github.commitsSinceSha(latestRelease?.sha);
     const latestReleaseVersion = latestRelease
       ? Version.parse(latestRelease.tag)
       : undefined;
     const conventionalCommits = parseConventionalCommits(commits);
 
     const newVersion = latestReleaseVersion
-      ? (await this.versioningStrategy.bump(
-          latestReleaseVersion,
-          conventionalCommits
-        )).toString()
+      ? (
+          await this.versioningStrategy.bump(
+            latestReleaseVersion,
+            conventionalCommits
+          )
+        ).toString()
       : '1.0.0';
     const newVersionTag = `v${newVersion}`;
     const pullRequestTitle = PullRequestTitle.ofComponentTargetBranchVersion(
