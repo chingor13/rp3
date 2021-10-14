@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Commit } from "../commit";
+import {Commit} from '../commit';
 
 export interface CommitSplitOptions {
   // Include empty git commits: each empty commit is included
