@@ -20,13 +20,14 @@ import {
   parseConfig,
   parseManifest,
   Manifest,
-  RepositoryPackage,
   ReleaserConfig,
+  RepositoryConfig,
 } from './manifest';
 import {PullRequest} from './pull-request';
 import {Commit} from './commit';
 import {TagName} from './util/tag-name';
 import {logger} from './util/logger';
+import {Version} from './version';
 
 const RELEASE_PLEASE_CONFIG = 'release-please-config.json';
 const RELEASE_PLEASE_MANIFEST = '.release-please-manifest.json';
@@ -34,20 +35,20 @@ const RELEASE_PLEASE_MANIFEST = '.release-please-manifest.json';
 export class ReleasePlease {
   repository: Repository;
   github: GitHub;
-  repositoryPackages: RepositoryPackage[];
+  repositoryConfig: RepositoryConfig;
   manifest: Manifest;
   targetBranch: string;
 
   constructor(
     github: GitHub,
     targetBranch: string,
-    repositoryPackages: RepositoryPackage[],
+    repositoryConfig: RepositoryConfig,
     manifest: Manifest
   ) {
     this.repository = github.repository;
     this.github = github;
     this.targetBranch = targetBranch;
-    this.repositoryPackages = repositoryPackages;
+    this.repositoryConfig = repositoryConfig;
     this.manifest = manifest;
   }
 
@@ -57,16 +58,14 @@ export class ReleasePlease {
     configFile: string = RELEASE_PLEASE_CONFIG,
     manifestFile: string = RELEASE_PLEASE_MANIFEST
   ): Promise<ReleasePlease> {
-    const [repositoryPackages, manifest] = await Promise.all([
+    const [repositoryConfig, manifest] = await Promise.all([
       parseConfig(github, configFile, targetBranch),
       parseManifest(github, manifestFile, targetBranch),
     ]);
-    return new ReleasePlease(
-      github,
-      targetBranch,
-      repositoryPackages,
-      manifest
-    );
+    logger.info('repositoryConfig', repositoryConfig);
+    logger.info('manifest', manifest);
+
+    return new ReleasePlease(github, targetBranch, repositoryConfig, manifest);
   }
 
   static async fromConfig(
@@ -74,30 +73,43 @@ export class ReleasePlease {
     targetBranch: string,
     config: ReleaserConfig
   ): Promise<ReleasePlease> {
-    const repositoryPackages: RepositoryPackage[] = [{path: '.', config}];
+    const repositoryConfig = {'.': config};
     const manifest: Manifest = {};
-    return new ReleasePlease(
-      github,
-      targetBranch,
-      repositoryPackages,
-      manifest
-    );
+    return new ReleasePlease(github, targetBranch, repositoryConfig, manifest);
   }
 
   async createPullRequests(): Promise<number[]> {
+    // collect versions by package name
+    logger.info('Collecting latest release versions by package');
+    const packageVersions: Record<string, Version> = {};
+    for (const path in this.repositoryConfig) {
+      const config = this.repositoryConfig[path];
+      if (!config.packageName) {
+        logger.warn(`did not find packageName for path: ${path}`);
+        continue;
+      }
+      packageVersions[config.packageName] = this.manifest[path];
+    }
+    logger.debug(packageVersions);
+
     // Collect all the SHAs of the latest release packages
+    logger.info('Collecting release commit SHAs');
     let releasesFound = 0;
     const expectedReleases = Object.keys(this.manifest).length;
     const packageShas: Record<string, string> = {};
-    const generator = this.github.releaseIterator(250);
+    const generator = this.github.releaseIterator(100);
     for await (const release of generator) {
       const tagName = TagName.parse(release.tagName);
       if (!tagName) {
         logger.warn(`unable to parse release name: ${release.name}`);
         continue;
       }
-      const expectedVersion = this.manifest[tagName.component];
-      if (expectedVersion?.toString() === tagName.version.toString()) {
+      const expectedVersion = packageVersions[tagName.component];
+      if (!expectedVersion) {
+        logger.warn(`unable to find package ${tagName.component} in manifest`);
+        continue;
+      }
+      if (expectedVersion.toString() === tagName.version.toString()) {
         packageShas[tagName.component] = release.sha;
         releasesFound += 1;
       }
@@ -115,12 +127,14 @@ export class ReleasePlease {
 
     // iterate through commits and collect commits until we have
     // seen all release commits
+    logger.info('Collecting commits since all latest releases');
     const commits: Commit[] = [];
     const commitGenerator = this.github.mergeCommitIterator(
       this.targetBranch,
-      250
+      500
     );
     const shas = new Set(Object.values(packageShas));
+    const expectedShas = shas.size;
     let commitsFound = 0;
     for await (const commit of commitGenerator) {
       if (shas.has(commit.commit.sha)) {
@@ -131,26 +145,35 @@ export class ReleasePlease {
         });
         commitsFound += 1;
       }
-      if (commitsFound >= expectedReleases) {
+      if (commitsFound >= expectedShas) {
         break;
       }
     }
 
+    if (commitsFound < expectedShas) {
+      logger.warn(
+        `Expected ${expectedShas} commits, only found ${commitsFound}`
+      );
+    }
+
     // TODO: split commits by package
+    logger.info('Splitting commits by path');
 
     const promises: Promise<number>[] = [];
-    for (const repositoryPackage of this.repositoryPackages) {
+    for (const path in this.repositoryConfig) {
+      logger.info(`Building candidate release pull request for path: ${path}`);
+      const config = this.repositoryConfig[path];
       const strategy = new JavaYoshi({
         targetBranch: this.targetBranch,
         github: this.github,
-        path: repositoryPackage.path,
+        path,
       });
       promises.push(
         this.createPullRequest(
           strategy,
           this.targetBranch,
           commits, // FIXME: use split commits
-          repositoryPackage.config.packageName
+          config.packageName
         )
       );
     }

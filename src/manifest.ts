@@ -52,12 +52,10 @@ export interface Config extends ReleaserConfigJson {
   'always-link-local'?: boolean;
   plugins?: PluginType[];
 }
+// path => version
 export type Manifest = Record<string, Version>;
-
-export interface RepositoryPackage {
-  path: string;
-  config: ReleaserConfig;
-}
+// path => config
+export type RepositoryConfig = Record<string, ReleaserConfig>;
 
 function extractReleaserConfig(config: ReleaserPackageConfig): ReleaserConfig {
   return {
@@ -77,21 +75,24 @@ export async function parseConfig(
   github: GitHub,
   configFile: string,
   branch: string
-): Promise<RepositoryPackage[]> {
+): Promise<RepositoryConfig> {
   const config = await github.getFileJson<Config>(configFile, branch);
   const defaultConfig = extractReleaserConfig(config);
-  const packages: RepositoryPackage[] = [];
+  const repositoryConfig: RepositoryConfig = {};
   for (const path in config.packages) {
     const packageConfig: ReleaserConfig = {
       ...defaultConfig,
       ...extractReleaserConfig(config.packages[path]),
     };
-    packages.push({
-      path,
-      config: packageConfig,
-    });
+    if (!packageConfig.packageName) {
+      const packageNameFromPath = path.split(/[\\/]/).pop();
+      if (packageNameFromPath !== '.') {
+        packageConfig.packageName = packageNameFromPath;
+      }
+    }
+    repositoryConfig[path] = packageConfig;
   }
-  return packages;
+  return repositoryConfig;
 }
 
 export async function parseManifest(
@@ -104,8 +105,8 @@ export async function parseManifest(
     branch
   );
   const manifest: Manifest = {};
-  for (const packageName in manifestJson) {
-    manifest[packageName] = Version.parse(manifestJson[packageName]);
+  for (const path in manifestJson) {
+    manifest[path] = Version.parse(manifestJson[path]);
   }
   return manifest;
 }
