@@ -110,6 +110,12 @@ interface PullRequestHistory {
   data: CommitWithPullRequest[];
 }
 
+interface Release {
+  name?: string;
+  tagName: string;
+  sha: string;
+}
+
 export class GitHub {
   repository: Repository;
   octokit: OctokitType;
@@ -216,7 +222,7 @@ export class GitHub {
    * @yields {CommitWithPullRequest}
    * @throws {GitHubAPIError} on an API error
    */
-  private async *mergeCommitIterator(
+  async *mergeCommitIterator(
     targetBranch: string,
     maxResults: number = Number.MAX_SAFE_INTEGER
   ) {
@@ -474,6 +480,57 @@ export class GitHub {
     }
     return undefined;
   }
+
+  /**
+   * Iterate through merged pull requests with a max number of results scanned.
+   *
+   * @param {number} maxResults maxResults - Limit the number of results searched.
+   *   Defaults to unlimited.
+   * @yields {MergedGitHubPR}
+   * @throws {GitHubAPIError} on an API error
+   */
+  async *releaseIterator(maxResults: number = Number.MAX_SAFE_INTEGER) {
+    let page = 1;
+    const results = 0;
+    while (results < maxResults) {
+      const tags = await this.listReleases(page);
+      // no response usually means we ran out of results
+      if (tags.length === 0) {
+        break;
+      }
+      for (let i = 0; i < tags.length; i++) {
+        yield tags[i];
+      }
+      page += 1;
+    }
+  }
+
+  /**
+   * Return a list of tags. The list is not guaranteed to be sorted.
+   *
+   * @param {number} page - Page of results. Defaults to 1.
+   * @param {number} perPage - Number of results per page. Defaults to 100.
+   * @returns {Tag[]} - List of tags
+   * @throws {GitHubAPIError} on an API error
+   */
+  listReleases = wrapAsync(
+    async (page = 1, perPage = 100): Promise<Release[]> => {
+      const releases = await this.octokit.repos.listReleases({
+        owner: this.repository.owner,
+        repo: this.repository.repo,
+        page,
+        per_page: perPage,
+      });
+
+      return releases.data.map(release => {
+        return {
+          name: release.name || undefined,
+          tagName: release.tag_name,
+          sha: release.target_commitish,
+        };
+      });
+    }
+  );
 
   /**
    * Fetch the contents of a file from the configured branch

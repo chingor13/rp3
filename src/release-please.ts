@@ -23,6 +23,10 @@ import {
   RepositoryPackage,
   ReleaserConfig,
 } from './manifest';
+import {PullRequest} from './pull-request';
+import {Commit} from './commit';
+import {TagName} from './util/tag-name';
+import {logger} from './util/logger';
 
 const RELEASE_PLEASE_CONFIG = 'release-please-config.json';
 const RELEASE_PLEASE_MANIFEST = '.release-please-manifest.json';
@@ -81,6 +85,59 @@ export class ReleasePlease {
   }
 
   async createPullRequests(): Promise<number[]> {
+    // Collect all the SHAs of the latest release packages
+    let releasesFound = 0;
+    const expectedReleases = Object.keys(this.manifest).length;
+    const packageShas: Record<string, string> = {};
+    const generator = this.github.releaseIterator(250);
+    for await (const release of generator) {
+      const tagName = TagName.parse(release.tagName);
+      if (!tagName) {
+        logger.warn(`unable to parse release name: ${release.name}`);
+        continue;
+      }
+      const expectedVersion = this.manifest[tagName.component];
+      if (expectedVersion?.toString() === tagName.version.toString()) {
+        packageShas[tagName.component] = release.sha;
+        releasesFound += 1;
+      }
+
+      if (releasesFound >= expectedReleases) {
+        break;
+      }
+    }
+
+    if (releasesFound < expectedReleases) {
+      logger.warn(
+        `Expected ${expectedReleases} releases, only found ${releasesFound}`
+      );
+    }
+
+    // iterate through commits and collect commits until we have
+    // seen all release commits
+    const commits: Commit[] = [];
+    const commitGenerator = this.github.mergeCommitIterator(
+      this.targetBranch,
+      250
+    );
+    const shas = new Set(Object.values(packageShas));
+    let commitsFound = 0;
+    for await (const commit of commitGenerator) {
+      if (shas.has(commit.commit.sha)) {
+        commits.push({
+          sha: commit.commit.sha,
+          message: commit.commit.message,
+          files: commit.commit.files,
+        });
+        commitsFound += 1;
+      }
+      if (commitsFound >= expectedReleases) {
+        break;
+      }
+    }
+
+    // TODO: split commits by package
+
     const promises: Promise<number>[] = [];
     for (const repositoryPackage of this.repositoryPackages) {
       const strategy = new JavaYoshi({
@@ -92,6 +149,7 @@ export class ReleasePlease {
         this.createPullRequest(
           strategy,
           this.targetBranch,
+          commits, // FIXME: use split commits
           repositoryPackage.config.packageName
         )
       );
@@ -102,29 +160,14 @@ export class ReleasePlease {
   async createPullRequest(
     strategy: Strategy,
     targetBranch: string,
-    component?: string
+    commits: Commit[],
+    component?: string,
+    lastMergedReleasePullRequest?: PullRequest
   ): Promise<number> {
-    const lastMergedReleasePullRequest =
-      await this.github.findMergedPullRequest(
-        targetBranch,
-        mergedPullRequest => {
-          if (component) {
-            // TODO: make sure component matches the pull request
-          }
-          // make sure pull request looks like a release
-          return mergedPullRequest.labels.includes('type: release');
-        }
-      );
     const latestRelease = lastMergedReleasePullRequest
       ? await strategy.buildRelease(lastMergedReleasePullRequest)
       : undefined;
 
-    const commits = await this.github.commitsSince(
-      targetBranch,
-      (commit, _pullRequest) => {
-        return commit.sha === lastMergedReleasePullRequest?.sha;
-      }
-    );
     const releasePullRequest = await strategy.buildReleasePullRequest(
       commits,
       latestRelease
