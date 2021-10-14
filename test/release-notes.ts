@@ -65,7 +65,7 @@ describe('ReleaseNotes', () => {
       const releaseNotes = new ReleaseNotes();
       const notes = await releaseNotes.buildNotes(commits, notesOptions);
       expect(notes).to.is.string;
-      snapshot(notes);
+      snapshot(notes.replace(/\d{4}-\d{2}-\d{2}/, '2000-01-02'));
     });
   });
 });
