@@ -24,6 +24,8 @@ import {JavaYoshi} from './strategies/java-yoshi';
 import {CommitSplit} from './util/commit-split';
 import {TagName} from './util/tag-name';
 import {Repository} from './repository';
+import {BranchName} from './util/branch-name';
+import {PullRequestTitle} from './util/pull-request-title';
 
 export interface ReleaserConfig {
   releaseType?: ReleaseType;
@@ -113,6 +115,12 @@ export class Manifest {
   ): Promise<Manifest> {
     const repositoryConfig = {'.': config};
     const releasedVersions: ReleasedVersions = {};
+    const latestVersion = await latestReleaseVersion(github, targetBranch);
+    if (latestVersion) {
+      releasedVersions['.'] = latestVersion;
+    }
+    logger.info(repositoryConfig);
+    logger.info(releasedVersions);
     return new Manifest(
       github,
       targetBranch,
@@ -127,7 +135,8 @@ export class Manifest {
     const packageVersions: Record<string, Version> = {};
     for (const path in this.repositoryConfig) {
       const config = this.repositoryConfig[path];
-      if (!config.packageName) {
+      console.log(config.packageName);
+      if (config.packageName === undefined) {
         logger.warn(`did not find packageName for path: ${path}`);
         continue;
       }
@@ -211,7 +220,13 @@ export class Manifest {
     for (const path in this.repositoryConfig) {
       logger.info(`Building candidate release pull request for path: ${path}`);
       const pathCommits = path === '.' ? commits : commitsPerPath[path];
+      if (!pathCommits || pathCommits.length === 0) {
+        logger.info(`No commits for path: ${path}, skipping`);
+        continue;
+      }
       const config = this.repositoryConfig[path];
+
+      // FIXME, use the config
       const strategy = new JavaYoshi({
         targetBranch: this.targetBranch,
         github: this.github,
@@ -305,4 +320,62 @@ export async function parseReleasedVersions(
     releasedVersions[path] = Version.parse(manifestJson[path]);
   }
   return releasedVersions;
+}
+
+/**
+ * Find the most recent matching release tag on the branch we're
+ * configured for.
+ *
+ * @param {string} prefix - Limit the release to a specific component.
+ * @param {boolean} preRelease - Whether or not to return pre-release
+ *   versions. Defaults to false.
+ */
+async function latestReleaseVersion(
+  github: GitHub,
+  targetBranch: string,
+  prefix?: string
+): Promise<Version | undefined> {
+  const branchPrefix = prefix?.endsWith('-')
+    ? prefix.replace(/-$/, '')
+    : prefix;
+
+  logger.info('Looking for latest release');
+
+  // only look at the last 250 or so commits to find the latest tag - we
+  // don't want to scan the entire repository history if this repo has never
+  // been released
+  const generator = github.mergeCommitIterator(targetBranch, 250);
+  for await (const commitWithPullRequest of generator) {
+    logger.info(commitWithPullRequest);
+    const mergedPullRequest = commitWithPullRequest.pullRequest;
+    if (!mergedPullRequest) {
+      continue;
+    }
+
+    const branchName = BranchName.parse(mergedPullRequest.headBranchName);
+    if (!branchName) {
+      continue;
+    }
+
+    // If branchPrefix is specified, ensure it is found in the branch name.
+    // If branchPrefix is not specified, component should also be undefined.
+    if (branchName.getComponent() !== branchPrefix) {
+      continue;
+    }
+
+    const pullRequestTitle = PullRequestTitle.parse(mergedPullRequest.title);
+    console.log(pullRequestTitle);
+    if (!pullRequestTitle) {
+      continue;
+    }
+
+    const version = Version.parse(pullRequestTitle.getVersion());
+    if (version.preRelease?.includes('SNAPSHOT')) {
+      // FIXME, don't hardcode this
+      continue;
+    }
+
+    return version;
+  }
+  return;
 }

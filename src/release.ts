@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import {TagName} from './util/tag-name';
+
 export interface Release {
-  tag: string;
-  component: string | null;
+  tag: TagName;
   sha: string;
   notes: string;
 }

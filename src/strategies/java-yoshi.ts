@@ -101,4 +101,8 @@ export class JavaYoshi extends Strategy {
 
     return updates;
   }
+
+  protected initialReleaseVersion(): Version {
+    return Version.parse('0.1.0');
+  }
 }

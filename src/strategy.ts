@@ -25,6 +25,7 @@ import {Update} from './update';
 import {Repository} from './repository';
 import {PullRequest} from './pull-request';
 import {BranchName} from './util/branch-name';
+import {TagName} from './util/tag-name';
 
 const DEFAULT_LABELS = ['autorelease: pending', 'type: release'];
 export interface StrategyOptions {
@@ -69,24 +70,19 @@ export class Strategy {
     commits: Commit[],
     latestRelease?: Release
   ): Promise<ReleasePullRequest> {
-    const latestReleaseVersion = latestRelease
-      ? Version.parse(latestRelease.tag)
-      : undefined;
     const conventionalCommits = parseConventionalCommits(commits);
 
-    const newVersion = latestReleaseVersion
-      ? (
-          await this.versioningStrategy.bump(
-            latestReleaseVersion,
-            conventionalCommits
-          )
-        ).toString()
-      : '1.0.0';
-    const newVersionTag = `v${newVersion}`;
+    const newVersion = latestRelease
+      ? await this.versioningStrategy.bump(
+          latestRelease.tag.version,
+          conventionalCommits
+        )
+      : Version.parse('1.0.0');
+    const newVersionTag = new TagName(newVersion, this.component || '');
     const pullRequestTitle = PullRequestTitle.ofComponentTargetBranchVersion(
       this.component || '',
       this.targetBranch,
-      newVersion
+      newVersion.toString()
     );
     const releaseNotes = new ReleaseNotes();
     const releaseNotesBody = await releaseNotes.buildNotes(
@@ -94,9 +90,9 @@ export class Strategy {
       {
         owner: this.repository.owner,
         repository: this.repository.repo,
-        version: newVersion,
-        previousTag: latestRelease?.tag,
-        currentTag: newVersionTag,
+        version: newVersion.toString(),
+        previousTag: latestRelease?.tag?.toString(),
+        currentTag: newVersionTag.toString(),
       }
     );
     const updates = await this.buildUpdates();
@@ -123,10 +119,16 @@ export class Strategy {
     }
 
     return {
-      tag: `v${pullRequestTitle.getVersion()}`,
-      component: branchName.getComponent() || '',
+      tag: new TagName(
+        Version.parse(pullRequestTitle.getVersion()),
+        branchName.getComponent() || ''
+      ),
       notes: 'FIXME',
       sha: mergedPullRequest.sha,
     };
+  }
+
+  protected initialReleaseVersion(): Version {
+    return Version.parse('1.0.0');
   }
 }
