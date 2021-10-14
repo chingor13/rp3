@@ -16,7 +16,6 @@ import {ChangelogSection} from './release-notes';
 import {ReleaseType} from './factory';
 import {GitHub} from './github';
 import {Version} from './version';
-import {Strategy} from './strategy';
 import {Commit} from './commit';
 import {PullRequest} from './pull-request';
 import {logger} from './util/logger';
@@ -26,6 +25,7 @@ import {TagName} from './util/tag-name';
 import {Repository} from './repository';
 import {BranchName} from './util/branch-name';
 import {PullRequestTitle} from './util/pull-request-title';
+import {ReleasePullRequest} from './release-pull-request';
 
 export interface ReleaserConfig {
   releaseType?: ReleaseType;
@@ -119,8 +119,6 @@ export class Manifest {
     if (latestVersion) {
       releasedVersions['.'] = latestVersion;
     }
-    logger.info(repositoryConfig);
-    logger.info(releasedVersions);
     return new Manifest(
       github,
       targetBranch,
@@ -130,27 +128,34 @@ export class Manifest {
   }
 
   async createPullRequests(): Promise<number[]> {
+    const promises: Promise<number>[] = [];
+    for (const pullRequest of await this.buildPullRequests()) {
+      logger.info('TODO: create pull request for: ', pullRequest);
+    }
+    return await Promise.all(promises);
+  }
+
+  async buildPullRequests(): Promise<ReleasePullRequest[]> {
     // collect versions by package name
     logger.info('Collecting latest release versions by package');
     const packageVersions: Record<string, Version> = {};
     for (const path in this.repositoryConfig) {
       const config = this.repositoryConfig[path];
-      console.log(config.packageName);
       if (config.packageName === undefined) {
         logger.warn(`did not find packageName for path: ${path}`);
         continue;
       }
       packageVersions[config.packageName] = this.releasedVersions[path];
     }
-    logger.debug(packageVersions);
 
     // Collect all the SHAs of the latest release packages
     logger.info('Collecting release commit SHAs');
     let releasesFound = 0;
     const expectedReleases = Object.keys(this.releasedVersions).length;
+
+    // package => sha
     const packageShas: Record<string, string> = {};
-    const generator = this.github.releaseIterator(100);
-    for await (const release of generator) {
+    for await (const release of this.github.releaseIterator(100)) {
       const tagName = TagName.parse(release.tagName);
       if (!tagName) {
         logger.warn(`unable to parse release name: ${release.name}`);
@@ -187,14 +192,24 @@ export class Manifest {
     );
     const shas = new Set(Object.values(packageShas));
     const expectedShas = shas.size;
+
+    // sha => release pull request
+    const releasePullRequests: Record<string, PullRequest> = {};
     let commitsFound = 0;
     for await (const commit of commitGenerator) {
+      commits.push({
+        sha: commit.commit.sha,
+        message: commit.commit.message,
+        files: commit.commit.files,
+      });
       if (shas.has(commit.commit.sha)) {
-        commits.push({
-          sha: commit.commit.sha,
-          message: commit.commit.message,
-          files: commit.commit.files,
-        });
+        if (commit.pullRequest) {
+          releasePullRequests[commit.commit.sha] = commit.pullRequest;
+        } else {
+          logger.warn(
+            `Release SHA ${commit.commit.sha} did not have an associated pull request`
+          );
+        }
         commitsFound += 1;
       }
       if (commitsFound >= expectedShas) {
@@ -216,7 +231,7 @@ export class Manifest {
     });
     const commitsPerPath = cs.split(commits);
 
-    const promises: Promise<number>[] = [];
+    const newReleasePullRequests: ReleasePullRequest[] = [];
     for (const path in this.repositoryConfig) {
       logger.info(`Building candidate release pull request for path: ${path}`);
       const pathCommits = path === '.' ? commits : commitsPerPath[path];
@@ -225,42 +240,28 @@ export class Manifest {
         continue;
       }
       const config = this.repositoryConfig[path];
+      const packageName = config.packageName;
+      const latestReleasePullRequest =
+        releasePullRequests[packageShas[packageName || '']];
+      if (!latestReleasePullRequest) {
+        logger.warn('No latest release pull request found.');
+      }
 
-      // FIXME, use the config
+      // FIXME, use the config to pick the right strategy class
       const strategy = new JavaYoshi({
         targetBranch: this.targetBranch,
         github: this.github,
         path,
       });
-      promises.push(
-        this.createPullRequest(
-          strategy,
-          this.targetBranch,
-          pathCommits,
-          config.packageName
-        )
+
+      const latestRelease = latestReleasePullRequest
+        ? await strategy.buildRelease(latestReleasePullRequest)
+        : undefined;
+      newReleasePullRequests.push(
+        await strategy.buildReleasePullRequest(commits, latestRelease)
       );
     }
-    return await Promise.all(promises);
-  }
-
-  async createPullRequest(
-    strategy: Strategy,
-    targetBranch: string,
-    commits: Commit[],
-    component?: string,
-    lastMergedReleasePullRequest?: PullRequest
-  ): Promise<number> {
-    const latestRelease = lastMergedReleasePullRequest
-      ? await strategy.buildRelease(lastMergedReleasePullRequest)
-      : undefined;
-
-    const releasePullRequest = await strategy.buildReleasePullRequest(
-      commits,
-      latestRelease
-    );
-    console.log(releasePullRequest);
-    return 123;
+    return newReleasePullRequests;
   }
 
   async createRelease(): Promise<string> {
@@ -346,7 +347,6 @@ async function latestReleaseVersion(
   // been released
   const generator = github.mergeCommitIterator(targetBranch, 250);
   for await (const commitWithPullRequest of generator) {
-    logger.info(commitWithPullRequest);
     const mergedPullRequest = commitWithPullRequest.pullRequest;
     if (!mergedPullRequest) {
       continue;
@@ -364,7 +364,6 @@ async function latestReleaseVersion(
     }
 
     const pullRequestTitle = PullRequestTitle.parse(mergedPullRequest.title);
-    console.log(pullRequestTitle);
     if (!pullRequestTitle) {
       continue;
     }
