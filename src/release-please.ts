@@ -28,6 +28,7 @@ import {Commit} from './commit';
 import {TagName} from './util/tag-name';
 import {logger} from './util/logger';
 import {Version} from './version';
+import { CommitSplit } from './util/commit-split';
 
 const RELEASE_PLEASE_CONFIG = 'release-please-config.json';
 const RELEASE_PLEASE_MANIFEST = '.release-please-manifest.json';
@@ -62,9 +63,6 @@ export class ReleasePlease {
       parseConfig(github, configFile, targetBranch),
       parseManifest(github, manifestFile, targetBranch),
     ]);
-    logger.info('repositoryConfig', repositoryConfig);
-    logger.info('manifest', manifest);
-
     return new ReleasePlease(github, targetBranch, repositoryConfig, manifest);
   }
 
@@ -156,12 +154,18 @@ export class ReleasePlease {
       );
     }
 
-    // TODO: split commits by package
+    // split commits by path
     logger.info('Splitting commits by path');
+    const cs = new CommitSplit({
+      includeEmpty: true,
+      packagePaths: Object.keys(this.repositoryConfig),
+    });
+    const commitsPerPath = cs.split(commits);
 
     const promises: Promise<number>[] = [];
     for (const path in this.repositoryConfig) {
       logger.info(`Building candidate release pull request for path: ${path}`);
+      const pathCommits = path === '.' ? commits : commitsPerPath[path];
       const config = this.repositoryConfig[path];
       const strategy = new JavaYoshi({
         targetBranch: this.targetBranch,
@@ -172,7 +176,7 @@ export class ReleasePlease {
         this.createPullRequest(
           strategy,
           this.targetBranch,
-          commits, // FIXME: use split commits
+          pathCommits,
           config.packageName
         )
       );
