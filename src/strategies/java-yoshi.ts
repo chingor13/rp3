@@ -17,6 +17,7 @@ import {VersionsManifest} from '../updaters/java/versions-manifest';
 import {Version} from '../version';
 import {JavaUpdate} from '../updaters/java/java-update';
 import {Strategy, StrategyOptions} from '../strategy';
+import {Changelog} from '../updaters/changelog';
 
 interface JavaStrategyOptions extends StrategyOptions {
   extraFiles?: string[];
@@ -37,9 +38,10 @@ export class JavaYoshi extends Strategy {
     const version = Version.parse('1.2.3');
     const versionsMap = new Map<string, Version>();
     versionsMap.set('foo', Version.parse('1.2.3'));
+    const changelogEntry = 'FIXME';
 
     updates.push({
-      path: 'versions.txt',
+      path: this.addPath('versions.txt'),
       createIfMissing: false,
       updater: new VersionsManifest({
         version,
@@ -47,10 +49,17 @@ export class JavaYoshi extends Strategy {
       }),
     });
 
-    const pomFilesSearch = this.github.findFilesByFilename('pom.xml');
-    const buildFilesSearch = this.github.findFilesByFilename('build.gradle');
+    const pomFilesSearch = this.github.findFilesByFilename(
+      'pom.xml',
+      this.path
+    );
+    const buildFilesSearch = this.github.findFilesByFilename(
+      'build.gradle',
+      this.path
+    );
     const dependenciesSearch = this.github.findFilesByFilename(
-      'dependencies.properties'
+      'dependencies.properties',
+      this.path
     );
 
     const pomFiles = await pomFilesSearch;
@@ -98,6 +107,15 @@ export class JavaYoshi extends Strategy {
           versionsMap,
         }),
       });
+    });
+
+    updates.push({
+      path: this.addPath(this.changelogPath),
+      createIfMissing: true,
+      updater: new Changelog({
+        version,
+        changelogEntry,
+      }),
     });
 
     return updates;
