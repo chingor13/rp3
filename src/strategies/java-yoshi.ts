@@ -32,6 +32,7 @@ export class JavaYoshi extends Strategy {
 
   async buildUpdates(): Promise<Update[]> {
     const updates: Update[] = [];
+
     // FIXME
     const version = Version.parse('1.2.3');
     const versionsMap = new Map<string, Version>();

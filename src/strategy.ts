@@ -28,6 +28,8 @@ import {BranchName} from './util/branch-name';
 import {TagName} from './util/tag-name';
 
 const DEFAULT_LABELS = ['autorelease: pending', 'type: release'];
+const DEFAULT_CHANGELOG_PATH = 'CHANGELOG.md';
+
 export interface StrategyOptions {
   path?: string;
   labels?: string[];
@@ -37,6 +39,7 @@ export interface StrategyOptions {
   component?: string;
   versioningStrategy?: VersioningStrategy;
   targetBranch: string;
+  changelogPath?: string;
 }
 export class Strategy {
   bumpMinorPreMajor: boolean;
@@ -48,6 +51,7 @@ export class Strategy {
   versioningStrategy: VersioningStrategy;
   targetBranch: string;
   repository: Repository;
+  changelogPath: string;
 
   constructor(options: StrategyOptions) {
     this.bumpMinorPreMajor = options.bumpMinorPreMajor || false;
@@ -60,6 +64,7 @@ export class Strategy {
       options.versioningStrategy || new DefaultVersioningStrategy({});
     this.targetBranch = options.targetBranch;
     this.repository = options.github.repository;
+    this.changelogPath = options.changelogPath || DEFAULT_CHANGELOG_PATH;
   }
 
   async buildUpdates(): Promise<Update[]> {
@@ -130,5 +135,15 @@ export class Strategy {
 
   protected initialReleaseVersion(): Version {
     return Version.parse('1.0.0');
+  }
+
+  addPath(file: string) {
+    file = file.replace(/^[/\\]/, '');
+    if (this.path === undefined) {
+      return file;
+    } else {
+      const path = this.path.replace(/[/\\]$/, '');
+      return `${path}/${file}`;
+    }
   }
 }

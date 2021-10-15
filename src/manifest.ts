@@ -69,6 +69,7 @@ export type RepositoryConfig = Record<string, ReleaserConfig>;
 
 const RELEASE_PLEASE_CONFIG = 'release-please-config.json';
 const RELEASE_PLEASE_MANIFEST = '.release-please-manifest.json';
+const ROOT_PROJECT_PATH = '.';
 
 export class Manifest {
   repository: Repository;
@@ -113,11 +114,11 @@ export class Manifest {
     targetBranch: string,
     config: ReleaserConfig
   ): Promise<Manifest> {
-    const repositoryConfig = {'.': config};
+    const repositoryConfig = {ROOT_PROJECT_PATH: config};
     const releasedVersions: ReleasedVersions = {};
     const latestVersion = await latestReleaseVersion(github, targetBranch);
     if (latestVersion) {
-      releasedVersions['.'] = latestVersion;
+      releasedVersions[ROOT_PROJECT_PATH] = latestVersion;
     }
     return new Manifest(
       github,
@@ -234,7 +235,8 @@ export class Manifest {
     const newReleasePullRequests: ReleasePullRequest[] = [];
     for (const path in this.repositoryConfig) {
       logger.info(`Building candidate release pull request for path: ${path}`);
-      const pathCommits = path === '.' ? commits : commitsPerPath[path];
+      const pathCommits =
+        path === ROOT_PROJECT_PATH ? commits : commitsPerPath[path];
       if (!pathCommits || pathCommits.length === 0) {
         logger.info(`No commits for path: ${path}, skipping`);
         continue;
@@ -298,7 +300,7 @@ export async function parseConfig(
     };
     if (!packageConfig.packageName) {
       const packageNameFromPath = path.split(/[\\/]/).pop();
-      if (packageNameFromPath !== '.') {
+      if (packageNameFromPath !== ROOT_PROJECT_PATH) {
         packageConfig.packageName = packageNameFromPath;
       }
     }
