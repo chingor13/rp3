@@ -14,17 +14,12 @@
 
 // Generic
 import {Changelog} from '../updaters/changelog';
-import * as yaml from 'js-yaml';
-
-// pubspec
-import {PubspecYaml} from '../updaters/pubspec-yaml';
+// mix.exs support
+import {ElixirMixExs} from '../updaters/elixir-mix-exs';
 import { Strategy, BuildUpdatesOptions } from '../strategy';
-import { GitHubFileContents } from '../github';
 import { Update } from '../update';
 
-export class Dart extends Strategy {
-  private pubspecYmlContents?: GitHubFileContents;
-
+export class Elixir extends Strategy {
   async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
     const updates: Update[] = [];
     const version = options.newVersion;
@@ -39,34 +34,13 @@ export class Dart extends Strategy {
     });
 
     updates.push({
-      path: this.addPath('pubspec.yaml'),
+      path: this.addPath('mix.exs'),
       createIfMissing: false,
-      cachedFileContents: this.pubspecYmlContents,
-      updater: new PubspecYaml({
+      updater: new ElixirMixExs({
         version,
       })
     });
 
     return updates;
-  }
-
-  async getDefaultComponent(): Promise<string | undefined> {
-    const pubspecYmlContents = await this.getPubspecYmlContents();
-    const pubspec = yaml.load(pubspecYmlContents.parsedContent, {json: true});
-    if (typeof pubspec === 'object') {
-     return (pubspec as {name: string}).name;
-    } else {
-      return undefined;
-    }
-  }
-
-  private async getPubspecYmlContents(): Promise<GitHubFileContents> {
-    if (!this.pubspecYmlContents) {
-      this.pubspecYmlContents = await this.github.getFileContentsOnBranch(
-        this.addPath('pubspec.yaml'),
-        this.targetBranch,
-      );
-    }
-    return this.pubspecYmlContents;
   }
 }

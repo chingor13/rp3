@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import {GitHubFileContents} from '../github';
+
 // Generic
 import {Changelog} from '../updaters/changelog';
 import * as yaml from 'js-yaml';
-
-// pubspec
-import {PubspecYaml} from '../updaters/pubspec-yaml';
+// helm
+import {ChartYaml} from '../updaters/helm/chart-yaml';
 import { Strategy, BuildUpdatesOptions } from '../strategy';
-import { GitHubFileContents } from '../github';
 import { Update } from '../update';
 
-export class Dart extends Strategy {
-  private pubspecYmlContents?: GitHubFileContents;
+export class Helm extends Strategy {
+  private chartYmlContents?: GitHubFileContents;
 
   async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
     const updates: Update[] = [];
@@ -39,34 +39,32 @@ export class Dart extends Strategy {
     });
 
     updates.push({
-      path: this.addPath('pubspec.yaml'),
+      path: this.addPath('Chart.yaml'),
       createIfMissing: false,
-      cachedFileContents: this.pubspecYmlContents,
-      updater: new PubspecYaml({
+      cachedFileContents: await this.getChartYmlContents(),
+      updater: new ChartYaml({
         version,
       })
     });
-
     return updates;
   }
 
   async getDefaultComponent(): Promise<string | undefined> {
-    const pubspecYmlContents = await this.getPubspecYmlContents();
-    const pubspec = yaml.load(pubspecYmlContents.parsedContent, {json: true});
-    if (typeof pubspec === 'object') {
-     return (pubspec as {name: string}).name;
+    const chartYmlContents = await this.getChartYmlContents();
+    const chart = yaml.load(chartYmlContents.parsedContent, {json: true});
+    if (typeof chart === 'object') {
+     return (chart as {name: string}).name;
     } else {
       return undefined;
     }
   }
 
-  private async getPubspecYmlContents(): Promise<GitHubFileContents> {
-    if (!this.pubspecYmlContents) {
-      this.pubspecYmlContents = await this.github.getFileContentsOnBranch(
-        this.addPath('pubspec.yaml'),
-        this.targetBranch,
+  private async getChartYmlContents(): Promise<GitHubFileContents> {
+    if (!this.chartYmlContents) {
+      this.chartYmlContents = await this.github.getFileContents(
+        this.addPath('Chart.yaml')
       );
     }
-    return this.pubspecYmlContents;
+    return this.chartYmlContents;
   }
 }
