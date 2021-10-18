@@ -78,6 +78,10 @@ export class Strategy {
     return [];
   }
 
+  async getDefaultComponent(): Promise<string | undefined> {
+    return '';
+  }
+
   async buildReleasePullRequest(
     commits: Commit[],
     latestRelease?: Release
@@ -103,15 +107,16 @@ export class Strategy {
       );
       versionsMap.set(versionKey, newVersion);
     }
+    const component = this.component || await this.getDefaultComponent();
 
-    const newVersionTag = new TagName(newVersion, this.component);
+    const newVersionTag = new TagName(newVersion, component);
     const pullRequestTitle = PullRequestTitle.ofComponentTargetBranchVersion(
-      this.component || '',
+      component || '',
       this.targetBranch,
       newVersion.toString()
     );
-    const branchName = this.component
-      ? BranchName.ofComponentTargetBranch(this.component, this.targetBranch)
+    const branchName = component
+      ? BranchName.ofComponentTargetBranch(component, this.targetBranch)
       : BranchName.ofTargetBranch(this.targetBranch);
     const releaseNotes = new ReleaseNotes();
     const releaseNotesBody = await releaseNotes.buildNotes(

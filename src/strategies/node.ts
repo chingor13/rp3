@@ -18,8 +18,11 @@ import {PackageLockJson} from '../updaters/package-lock-json';
 import {SamplesPackageJson} from '../updaters/samples-package-json';
 import {Changelog} from '../updaters/changelog';
 import {PackageJson} from '../updaters/package-json';
+import { GitHubFileContents } from '../github';
 
 export class Node extends Strategy {
+  private pkgJsonContents?: GitHubFileContents;
+
   async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
     const updates: Update[] = [];
     const version = options.newVersion;
@@ -57,11 +60,28 @@ export class Node extends Strategy {
     updates.push({
       path: this.addPath('package.json'),
       createIfMissing: false,
+      cachedFileContents: this.pkgJsonContents,
       updater: new PackageJson({
         version,
       }),
     });
 
     return updates;
+  }
+
+  async getDefaultComponent(): Promise<string | undefined> {
+    const pkgJsonContents = await this.getPkgJsonContents();
+    const pkg = JSON.parse(pkgJsonContents.parsedContent);
+    return pkg.name;
+  }
+
+  private async getPkgJsonContents(): Promise<GitHubFileContents> {
+    if (!this.pkgJsonContents) {
+      this.pkgJsonContents = await this.github.getFileContentsOnBranch(
+        this.addPath('package.json'),
+        this.targetBranch,
+      );
+    }
+    return this.pkgJsonContents;
   }
 }
