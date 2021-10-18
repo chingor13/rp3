@@ -14,8 +14,8 @@
 
 // Generic
 import {Changelog} from '../updaters/changelog';
-import { Strategy, BuildUpdatesOptions } from '../strategy';
-import { Update } from '../update';
+import {Strategy, BuildUpdatesOptions} from '../strategy';
+import {Update} from '../update';
 
 export class Go extends Strategy {
   async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
@@ -28,9 +28,9 @@ export class Go extends Strategy {
       updater: new Changelog({
         version,
         changelogEntry: options.changelogEntry,
-      })
+      }),
     });
-    
+
     return updates;
   }
 }

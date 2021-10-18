@@ -18,7 +18,7 @@ import {PackageLockJson} from '../updaters/package-lock-json';
 import {SamplesPackageJson} from '../updaters/samples-package-json';
 import {Changelog} from '../updaters/changelog';
 import {PackageJson} from '../updaters/package-json';
-import { GitHubFileContents } from '../github';
+import {GitHubFileContents} from '../github';
 
 export class Node extends Strategy {
   private pkgJsonContents?: GitHubFileContents;
@@ -79,7 +79,7 @@ export class Node extends Strategy {
     if (!this.pkgJsonContents) {
       this.pkgJsonContents = await this.github.getFileContentsOnBranch(
         this.addPath('package.json'),
-        this.targetBranch,
+        this.targetBranch
       );
     }
     return this.pkgJsonContents;

@@ -19,8 +19,8 @@ import {Changelog} from '../updaters/changelog';
 import * as yaml from 'js-yaml';
 // helm
 import {ChartYaml} from '../updaters/helm/chart-yaml';
-import { Strategy, BuildUpdatesOptions } from '../strategy';
-import { Update } from '../update';
+import {Strategy, BuildUpdatesOptions} from '../strategy';
+import {Update} from '../update';
 
 export class Helm extends Strategy {
   private chartYmlContents?: GitHubFileContents;
@@ -35,7 +35,7 @@ export class Helm extends Strategy {
       updater: new Changelog({
         version,
         changelogEntry: options.changelogEntry,
-      })
+      }),
     });
 
     updates.push({
@@ -44,7 +44,7 @@ export class Helm extends Strategy {
       cachedFileContents: await this.getChartYmlContents(),
       updater: new ChartYaml({
         version,
-      })
+      }),
     });
     return updates;
   }
@@ -53,7 +53,7 @@ export class Helm extends Strategy {
     const chartYmlContents = await this.getChartYmlContents();
     const chart = yaml.load(chartYmlContents.parsedContent, {json: true});
     if (typeof chart === 'object') {
-     return (chart as {name: string}).name;
+      return (chart as {name: string}).name;
     } else {
       return undefined;
     }

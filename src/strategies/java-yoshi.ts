@@ -19,7 +19,7 @@ import {JavaUpdate} from '../updaters/java/java-update';
 import {Strategy, StrategyOptions, BuildUpdatesOptions} from '../strategy';
 import {Changelog} from '../updaters/changelog';
 import {GitHubFileContents} from '../github';
-import { logger } from '../util/logger';
+import {logger} from '../util/logger';
 
 interface JavaStrategyOptions extends StrategyOptions {
   extraFiles?: string[];

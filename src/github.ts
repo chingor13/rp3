@@ -700,7 +700,9 @@ export class GitHub {
       if (prefix) {
         prefix = normalizePrefix(prefix);
       }
-      logger.info(`finding files by filename and ref: ${filename}/${ref}/${prefix}`);
+      logger.info(
+        `finding files by filename and ref: ${filename}/${ref}/${prefix}`
+      );
       const response: {
         data: GitGetTreeResponse;
       } = await this.octokit.git.getTree({
@@ -852,6 +854,84 @@ export class GitHub {
       }
     }
     return changes;
+  }
+
+  /**
+   * Returns a list of paths to all files with a given file
+   * extension.
+   *
+   * If a prefix is specified, only return paths that match
+   * the provided prefix.
+   *
+   * @param extension The file extension used to filter results.
+   *   Example: `js`, `java`
+   * @param ref Git reference to search files in
+   * @param prefix Optional path prefix used to filter results
+   * @returns {string[]} List of file paths
+   * @throws {GitHubAPIError} on an API error
+   */
+  findFilesByExtensionAndRef = wrapAsync(
+    async (
+      extension: string,
+      ref: string,
+      prefix?: string
+    ): Promise<string[]> => {
+      if (prefix) {
+        prefix = normalizePrefix(prefix);
+      }
+      const response: {
+        data: GitGetTreeResponse;
+      } = await this.octokit.git.getTree({
+        owner: this.repository.owner,
+        repo: this.repository.repo,
+        tree_sha: ref,
+        recursive: 'true',
+      });
+      return response.data.tree
+        .filter(file => {
+          const path = file.path;
+          return (
+            path &&
+            // match the file extension
+            path.endsWith(`.${extension}`) &&
+            // match the prefix if provided
+            (!prefix || path.startsWith(prefix))
+          );
+        })
+        .map(file => {
+          let path = file.path!;
+          // strip the prefix if provided
+          if (prefix) {
+            const pfix = new RegExp(`^${prefix}[/\\\\]`);
+            path = path.replace(pfix, '');
+          }
+          return path;
+        });
+    }
+  );
+
+  /**
+   * Returns a list of paths to all files with a given file
+   * extension.
+   *
+   * If a prefix is specified, only return paths that match
+   * the provided prefix.
+   *
+   * @param extension The file extension used to filter results.
+   *   Example: `js`, `java`
+   * @param prefix Optional path prefix used to filter results
+   * @returns {string[]} List of file paths
+   * @throws {GitHubAPIError} on an API error
+   */
+  async findFilesByExtension(
+    extension: string,
+    prefix?: string
+  ): Promise<string[]> {
+    return this.findFilesByExtensionAndRef(
+      extension,
+      this.repository.defaultBranch,
+      prefix
+    );
   }
 }
 

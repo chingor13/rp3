@@ -107,7 +107,7 @@ export class Strategy {
       );
       versionsMap.set(versionKey, newVersion);
     }
-    const component = this.component || await this.getDefaultComponent();
+    const component = this.component || (await this.getDefaultComponent());
 
     const newVersionTag = new TagName(newVersion, component);
     const pullRequestTitle = PullRequestTitle.ofComponentTargetBranchVersion(

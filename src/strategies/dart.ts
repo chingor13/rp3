@@ -18,9 +18,9 @@ import * as yaml from 'js-yaml';
 
 // pubspec
 import {PubspecYaml} from '../updaters/pubspec-yaml';
-import { Strategy, BuildUpdatesOptions } from '../strategy';
-import { GitHubFileContents } from '../github';
-import { Update } from '../update';
+import {Strategy, BuildUpdatesOptions} from '../strategy';
+import {GitHubFileContents} from '../github';
+import {Update} from '../update';
 
 export class Dart extends Strategy {
   private pubspecYmlContents?: GitHubFileContents;
@@ -35,7 +35,7 @@ export class Dart extends Strategy {
       updater: new Changelog({
         version,
         changelogEntry: options.changelogEntry,
-      })
+      }),
     });
 
     updates.push({
@@ -44,7 +44,7 @@ export class Dart extends Strategy {
       cachedFileContents: this.pubspecYmlContents,
       updater: new PubspecYaml({
         version,
-      })
+      }),
     });
 
     return updates;
@@ -54,7 +54,7 @@ export class Dart extends Strategy {
     const pubspecYmlContents = await this.getPubspecYmlContents();
     const pubspec = yaml.load(pubspecYmlContents.parsedContent, {json: true});
     if (typeof pubspec === 'object') {
-     return (pubspec as {name: string}).name;
+      return (pubspec as {name: string}).name;
     } else {
       return undefined;
     }
@@ -64,7 +64,7 @@ export class Dart extends Strategy {
     if (!this.pubspecYmlContents) {
       this.pubspecYmlContents = await this.github.getFileContentsOnBranch(
         this.addPath('pubspec.yaml'),
-        this.targetBranch,
+        this.targetBranch
       );
     }
     return this.pubspecYmlContents;

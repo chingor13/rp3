@@ -16,8 +16,8 @@
 import {Changelog} from '../updaters/changelog';
 // mix.exs support
 import {ElixirMixExs} from '../updaters/elixir-mix-exs';
-import { Strategy, BuildUpdatesOptions } from '../strategy';
-import { Update } from '../update';
+import {Strategy, BuildUpdatesOptions} from '../strategy';
+import {Update} from '../update';
 
 export class Elixir extends Strategy {
   async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
@@ -30,7 +30,7 @@ export class Elixir extends Strategy {
       updater: new Changelog({
         version,
         changelogEntry: options.changelogEntry,
-      })
+      }),
     });
 
     updates.push({
@@ -38,7 +38,7 @@ export class Elixir extends Strategy {
       createIfMissing: false,
       updater: new ElixirMixExs({
         version,
-      })
+      }),
     });
 
     return updates;
