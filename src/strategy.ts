@@ -15,7 +15,7 @@
 import {ReleasePullRequest} from './release-pull-request';
 import {Release} from './release';
 import {GitHub} from './github';
-import {Version} from './version';
+import {Version, VersionsMap} from './version';
 import {parseConventionalCommits, Commit} from './commit';
 import {VersioningStrategy} from './versioning-strategy';
 import {DefaultVersioningStrategy} from './versioning-strategies/default';
@@ -26,6 +26,7 @@ import {Repository} from './repository';
 import {PullRequest} from './pull-request';
 import {BranchName} from './util/branch-name';
 import {TagName} from './util/tag-name';
+import {logger} from './util/logger';
 
 const DEFAULT_LABELS = ['autorelease: pending', 'type: release'];
 const DEFAULT_CHANGELOG_PATH = 'CHANGELOG.md';
@@ -33,6 +34,7 @@ const DEFAULT_CHANGELOG_PATH = 'CHANGELOG.md';
 export interface BuildUpdatesOptions {
   changelogEntry: string;
   newVersion: Version;
+  versionsMap: VersionsMap;
   latestVersion?: Version;
 }
 export interface StrategyOptions {
@@ -88,7 +90,21 @@ export class Strategy {
           conventionalCommits
         )
       : this.initialReleaseVersion();
-    const newVersionTag = new TagName(newVersion, this.component || '');
+    const versionsMap = await this.buildVersionsMap();
+    for (const versionKey of versionsMap.keys()) {
+      const version = versionsMap.get(versionKey);
+      if (!version) {
+        logger.warn(`didn't find version for ${versionKey}`);
+        continue;
+      }
+      const newVersion = await this.versioningStrategy.bump(
+        version,
+        conventionalCommits
+      );
+      versionsMap.set(versionKey, newVersion);
+    }
+
+    const newVersionTag = new TagName(newVersion, this.component);
     const pullRequestTitle = PullRequestTitle.ofComponentTargetBranchVersion(
       this.component || '',
       this.targetBranch,
@@ -111,6 +127,7 @@ export class Strategy {
     const updates = await this.buildUpdates({
       changelogEntry: releaseNotesBody,
       newVersion,
+      versionsMap,
       latestVersion: latestRelease?.tag.version,
     });
 
@@ -122,6 +139,10 @@ export class Strategy {
       headRefName: branchName.toString() + '-testing',
       version: newVersion,
     };
+  }
+
+  protected async buildVersionsMap(): Promise<VersionsMap> {
+    return new Map();
   }
 
   async buildRelease(mergedPullRequest: PullRequest): Promise<Release> {

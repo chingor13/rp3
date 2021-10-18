@@ -17,10 +17,10 @@ import {Version} from '../version';
 const TAG_PATTERN = /^((?<component>.*)-)?v(?<version>\d+\.\d+\.\d+.*)$/;
 
 export class TagName {
-  component: string;
+  component?: string;
   version: Version;
 
-  constructor(version: Version, component: string) {
+  constructor(version: Version, component?: string) {
     this.version = version;
     this.component = component;
   }
@@ -30,7 +30,7 @@ export class TagName {
     if (match?.groups) {
       return new TagName(
         Version.parse(match.groups.version),
-        match.groups.component || ''
+        match.groups.component
       );
     }
     return;

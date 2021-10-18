@@ -131,7 +131,6 @@ export class Manifest {
   async createPullRequests(): Promise<(number | undefined)[]> {
     const promises: Promise<number | undefined>[] = [];
     for (const pullRequest of await this.buildPullRequests()) {
-      logger.info('TODO: create pull request for: ', pullRequest);
       promises.push(this.github.openPR(pullRequest, this.targetBranch));
     }
     return await Promise.all(promises);
@@ -160,16 +159,16 @@ export class Manifest {
     for await (const release of this.github.releaseIterator(100)) {
       const tagName = TagName.parse(release.tagName);
       if (!tagName) {
-        logger.warn(`unable to parse release name: ${release.name}`);
+        logger.warn(`Unable to parse release name: ${release.name}`);
         continue;
       }
-      const expectedVersion = packageVersions[tagName.component];
+      const expectedVersion = packageVersions[tagName.component || ''];
       if (!expectedVersion) {
-        logger.warn(`unable to find package ${tagName.component} in manifest`);
+        logger.warn(`Unable to find package ${tagName.component} in manifest`);
         continue;
       }
       if (expectedVersion.toString() === tagName.version.toString()) {
-        packageShas[tagName.component] = release.sha;
+        packageShas[tagName.component || ''] = release.sha;
         releasesFound += 1;
       }
 

@@ -14,10 +14,12 @@
 
 import {Update} from '../update';
 import {VersionsManifest} from '../updaters/java/versions-manifest';
-import {Version} from '../version';
+import {Version, VersionsMap} from '../version';
 import {JavaUpdate} from '../updaters/java/java-update';
 import {Strategy, StrategyOptions, BuildUpdatesOptions} from '../strategy';
 import {Changelog} from '../updaters/changelog';
+import {GitHubFileContents} from '../github';
+import { logger } from '../util/logger';
 
 interface JavaStrategyOptions extends StrategyOptions {
   extraFiles?: string[];
@@ -25,23 +27,30 @@ interface JavaStrategyOptions extends StrategyOptions {
 
 export class JavaYoshi extends Strategy {
   extraFiles: string[];
+  versionsContent?: GitHubFileContents;
 
   constructor(options: JavaStrategyOptions) {
     super(options);
     this.extraFiles = options.extraFiles || [];
   }
 
+  protected async buildVersionsMap(): Promise<VersionsMap> {
+    this.versionsContent = await this.github.getFileContentsOnBranch(
+      'versions.txt',
+      this.targetBranch
+    );
+    return VersionsManifest.parseVersions(this.versionsContent.parsedContent);
+  }
+
   async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
     const updates: Update[] = [];
     const version = options.newVersion;
-
-    // FIXME
-    const versionsMap = new Map<string, Version>();
-    versionsMap.set('foo', options.newVersion);
+    const versionsMap = options.versionsMap;
 
     updates.push({
       path: this.addPath('versions.txt'),
       createIfMissing: false,
+      cachedFileContents: this.versionsContent,
       updater: new VersionsManifest({
         version,
         versionsMap,
@@ -62,9 +71,10 @@ export class JavaYoshi extends Strategy {
     );
 
     const pomFiles = await pomFilesSearch;
+    logger.info(pomFiles);
     pomFiles.forEach(path => {
       updates.push({
-        path,
+        path: this.addPath(path),
         createIfMissing: false,
         updater: new JavaUpdate({
           version,
@@ -76,7 +86,7 @@ export class JavaYoshi extends Strategy {
     const buildFiles = await buildFilesSearch;
     buildFiles.forEach(path => {
       updates.push({
-        path,
+        path: this.addPath(path),
         createIfMissing: false,
         updater: new JavaUpdate({
           version,
@@ -88,7 +98,7 @@ export class JavaYoshi extends Strategy {
     const dependenciesFiles = await dependenciesSearch;
     dependenciesFiles.forEach(path => {
       updates.push({
-        path,
+        path: this.addPath(path),
         createIfMissing: false,
         updater: new JavaUpdate({
           version,

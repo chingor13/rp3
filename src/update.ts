@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import {Version, VersionsMap} from './version';
+import {GitHubFileContents} from './github';
 
 export interface UpdateOptions {
   version: Version;
@@ -21,7 +22,7 @@ export interface UpdateOptions {
 
 export interface Update {
   // If provided, skip looking up the file
-  cachedFileContents?: string; // FIXME
+  cachedFileContents?: GitHubFileContents;
 
   // Whether or not we should create the file if it is missing.
   // Defaults to `true`.

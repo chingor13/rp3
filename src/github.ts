@@ -700,6 +700,7 @@ export class GitHub {
       if (prefix) {
         prefix = normalizePrefix(prefix);
       }
+      logger.info(`finding files by filename and ref: ${filename}/${ref}/${prefix}`);
       const response: {
         data: GitGetTreeResponse;
       } = await this.octokit.git.getTree({
@@ -874,7 +875,11 @@ function fullyQualifyBranchRef(refName: string): string {
  * @param prefix String to normalize
  */
 function normalizePrefix(prefix: string) {
-  return prefix.replace(/^[/\\]/, '').replace(/[/\\]$/, '');
+  const normalized = prefix.replace(/^[/\\]/, '').replace(/[/\\]$/, '');
+  if (normalized === '.') {
+    return '';
+  }
+  return normalized;
 }
 
 /**
