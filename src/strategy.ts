@@ -89,6 +89,9 @@ export class Strategy {
       this.targetBranch,
       newVersion.toString()
     );
+    const branchName = this.component
+      ? BranchName.ofComponentTargetBranch(this.component, this.targetBranch)
+      : BranchName.ofTargetBranch(this.targetBranch);
     const releaseNotes = new ReleaseNotes();
     const releaseNotesBody = await releaseNotes.buildNotes(
       conventionalCommits,
@@ -107,6 +110,7 @@ export class Strategy {
       body: releaseNotesBody,
       updates,
       labels: this.labels,
+      headRefName: branchName.toString() + '-testing',
     };
   }
 
@@ -138,6 +142,9 @@ export class Strategy {
   }
 
   addPath(file: string) {
+    if (this.path === '.') {
+      return file;
+    }
     file = file.replace(/^[/\\]/, '');
     if (this.path === undefined) {
       return file;

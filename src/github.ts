@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import {createPullRequest, Changes} from 'code-suggester';
 import {PullRequest} from './pull-request';
 import {Commit} from './commit';
 
@@ -22,6 +23,7 @@ import {graphql} from '@octokit/graphql';
 import {RequestError} from '@octokit/request-error';
 import {GitHubAPIError} from './errors';
 
+const MAX_ISSUE_BODY_SIZE = 65536;
 const GH_API_URL = 'https://api.github.com';
 const GH_GRAPHQL_URL = 'https://api.github.com';
 type OctokitType = InstanceType<typeof Octokit>;
@@ -33,6 +35,8 @@ type OctokitType = InstanceType<typeof Octokit>;
 import {PromiseValue} from 'type-fest';
 import {logger} from './util/logger';
 import {Repository} from './repository';
+import {ReleasePullRequest} from './release-pull-request';
+import {Update} from './update';
 type GitGetTreeResponse = PromiseValue<
   ReturnType<InstanceType<typeof Octokit>['git']['getTree']>
 >['data'];
@@ -726,6 +730,128 @@ export class GitHub {
         });
     }
   );
+
+  /**
+   * Open a pull request
+   *
+   * @param {GitHubPR} options The pull request options
+   * @throws {GitHubAPIError} on an API error
+   */
+  openPR = wrapAsync(
+    async (
+      releasePullRequest: ReleasePullRequest,
+      targetBranch: string
+    ): Promise<number | undefined> => {
+      // check if there's an existing PR, so that we can opt to update it
+      // rather than creating a new PR.
+      // const headRefName = `refs/heads/${targetBranch}`;
+      // let openReleasePR: number | undefined;
+      // const releasePRCandidates = await this.findOpenReleasePRs(options.labels);
+      // for (const releasePR of releasePRCandidates) {
+      //   if (refName && refName.includes(releasePR.head.ref)) {
+      //     openReleasePR = releasePR as PullsListResponseItem;
+      //     break;
+      //   }
+      // }
+
+      // Short-circuit if there have been no changes to the pull-request body.
+      // if (openReleasePR && openReleasePR.body === releasePullRequest.body) {
+      //   logger.info(
+      //     `PR https://github.com/${this.repository.owner}/${this.repository.repo}/pull/${openReleasePR} remained the same`
+      //   );
+      //   return undefined;
+      // }
+
+      //  Update the files for the release if not already supplied
+      const changes = await this.getChangeSet(
+        releasePullRequest.updates,
+        targetBranch
+      );
+      const prNumber = await createPullRequest(this.octokit, changes, {
+        upstreamOwner: this.repository.owner,
+        upstreamRepo: this.repository.repo,
+        title: releasePullRequest.title,
+        branch: releasePullRequest.headRefName,
+        description: releasePullRequest.body.slice(0, MAX_ISSUE_BODY_SIZE),
+        primary: targetBranch,
+        force: true,
+        fork: true, // FIXME
+        message: releasePullRequest.title,
+        logger: logger,
+      });
+
+      // If a release PR was already open, update the title and body:
+      // if (openReleasePR) {
+      //   logger.info(
+      //     `update pull-request #${openReleasePR}: ${chalk.yellow(
+      //       releasePullRequest.title
+      //     )}`
+      //   );
+      //   await this.request('PATCH /repos/:owner/:repo/pulls/:pull_number', {
+      //     pull_number: openReleasePR.number,
+      //     owner: this.owner,
+      //     repo: this.repo,
+      //     title: options.title,
+      //     body: options.body,
+      //     state: 'open',
+      //   });
+      //   return openReleasePR.number;
+      // } else {
+      //   return prNumber;
+      // }
+      return prNumber;
+    }
+  );
+
+  /**
+   * Given a set of proposed updates, build a changeset to suggest.
+   *
+   * @param {Update[]} updates The proposed updates
+   * @param {string} defaultBranch The target branch
+   * @return {Changes} The changeset to suggest.
+   * @throws {GitHubAPIError} on an API error
+   */
+  async getChangeSet(
+    updates: Update[],
+    defaultBranch: string
+  ): Promise<Changes> {
+    const changes = new Map();
+    for (const update of updates) {
+      let content;
+      try {
+        // if (update.contents) {
+        //   // we already loaded the file contents earlier, let's not
+        //   // hit GitHub again.
+        //   content = {data: update.contents};
+        // } else {
+        const fileContent = await this.getFileContentsOnBranch(
+          update.path,
+          defaultBranch
+        );
+        content = {data: fileContent};
+        // }
+      } catch (err) {
+        if (err.status !== 404) throw err;
+        // if the file is missing and create = false, just continue
+        // to the next update, otherwise create the file.
+        if (!update.createIfMissing) {
+          logger.warn(`file ${update.path} did not exist`);
+          continue;
+        }
+      }
+      const contentText = content
+        ? Buffer.from(content.data.content, 'base64').toString('utf8')
+        : undefined;
+      const updatedContent = update.updater.updateContent(contentText);
+      if (updatedContent) {
+        changes.set(update.path, {
+          content: updatedContent,
+          mode: '100644',
+        });
+      }
+    }
+    return changes;
+  }
 }
 
 // Takes a potentially unqualified branch name, and turns it

@@ -114,7 +114,7 @@ export class Manifest {
     targetBranch: string,
     config: ReleaserConfig
   ): Promise<Manifest> {
-    const repositoryConfig = {ROOT_PROJECT_PATH: config};
+    const repositoryConfig = {'.': config};
     const releasedVersions: ReleasedVersions = {};
     const latestVersion = await latestReleaseVersion(github, targetBranch);
     if (latestVersion) {
@@ -128,10 +128,11 @@ export class Manifest {
     );
   }
 
-  async createPullRequests(): Promise<number[]> {
-    const promises: Promise<number>[] = [];
+  async createPullRequests(): Promise<(number | undefined)[]> {
+    const promises: Promise<number | undefined>[] = [];
     for (const pullRequest of await this.buildPullRequests()) {
       logger.info('TODO: create pull request for: ', pullRequest);
+      promises.push(this.github.openPR(pullRequest, this.targetBranch));
     }
     return await Promise.all(promises);
   }

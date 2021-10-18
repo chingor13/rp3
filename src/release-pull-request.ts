@@ -19,4 +19,5 @@ export interface ReleasePullRequest {
   body: string;
   updates: Update[];
   labels: string[];
+  headRefName: string;
 }
