@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Strategy} from '../strategy';
+import {Strategy, BuildUpdatesOptions} from '../strategy';
 import {Update} from '../update';
 import {Changelog} from '../updaters/changelog';
 import {Version} from '../version';
@@ -27,17 +27,16 @@ import {logger} from '../util/logger';
 import {PythonFileWithVersion} from '../updaters/python/python-file-with-version';
 
 export class Python extends Strategy {
-  async buildUpdates(): Promise<Update[]> {
+  async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
     const updates: Update[] = [];
-    const changelogEntry = 'FIXME';
-    const version = Version.parse('1.0.0');
+    const version = options.newVersion;
 
     updates.push({
       path: this.addPath(this.changelogPath),
       createIfMissing: true,
       updater: new Changelog({
         version,
-        changelogEntry,
+        changelogEntry: options.changelogEntry,
       }),
     });
 
@@ -79,20 +78,24 @@ export class Python extends Strategy {
       );
     }
 
-    updates.push({
-      path: this.addPath(`${projectName}/__init__.py`),
-      createIfMissing: false,
-      updater: new PythonFileWithVersion({
-        version,
-      }),
-    });
-    updates.push({
-      path: this.addPath(`src/${projectName}/__init__.py`),
-      createIfMissing: false,
-      updater: new PythonFileWithVersion({
-        version,
-      }),
-    });
+    if (!projectName) {
+      logger.warn('No project/component found.');
+    } else {
+      updates.push({
+        path: this.addPath(`${projectName}/__init__.py`),
+        createIfMissing: false,
+        updater: new PythonFileWithVersion({
+          version,
+        }),
+      });
+      updates.push({
+        path: this.addPath(`src/${projectName}/__init__.py`),
+        createIfMissing: false,
+        updater: new PythonFileWithVersion({
+          version,
+        }),
+      });
+    }
 
     // There should be only one version.py, but foreach in case that is incorrect
     const versionPyFilesSearch = this.github.findFilesByFilename(

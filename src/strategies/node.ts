@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Strategy} from '../strategy';
+import {Strategy, BuildUpdatesOptions} from '../strategy';
 import {Update} from '../update';
 import {PackageLockJson} from '../updaters/package-lock-json';
 import {Version} from '../version';
@@ -21,13 +21,10 @@ import {Changelog} from '../updaters/changelog';
 import {PackageJson} from '../updaters/package-json';
 
 export class Node extends Strategy {
-  async buildUpdates(): Promise<Update[]> {
+  async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
     const updates: Update[] = [];
-
-    // FIXME
-    const version = Version.parse('1.2.3');
-    const packageName = 'FIXME';
-    const changelogEntry = 'FIXME';
+    const version = options.newVersion;
+    const packageName = this.component || '';
 
     const lockFiles = ['package-lock.json', 'npm-shrinkwrap.json'];
     lockFiles.forEach(lockFile => {
@@ -54,7 +51,7 @@ export class Node extends Strategy {
       createIfMissing: true,
       updater: new Changelog({
         version,
-        changelogEntry,
+        changelogEntry: options.changelogEntry,
       }),
     });
 

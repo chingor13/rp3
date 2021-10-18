@@ -30,6 +30,11 @@ import {TagName} from './util/tag-name';
 const DEFAULT_LABELS = ['autorelease: pending', 'type: release'];
 const DEFAULT_CHANGELOG_PATH = 'CHANGELOG.md';
 
+export interface BuildUpdatesOptions {
+  changelogEntry: string;
+  newVersion: Version;
+  latestVersion?: Version;
+}
 export interface StrategyOptions {
   path?: string;
   labels?: string[];
@@ -67,7 +72,7 @@ export class Strategy {
     this.changelogPath = options.changelogPath || DEFAULT_CHANGELOG_PATH;
   }
 
-  async buildUpdates(): Promise<Update[]> {
+  async buildUpdates(_options: BuildUpdatesOptions): Promise<Update[]> {
     return [];
   }
 
@@ -103,7 +108,11 @@ export class Strategy {
         currentTag: newVersionTag.toString(),
       }
     );
-    const updates = await this.buildUpdates();
+    const updates = await this.buildUpdates({
+      changelogEntry: releaseNotesBody,
+      newVersion,
+      latestVersion: latestRelease?.tag.version,
+    });
 
     return {
       title: pullRequestTitle.toString(),
