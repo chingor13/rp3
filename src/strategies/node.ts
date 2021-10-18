@@ -15,7 +15,6 @@
 import {Strategy, BuildUpdatesOptions} from '../strategy';
 import {Update} from '../update';
 import {PackageLockJson} from '../updaters/package-lock-json';
-import {Version} from '../version';
 import {SamplesPackageJson} from '../updaters/samples-package-json';
 import {Changelog} from '../updaters/changelog';
 import {PackageJson} from '../updaters/package-json';

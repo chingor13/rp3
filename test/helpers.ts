@@ -22,6 +22,8 @@ import {CreatePullRequestUserOptions} from 'code-suggester/build/src/types';
 import {Octokit} from '@octokit/rest';
 import {Commit} from '../src/commit';
 import {GitHubFileContents, GitHub} from '../src/github';
+import {Update} from '../src/update';
+import {expect} from 'chai';
 
 export function stubSuggesterWithSnapshot(
   sandbox: sinon.SinonSandbox,
@@ -64,7 +66,7 @@ function newLine(content: string): string {
   return content.replace(/\r\n/g, '\n');
 }
 /*
- * Given an object of chnages expected to be made by code-suggester API,
+ * Given an object of changes expected to be made by code-suggester API,
  * stringify content in such a way that it works well for snapshots:
  */
 export function stringifyExpectedChanges(expected: [string, object][]): string {
@@ -203,4 +205,23 @@ export function getFilesInDirWithPrefix(directory: string, prefix: string) {
       return posix.extname(p) === `.${prefix}`;
     })
     .map(p => posix.relative(directory, p));
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export function assertHasUpdate(updates: Update[], path: string, clazz: any) {
+  const found = updates.find(update => {
+    return update.path === path;
+  });
+  expect(found).to.not.be.undefined;
+  expect(found?.updater).instanceof(
+    clazz,
+    `expected update to be of class ${clazz}`
+  );
+}
+
+export function assertNoHasUpdate(updates: Update[], path: string) {
+  const found = updates.find(update => {
+    return update.path === path;
+  });
+  expect(found).to.be.undefined;
 }

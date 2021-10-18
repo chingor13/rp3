@@ -87,7 +87,7 @@ export class Strategy {
           latestRelease.tag.version,
           conventionalCommits
         )
-      : Version.parse('1.0.0');
+      : this.initialReleaseVersion();
     const newVersionTag = new TagName(newVersion, this.component || '');
     const pullRequestTitle = PullRequestTitle.ofComponentTargetBranchVersion(
       this.component || '',
@@ -120,6 +120,7 @@ export class Strategy {
       updates,
       labels: this.labels,
       headRefName: branchName.toString() + '-testing',
+      version: newVersion,
     };
   }
 

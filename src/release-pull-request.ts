@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import {Update} from './update';
+import {Version} from './version';
 
 export interface ReleasePullRequest {
   title: string;
@@ -20,4 +21,5 @@ export interface ReleasePullRequest {
   updates: Update[];
   labels: string[];
   headRefName: string;
+  version: Version;
 }

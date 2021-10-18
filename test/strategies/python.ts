@@ -12,36 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import * as assert from 'assert';
-import {describe, it, afterEach} from 'mocha';
+import {describe, it, afterEach, beforeEach} from 'mocha';
 import {expect} from 'chai';
 import {GitHub} from '../../src/github';
 import {Python} from '../../src/strategies/python';
-import * as snapshot from 'snap-shot-it';
 import * as sinon from 'sinon';
-import {stubFilesFromFixtures} from '../helpers';
-import {buildMockCommit, dateSafe, stubSuggesterWithSnapshot} from '../helpers';
-import {Changelog} from '../../src/updaters/changelog';
+import {buildGitHubFileContent, assertHasUpdate} from '../helpers';
+import {buildMockCommit} from '../helpers';
+import {PythonFileWithVersion} from '../../src/updaters/python/python-file-with-version';
+import {TagName} from '../../src/util/tag-name';
+import {Version} from '../../src/version';
+import {PyProjectToml} from '../../src/updaters/python/pyproject-toml';
 import {SetupCfg} from '../../src/updaters/python/setup-cfg';
 import {SetupPy} from '../../src/updaters/python/setup-py';
-import {PythonFileWithVersion} from '../../src/updaters/python/python-file-with-version';
+import {Changelog} from '../../src/updaters/changelog';
 
 const sandbox = sinon.createSandbox();
-
-function stubFilesToUpdate(github: GitHub, files: string[]) {
-  stubFilesFromFixtures({
-    fixturePath: './test/updaters/fixtures',
-    sandbox,
-    github,
-    files,
-  });
-}
-
-const LATEST_TAG = {
-  name: 'v0.123.4',
-  sha: 'da6e52d956c1e35d19e75e0f2fdba439739ba364',
-  version: '0.123.4',
-};
 
 const COMMITS = [
   buildMockCommit(
@@ -53,290 +39,118 @@ const COMMITS = [
   buildMockCommit('chore: update common templates'),
 ];
 
-// let latestTagStub = sinon.spy();
-// function stubGithub(
-//   releasePR: Python,
-//   versionFiles: string[] = [],
-//   commits = COMMITS,
-//   latestTag = LATEST_TAG,
-//   stubGetFileContents = true
-// ) {
-//   if (stubGetFileContents) {
-//     sandbox.stub(releasePR.gh, 'getFileContents').rejects();
-//   }
-
-//   sandbox.stub(releasePR.gh, 'getDefaultBranch').resolves('master');
-//   // No open release PRs, so create a new release PR
-//   sandbox.stub(releasePR.gh, 'findOpenReleasePRs').returns(Promise.resolve([]));
-//   sandbox
-//     .stub(releasePR.gh, 'findMergedReleasePR')
-//     .returns(Promise.resolve(undefined));
-//   latestTagStub = sandbox.stub(releasePR, 'latestTag').resolves(latestTag);
-//   sandbox.stub(releasePR.gh, 'commitsSinceSha').resolves(commits);
-//   sandbox.stub(releasePR.gh, 'addLabels');
-//   sandbox.stub(releasePR.gh, 'findFilesByFilename').resolves(versionFiles);
-// }
-
 describe('Python', () => {
+  let github: GitHub;
+  beforeEach(async () => {
+    github = await GitHub.create({
+      owner: 'googleapis',
+      repo: 'py-test-repo',
+      defaultBranch: 'main',
+    });
+  });
   afterEach(() => {
     sandbox.restore();
   });
   describe('buildReleasePullRequest', () => {
     it('returns release PR changes with defaultInitialVersion', async () => {
       const expectedVersion = '0.1.0';
-      const github = await GitHub.create({
-        owner: 'googleapis',
-        repo: 'py-test-repo',
-        defaultBranch: 'main',
+      const strategy = new Python({
+        targetBranch: 'main',
+        github,
+        component: 'google-cloud-automl',
       });
+      sandbox.stub(github, 'findFilesByFilename').resolves([]);
+      const latestRelease = undefined;
+      const release = await strategy.buildReleasePullRequest(
+        COMMITS,
+        latestRelease
+      );
+      expect(release.version.toString()).to.eql(expectedVersion);
+    });
+    it('returns release PR changes with semver patch bump', async () => {
+      const expectedVersion = '0.123.5';
+      const strategy = new Python({
+        targetBranch: 'main',
+        github,
+        component: 'google-cloud-automl',
+      });
+      sandbox.stub(github, 'findFilesByFilename').resolves([]);
+      const latestRelease = {
+        tag: new TagName(Version.parse('0.123.4'), 'google-cloud-automl'),
+        sha: 'abc123',
+        notes: 'some notes',
+      };
+      const release = await strategy.buildReleasePullRequest(
+        COMMITS,
+        latestRelease
+      );
+      expect(release.version.toString()).to.eql(expectedVersion);
+    });
+  });
+  describe('buildUpdates', () => {
+    it('builds common files', async () => {
+      const strategy = new Python({
+        targetBranch: 'main',
+        github,
+        component: 'google-cloud-automl',
+      });
+      sandbox.stub(github, 'findFilesByFilename').resolves([]);
+      const latestRelease = undefined;
+      const release = await strategy.buildReleasePullRequest(
+        COMMITS,
+        latestRelease
+      );
+      const updates = release.updates;
+      assertHasUpdate(updates, 'CHANGELOG.md', Changelog);
+      assertHasUpdate(updates, 'setup.cfg', SetupCfg);
+      assertHasUpdate(updates, 'setup.py', SetupPy);
+      assertHasUpdate(
+        updates,
+        'google-cloud-automl/__init__.py',
+        PythonFileWithVersion
+      );
+      assertHasUpdate(
+        updates,
+        'src/google-cloud-automl/__init__.py',
+        PythonFileWithVersion
+      );
+    });
+
+    it('finds and updates a pyproject.toml', async () => {
+      const strategy = new Python({
+        targetBranch: 'main',
+        github,
+        component: 'google-cloud-automl',
+      });
+      sandbox
+        .stub(github, 'getFileContentsOnBranch')
+        .resolves(
+          buildGitHubFileContent('./test/updaters/fixtures', 'pyproject.toml')
+        );
+      sandbox.stub(github, 'findFilesByFilename').resolves([]);
+      const latestRelease = undefined;
+      const release = await strategy.buildReleasePullRequest(
+        COMMITS,
+        latestRelease
+      );
+      const updates = release.updates;
+      assertHasUpdate(updates, 'pyproject.toml', PyProjectToml);
+    });
+
+    it('finds and updates a version.py file', async () => {
       const strategy = new Python({
         targetBranch: 'main',
         github,
         component: 'google-cloud-automl',
       });
       sandbox.stub(github, 'findFilesByFilename').resolves(['src/version.py']);
-
+      const latestRelease = undefined;
       const release = await strategy.buildReleasePullRequest(
         COMMITS,
-        undefined
+        latestRelease
       );
       const updates = release.updates;
-      console.log(updates);
-
-      // no latestTag to pass to getOpenPROptions (never found a release)
-      // releaser should set defaultInitialVersion
-      // const openPROptions = await releasePR.getOpenPROptions(COMMITS);
-
-      // expect(openPROptions).to.not.be.undefined;
-      // expect(openPROptions).to.have.property('sha').equal(COMMITS[0].sha);
-      // expect(openPROptions).to.have.property('version').equal(expectedVersion);
-      // expect(openPROptions).to.have.property('includePackageName').to.be.false;
-      // expect(openPROptions).to.have.property('changelogEntry');
-
-      // snapshot(dateSafe(openPROptions!.changelogEntry));
-
-      // const perUpdateChangelog = openPROptions!.changelogEntry.substring(
-      //   0,
-      //   openPROptions!.changelogEntry.length - 5 // no trailing "\n---\n"
-      // );
-      // expect(openPROptions)
-      //   .to.have.property('updates')
-      //   .to.eql([
-      //     new Changelog({
-      //       path: 'CHANGELOG.md',
-      //       changelogEntry: perUpdateChangelog,
-      //       version: expectedVersion,
-      //       packageName: pkgName,
-      //     }),
-      //     new SetupCfg({
-      //       path: 'setup.cfg',
-      //       changelogEntry: perUpdateChangelog,
-      //       version: expectedVersion,
-      //       packageName: pkgName,
-      //     }),
-      //     new SetupPy({
-      //       path: 'setup.py',
-      //       changelogEntry: perUpdateChangelog,
-      //       version: expectedVersion,
-      //       packageName: pkgName,
-      //     }),
-      //     new PythonFileWithVersion({
-      //       path: `${pkgName}/__init__.py`,
-      //       changelogEntry: perUpdateChangelog,
-      //       version: expectedVersion,
-      //       packageName: pkgName,
-      //     }),
-      //     new PythonFileWithVersion({
-      //       path: `src/${pkgName}/__init__.py`,
-      //       changelogEntry: perUpdateChangelog,
-      //       version: expectedVersion,
-      //       packageName: pkgName,
-      //     }),
-      //     new PythonFileWithVersion({
-      //       path: 'src/version.py',
-      //       changelogEntry: perUpdateChangelog,
-      //       version: expectedVersion,
-      //       packageName: pkgName,
-      //     }),
-      //   ]);
+      assertHasUpdate(updates, 'src/version.py', PythonFileWithVersion);
     });
-    //   it('returns release PR changes with semver patch bump', async () => {
-    //     const expectedVersion = '0.123.5';
-    //     const releasePR = new Python({
-    //       github: new GitHub({owner: 'googleapis', repo: 'py-test-repo'}),
-    //       packageName: pkgName,
-    //     });
-    //     stubGithub(releasePR, ['src/version.py']);
-
-    //     // found last release (LATEST_TAG) so releaser should semver bump.
-    //     const openPROptions = await releasePR.getOpenPROptions(
-    //       COMMITS,
-    //       LATEST_TAG
-    //     );
-
-    //     expect(openPROptions).to.not.be.undefined;
-    //     expect(openPROptions).to.have.property('sha').equal(COMMITS[0].sha);
-    //     expect(openPROptions).to.have.property('version').equal(expectedVersion);
-    //     expect(openPROptions).to.have.property('includePackageName').to.be.false;
-    //     expect(openPROptions).to.have.property('changelogEntry');
-
-    //     snapshot(dateSafe(openPROptions!.changelogEntry));
-
-    //     const perUpdateChangelog = openPROptions!.changelogEntry.substring(
-    //       0,
-    //       openPROptions!.changelogEntry.length - 5 // no trailing "\n---\n"
-    //     );
-    //     expect(openPROptions)
-    //       .to.have.property('updates')
-    //       .to.eql([
-    //         new Changelog({
-    //           path: 'CHANGELOG.md',
-    //           changelogEntry: perUpdateChangelog,
-    //           version: expectedVersion,
-    //           packageName: pkgName,
-    //         }),
-    //         new SetupCfg({
-    //           path: 'setup.cfg',
-    //           changelogEntry: perUpdateChangelog,
-    //           version: expectedVersion,
-    //           packageName: pkgName,
-    //         }),
-    //         new SetupPy({
-    //           path: 'setup.py',
-    //           changelogEntry: perUpdateChangelog,
-    //           version: expectedVersion,
-    //           packageName: pkgName,
-    //         }),
-    //         new PythonFileWithVersion({
-    //           path: `${pkgName}/__init__.py`,
-    //           changelogEntry: perUpdateChangelog,
-    //           version: expectedVersion,
-    //           packageName: pkgName,
-    //         }),
-    //         new PythonFileWithVersion({
-    //           path: `src/${pkgName}/__init__.py`,
-    //           changelogEntry: perUpdateChangelog,
-    //           version: expectedVersion,
-    //           packageName: pkgName,
-    //         }),
-    //         new PythonFileWithVersion({
-    //           path: 'src/version.py',
-    //           changelogEntry: perUpdateChangelog,
-    //           version: expectedVersion,
-    //           packageName: pkgName,
-    //         }),
-    //       ]);
-    //   });
-    //   it('returns undefined for no CC changes', async () => {
-    //     const releasePR = new Python({
-    //       github: new GitHub({owner: 'googleapis', repo: 'py-test-repo'}),
-    //       packageName: pkgName,
-    //     });
-    //     stubGithub(releasePR);
-    //     const openPROptions = await releasePR.getOpenPROptions(
-    //       [buildMockCommit('chore: update common templates')],
-    //       LATEST_TAG
-    //     );
-    //     expect(openPROptions).to.be.undefined;
-    //   });
-    // });
-
-    // describe('run', () => {
-    //   // normally you'd only have your version in one location
-    //   // e.g. setup.py or setup.cfg or src/version.py, not all 3!
-    //   // just testing the releaser does try to update all 3.
-    //   it('creates a release PR with defaults', async function () {
-    //     const releasePR = new Python({
-    //       github: new GitHub({owner: 'googleapis', repo: 'py-test-repo'}),
-    //       packageName: pkgName,
-    //     });
-
-    //     stubSuggesterWithSnapshot(sandbox, this.test!.fullTitle());
-    //     stubGithub(releasePR, ['src/version.py'], undefined, undefined, false);
-    //     sandbox.stub(releasePR.gh, 'getFileContents').resolves({
-    //       parsedContent: "[project]\nname = 'project'\nversion = '0.0.1'\n",
-    //       sha: '',
-    //       content: '',
-    //     });
-    //     stubFilesToUpdate(releasePR.gh, [
-    //       'pyproject.toml',
-    //       'project/__init__.py',
-    //       'src/project/__init__.py',
-    //       'setup.py',
-    //       'src/version.py',
-    //       'setup.cfg',
-    //     ]);
-    //     const pr = await releasePR.run();
-    //     assert.strictEqual(pr, 22);
-    //   });
-
-    //   it('creates a release PR relative to a path', async function () {
-    //     const releasePR = new Python({
-    //       github: new GitHub({owner: 'googleapis', repo: 'py-test-repo'}),
-    //       packageName: pkgName,
-    //       path: 'projects/python',
-    //     });
-
-    //     stubSuggesterWithSnapshot(sandbox, this.test!.fullTitle());
-    //     stubGithub(releasePR, ['src/version.py']);
-    //     stubFilesToUpdate(releasePR.gh, [
-    //       'projects/python/setup.py',
-    //       'projects/python/src/version.py',
-    //       'projects/python/setup.cfg',
-    //     ]);
-    //     const pr = await releasePR.run();
-    //     assert.strictEqual(pr, 22);
-    //   });
-
-    //   it('creates a release PR with custom config', async function () {
-    //     const releasePR = new Python({
-    //       github: new GitHub({owner: 'googleapis', repo: 'py-test-repo'}),
-    //       packageName: pkgName,
-    //       path: 'projects/python',
-    //       bumpMinorPreMajor: true,
-    //       monorepoTags: true,
-    //       changelogPath: 'HISTORY.md',
-    //     });
-
-    //     stubSuggesterWithSnapshot(sandbox, this.test!.fullTitle());
-    //     const commits = [buildMockCommit('feat!: still no major version')];
-    //     commits.push(...COMMITS);
-    //     const latestTag = {...LATEST_TAG};
-    //     latestTag.name = pkgName + '-v' + latestTag.version;
-    //     stubGithub(releasePR, ['src/version.py'], commits, latestTag);
-    //     stubFilesToUpdate(releasePR.gh, [
-    //       'projects/python/setup.py',
-    //       'projects/python/src/version.py',
-    //       'projects/python/setup.cfg',
-    //     ]);
-    //     const pr = await releasePR.run();
-    //     assert.strictEqual(pr, 22);
-    //   });
-
-    //   it('calls latestTag with preRelease set to true', async function () {
-    //     const releasePR = new Python({
-    //       github: new GitHub({owner: 'googleapis', repo: 'py-test-repo'}),
-    //       packageName: pkgName,
-    //     });
-
-    //     stubSuggesterWithSnapshot(sandbox, this.test!.fullTitle());
-    //     stubGithub(releasePR, ['src/version.py'], undefined, undefined, false);
-    //     sandbox.stub(releasePR.gh, 'getFileContents').resolves({
-    //       parsedContent: "[project]\nname = 'project'\nversion = '0.0.1'\n",
-    //       sha: '',
-    //       content: '',
-    //     });
-    //     stubFilesToUpdate(releasePR.gh, [
-    //       'pyproject.toml',
-    //       'project/__init__.py',
-    //       'src/project/__init__.py',
-    //       'setup.py',
-    //       'src/version.py',
-    //       'setup.cfg',
-    //     ]);
-    //     //  sinon.match.any, true
-    //     await releasePR.run();
-    //     sandbox.assert.calledWith(latestTagStub, sinon.match.any, true);
-    //   });
   });
 });
