@@ -233,14 +233,16 @@ export class Manifest {
 
     const newReleasePullRequests: ReleasePullRequest[] = [];
     for (const path in this.repositoryConfig) {
+      const config = this.repositoryConfig[path];
       logger.info(`Building candidate release pull request for path: ${path}`);
+      logger.debug(`type: ${config.releaseType}`);
+      logger.debug(`targetBranch: ${this.targetBranch}`);
       const pathCommits =
         path === ROOT_PROJECT_PATH ? commits : commitsPerPath[path];
       if (!pathCommits || pathCommits.length === 0) {
         logger.info(`No commits for path: ${path}, skipping`);
         continue;
       }
-      const config = this.repositoryConfig[path];
       const packageName = config.packageName;
       const latestReleasePullRequest =
         releasePullRequests[packageShas[packageName || '']];
@@ -249,10 +251,10 @@ export class Manifest {
       }
 
       const strategy = await buildStrategy({
+        ...config,
         github: this.github,
         path,
         targetBranch: this.targetBranch,
-        strategyType: config.releaseType,
       });
 
       const latestRelease = latestReleasePullRequest

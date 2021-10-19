@@ -114,7 +114,7 @@ class DefaultBranchName extends BranchName {
   }
 }
 
-const COMPONENT_PATTERN = `^${RELEASE_PLEASE}/branches/(?<branch>[^/]+)/components/(?<component>[^/]+)$`;
+const COMPONENT_PATTERN = `^${RELEASE_PLEASE}/branches/(?<branch>[^/]+)/components/(?<component>.+)$`;
 class ComponentBranchName extends BranchName {
   static matches(branchName: string): boolean {
     return !!branchName.match(COMPONENT_PATTERN);

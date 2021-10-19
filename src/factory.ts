@@ -28,6 +28,7 @@ import {Elixir} from './strategies/elixir';
 import {Dart} from './strategies/dart';
 import {Node} from './strategies/node';
 import {GitHub} from './github';
+import {ReleaserConfig} from './manifest';
 
 // Factory shared by GitHub Action and CLI for creating Release PRs
 // and GitHub Releases:
@@ -83,11 +84,6 @@ export function getReleasers(): Releasers {
   return releasers;
 }
 
-// deprecated, use getReleaserTypes
-export function getReleaserNames(): string[] {
-  return getReleaserTypes() as string[];
-}
-
 export function getReleaserTypes(): readonly ReleaseType[] {
   const names: ReleaseType[] = [];
   for (const releaseType of Object.keys(releasers)) {
@@ -96,10 +92,9 @@ export function getReleaserTypes(): readonly ReleaseType[] {
   return names;
 }
 
-export interface StrategyFactoryOptions {
+export interface StrategyFactoryOptions extends ReleaserConfig {
   github: GitHub;
   path?: string;
-  strategyType: ReleaseType;
   targetBranch?: string;
 }
 
@@ -108,7 +103,7 @@ export async function buildStrategy(
 ): Promise<Strategy> {
   const targetBranch =
     options.targetBranch ?? options.github.repository.defaultBranch;
-  const clazz = releasers[options.strategyType];
+  const clazz = releasers[options.releaseType];
   return new clazz({
     github: options.github,
     targetBranch,
