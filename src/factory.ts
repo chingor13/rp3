@@ -13,33 +13,104 @@
 // limitations under the License.
 
 import {Strategy} from './strategy';
+import {Go} from './strategies/go';
 import {JavaYoshi} from './strategies/java-yoshi';
-import {GitHub, OctokitAPIs} from './github';
+import {KRMBlueprint} from './strategies/krm-blueprint';
+import {OCaml} from './strategies/ocaml';
+import {PHP} from './strategies/php';
+import {Python} from './strategies/python';
+import {Ruby} from './strategies/ruby';
+import {Rust} from './strategies/rust';
+import {Simple} from './strategies/simple';
+import {TerraformModule} from './strategies/terraform-module';
+import {Helm} from './strategies/helm';
+import {Elixir} from './strategies/elixir';
+import {Dart} from './strategies/dart';
+import {Node} from './strategies/node';
+import {GitHub} from './github';
 
 // Factory shared by GitHub Action and CLI for creating Release PRs
 // and GitHub Releases:
+// add any new releasers you create to this type as well as the `releasers`
+// object below.
+export type ReleaseType =
+  | 'go'
+  // | 'go-yoshi'
+  // | 'java-backport'
+  // | 'java-bom'
+  // | 'java-lts'
+  | 'java-yoshi'
+  | 'krm-blueprint'
+  | 'node'
+  | 'ocaml'
+  | 'php'
+  // | 'php-yoshi'
+  | 'python'
+  | 'ruby'
+  // | 'ruby-yoshi'
+  | 'rust'
+  | 'simple'
+  | 'terraform-module'
+  | 'helm'
+  | 'elixir'
+  | 'dart';
 
-type StrategyType = typeof Strategy;
+type Releasers = Record<ReleaseType, typeof Strategy>;
 
-export interface StrategyOptions {
-  strategy: StrategyType;
-  octokitAPIs?: OctokitAPIs;
-  owner: string;
-  repo: string;
-  defaultBranch?: string;
+const releasers: Releasers = {
+  go: Go,
+  // 'go-yoshi': GoYoshi,
+  // 'java-backport': JavaBackport,
+  // 'java-bom': JavaBom,
+  // 'java-lts': JavaLTS,
+  'java-yoshi': JavaYoshi,
+  'krm-blueprint': KRMBlueprint,
+  node: Node,
+  ocaml: OCaml,
+  php: PHP,
+  // 'php-yoshi': PHPYoshi,
+  python: Python,
+  ruby: Ruby,
+  // 'ruby-yoshi': RubyYoshi,
+  rust: Rust,
+  simple: Simple,
+  'terraform-module': TerraformModule,
+  helm: Helm,
+  elixir: Elixir,
+  dart: Dart,
+};
+export function getReleasers(): Releasers {
+  return releasers;
+}
+
+// deprecated, use getReleaserTypes
+export function getReleaserNames(): string[] {
+  return getReleaserTypes() as string[];
+}
+
+export function getReleaserTypes(): readonly ReleaseType[] {
+  const names: ReleaseType[] = [];
+  for (const releaseType of Object.keys(releasers)) {
+    names.push(releaseType as ReleaseType);
+  }
+  return names;
+}
+
+export interface StrategyFactoryOptions {
+  github: GitHub;
+  path?: string;
+  strategyType: ReleaseType;
   targetBranch?: string;
 }
 
-export async function strategy(options: StrategyOptions): Promise<Strategy> {
-  const github = await GitHub.create({
-    owner: options.owner,
-    repo: options.repo,
-    defaultBranch: options.defaultBranch,
-    octokitAPIs: options.octokitAPIs,
-  });
-  const targetBranch = options.targetBranch ?? github.repository.defaultBranch;
-  return new JavaYoshi({
-    github,
+export async function buildStrategy(
+  options: StrategyFactoryOptions
+): Promise<Strategy> {
+  const targetBranch =
+    options.targetBranch ?? options.github.repository.defaultBranch;
+  const clazz = releasers[options.strategyType];
+  return new clazz({
+    github: options.github,
     targetBranch,
   });
 }

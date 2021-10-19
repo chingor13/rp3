@@ -23,7 +23,7 @@ import {GitHub, GH_API_URL, GH_GRAPHQL_URL} from '../github';
 import {Manifest} from '../manifest';
 import {ChangelogSection} from '../release-notes';
 import {logger} from '../util/logger';
-import {getReleaserTypes, ReleaseType} from '..';
+import {getReleaserTypes, ReleaseType} from '../factory';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const parseGithubRepoUrl = require('parse-github-repo-url');

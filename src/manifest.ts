@@ -18,17 +18,16 @@ import {Version} from './version';
 import {Commit} from './commit';
 import {PullRequest} from './pull-request';
 import {logger} from './util/logger';
-import {JavaYoshi} from './strategies/java-yoshi';
 import {CommitSplit} from './util/commit-split';
 import {TagName} from './util/tag-name';
 import {Repository} from './repository';
 import {BranchName} from './util/branch-name';
 import {PullRequestTitle} from './util/pull-request-title';
 import {ReleasePullRequest} from './release-pull-request';
-import {ReleaseType} from '.';
+import {buildStrategy, ReleaseType} from './factory';
 
 export interface ReleaserConfig {
-  releaseType?: ReleaseType;
+  releaseType: ReleaseType;
   bumpMinorPreMajor?: boolean;
   bumpPatchForMinorPreMajor?: boolean;
   changelogSections?: ChangelogSection[];
@@ -249,11 +248,11 @@ export class Manifest {
         logger.warn('No latest release pull request found.');
       }
 
-      // FIXME, use the config to pick the right strategy class
-      const strategy = new JavaYoshi({
-        targetBranch: this.targetBranch,
+      const strategy = await buildStrategy({
         github: this.github,
         path,
+        targetBranch: this.targetBranch,
+        strategyType: config.releaseType,
       });
 
       const latestRelease = latestReleasePullRequest
@@ -273,7 +272,7 @@ export class Manifest {
 
 function extractReleaserConfig(config: ReleaserPackageConfig): ReleaserConfig {
   return {
-    releaseType: config['release-type'],
+    releaseType: config['release-type'] || 'node', // FIXME
     bumpMinorPreMajor: config['bump-minor-pre-major'],
     bumpPatchForMinorPreMajor: config['bump-patch-for-minor-pre-major'],
     changelogSections: config['changelog-sections'],
