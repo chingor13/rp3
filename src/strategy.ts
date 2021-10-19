@@ -16,7 +16,7 @@ import {ReleasePullRequest} from './release-pull-request';
 import {Release} from './release';
 import {GitHub} from './github';
 import {Version, VersionsMap} from './version';
-import {parseConventionalCommits, Commit} from './commit';
+import {parseConventionalCommits, Commit, ConventionalCommit} from './commit';
 import {VersioningStrategy} from './versioning-strategy';
 import {DefaultVersioningStrategy} from './versioning-strategies/default';
 import {PullRequestTitle} from './util/pull-request-title';
@@ -83,6 +83,10 @@ export class Strategy {
 
   async getDefaultComponent(): Promise<string | undefined> {
     return '';
+  }
+
+  protected postProcessCommits(commits: ConventionalCommit[]): ConventionalCommit[] {
+    return commits;
   }
 
   async buildReleasePullRequest(
@@ -182,7 +186,7 @@ export class Strategy {
     return Version.parse('1.0.0');
   }
 
-  addPath(file: string) {
+  protected addPath(file: string) {
     if (this.path === '.') {
       return file;
     }
