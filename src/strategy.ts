@@ -85,7 +85,9 @@ export class Strategy {
     return '';
   }
 
-  protected postProcessCommits(commits: ConventionalCommit[]): ConventionalCommit[] {
+  protected postProcessCommits(
+    commits: ConventionalCommit[]
+  ): ConventionalCommit[] {
     return commits;
   }
 

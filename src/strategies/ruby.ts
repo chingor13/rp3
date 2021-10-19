@@ -19,9 +19,9 @@ import {Changelog} from '../updaters/changelog';
 
 // Ruby
 import {VersionRB} from '../updaters/version-rb';
-import { StrategyOptions, Strategy, BuildUpdatesOptions } from '../strategy';
-import { ConventionalCommit } from '../commit';
-import { Update } from '../update';
+import {StrategyOptions, Strategy, BuildUpdatesOptions} from '../strategy';
+import {ConventionalCommit} from '../commit';
+import {Update} from '../update';
 
 interface RubyStrategyOptions extends StrategyOptions {
   versionFile?: string;
@@ -46,7 +46,7 @@ export class Ruby extends Strategy {
         changelogEntry: options.changelogEntry,
       }),
     });
-    
+
     const versionFile: string = this.versionFile
       ? this.versionFile
       : `lib/${(this.component || '').replace(/-/g, '/')}/version.rb`;
@@ -55,7 +55,7 @@ export class Ruby extends Strategy {
       createIfMissing: false,
       updater: new VersionRB({
         version,
-      })
+      }),
     });
     return updates;
   }
@@ -64,7 +64,9 @@ export class Ruby extends Strategy {
     return '/';
   }
 
-  protected postProcessCommits(commits: ConventionalCommit[]): ConventionalCommit[] {
+  protected postProcessCommits(
+    commits: ConventionalCommit[]
+  ): ConventionalCommit[] {
     commits.forEach(commit => {
       commit.message = indentCommit(commit);
     });
