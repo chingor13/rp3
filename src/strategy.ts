@@ -20,7 +20,7 @@ import {parseConventionalCommits, Commit} from './commit';
 import {VersioningStrategy} from './versioning-strategy';
 import {DefaultVersioningStrategy} from './versioning-strategies/default';
 import {PullRequestTitle} from './util/pull-request-title';
-import {ReleaseNotes} from './release-notes';
+import {ReleaseNotes, ChangelogSection} from './release-notes';
 import {Update} from './update';
 import {Repository} from './repository';
 import {PullRequest} from './pull-request';
@@ -47,6 +47,7 @@ export interface StrategyOptions {
   versioningStrategy?: VersioningStrategy;
   targetBranch: string;
   changelogPath?: string;
+  changelogSections?: ChangelogSection[];
 }
 export class Strategy {
   bumpMinorPreMajor: boolean;
@@ -59,6 +60,7 @@ export class Strategy {
   targetBranch: string;
   repository: Repository;
   changelogPath: string;
+  changelogSections?: ChangelogSection[];
 
   constructor(options: StrategyOptions) {
     this.bumpMinorPreMajor = options.bumpMinorPreMajor || false;
@@ -72,6 +74,7 @@ export class Strategy {
     this.targetBranch = options.targetBranch;
     this.repository = options.github.repository;
     this.changelogPath = options.changelogPath || DEFAULT_CHANGELOG_PATH;
+    this.changelogSections = options.changelogSections;
   }
 
   async buildUpdates(_options: BuildUpdatesOptions): Promise<Update[]> {
@@ -118,7 +121,9 @@ export class Strategy {
     const branchName = component
       ? BranchName.ofComponentTargetBranch(component, this.targetBranch)
       : BranchName.ofTargetBranch(this.targetBranch);
-    const releaseNotes = new ReleaseNotes();
+    const releaseNotes = new ReleaseNotes({
+      changelogSections: this.changelogSections,
+    });
     const releaseNotesBody = await releaseNotes.buildNotes(
       conventionalCommits,
       {

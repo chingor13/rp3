@@ -21,6 +21,21 @@ import {Changelog} from '../updaters/changelog';
 import {GitHubFileContents} from '../github';
 import {logger} from '../util/logger';
 
+const CHANGELOG_SECTIONS = [
+  {type: 'feat', section: 'Features'},
+  {type: 'fix', section: 'Bug Fixes'},
+  {type: 'perf', section: 'Performance Improvements'},
+  {type: 'deps', section: 'Dependencies'},
+  {type: 'revert', section: 'Reverts'},
+  {type: 'docs', section: 'Documentation'},
+  {type: 'style', section: 'Styles', hidden: true},
+  {type: 'chore', section: 'Miscellaneous Chores', hidden: true},
+  {type: 'refactor', section: 'Code Refactoring', hidden: true},
+  {type: 'test', section: 'Tests', hidden: true},
+  {type: 'build', section: 'Build System', hidden: true},
+  {type: 'ci', section: 'Continuous Integration', hidden: true},
+];
+
 interface JavaStrategyOptions extends StrategyOptions {
   extraFiles?: string[];
 }
@@ -30,7 +45,10 @@ export class JavaYoshi extends Strategy {
   versionsContent?: GitHubFileContents;
 
   constructor(options: JavaStrategyOptions) {
-    super(options);
+    super({
+      ...options,
+      changelogSections: CHANGELOG_SECTIONS,
+    });
     this.extraFiles = options.extraFiles || [];
   }
 
