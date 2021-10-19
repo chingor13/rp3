@@ -16,8 +16,6 @@
 
 import chalk = require('chalk');
 import {coerceOption} from '../util/coerce-option';
-// import {factory} from '../factory';
-// import {getReleaserTypes, ReleaseType} from '../releasers';
 import * as yargs from 'yargs';
 import {GitHub, GH_API_URL, GH_GRAPHQL_URL} from '../github';
 import {Manifest} from '../manifest';
@@ -27,12 +25,6 @@ import {getReleaserTypes, ReleaseType} from '../factory';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const parseGithubRepoUrl = require('parse-github-repo-url');
-// import {
-//   GitHubReleaseFactoryOptions,
-//   ReleasePRFactoryOptions,
-//   ManifestFactoryOptions,
-// } from '..';
-// import {GH_API_URL, GH_GRAPHQL_URL} from '../constants';
 
 interface ErrorObject {
   body?: object;
@@ -41,181 +33,306 @@ interface ErrorObject {
   stack: string;
 }
 
-interface YargsOptions {
-  describe: string;
-  choices?: readonly ReleaseType[];
-  demand?: boolean;
-  type?: string;
-  default?: string | boolean;
+interface GitHubArgs {
+  dryRun?: boolean;
+  repoUrl?: string;
+  token?: string;
+  apiUrl?: string;
+  graphqlUrl?: string;
+  fork?: boolean;
+
+  // deprecated in favor of targetBranch
+  defaultBranch?: string;
+  targetBranch?: string;
 }
 
-interface YargsOptionsBuilder {
-  option(opt: string, options: YargsOptions): YargsOptionsBuilder;
+interface ManifestArgs {
+  configFile?: string;
+  manifestFile?: string;
 }
 
-interface PullRequestOptions {
-  path?: string;
-  packageName?: string;
+interface VersioningArgs {
   bumpMinorPreMajor?: boolean;
   bumpPatchForMinorPreMajor?: boolean;
   releaseAs?: string;
+
+  // only for Ruby: TODO replace with generic bootstrap option
+  // deprecated in favor of latestTagVersion
+  lastPackageVersion?: string;
+  latestTagVersion?: string;
+  latestTagSha?: string;
+  latestTagName?: string;
+}
+
+interface CreatePullRequestArgs
+  extends GitHubArgs,
+    ManifestArgs,
+    VersioningArgs {
+  label?: string;
+  path?: string;
+  packageName?: string;
   snapshot?: boolean;
   monorepoTags?: boolean;
   changelogSections?: ChangelogSection[];
   changelogPath?: string;
-  // only for Ruby: TODO replace with generic bootstrap option
-  lastPackageVersion?: string;
+
   // for Ruby: TODO refactor to find version.rb like Python finds version.py
   // and then remove this property
   versionFile?: string;
   pullRequestTitlePattern?: string;
   signoff?: string;
   extraFiles?: string[];
-  dryRun?: boolean;
-  repoUrl: string;
-  token?: string;
-  apiUrl?: string;
-  graphqlUrl?: string;
   releaseType?: ReleaseType;
-  defaultBranch?: string;
 }
 
-function releaserCommon(ya: YargsOptionsBuilder) {
+interface CreateManifestPullRequestArgs extends GitHubArgs, ManifestArgs {}
+
+function gitHubOptions(yargs: yargs.Argv): yargs.Argv {
+  return yargs
+    .option('token', {describe: 'GitHub token with repo write permissions'})
+    .option('api-url', {
+      describe: 'URL to use when making API requests',
+      default: GH_API_URL,
+      type: 'string',
+    })
+    .option('graphql-url', {
+      describe: 'URL to use when making GraphQL requests',
+      default: GH_GRAPHQL_URL,
+      type: 'string',
+    })
+    .option('default-branch', {
+      describe: 'The branch to open release PRs against and tag releases on',
+      type: 'string',
+      deprecated: true,
+    })
+    .option('target-branch', {
+      describe: 'The branch to open release PRs against and tag releases on',
+      type: 'string',
+      deprecated: true,
+    })
+    .option('repo-url', {
+      describe: 'GitHub URL to generate release for',
+      demand: true,
+    })
+    .option('dry-run', {
+      describe: 'Prepare but do not take action',
+      type: 'boolean',
+      default: false,
+    })
+    .option('fork', {
+      describe: 'should the PR be created from a fork',
+      type: 'boolean',
+      default: false,
+    })
+    .middleware(_argv => {
+      const argv = _argv as GitHubArgs;
+      // allow secrets to be loaded from file path
+      // rather than being passed directly to the bin.
+      if (argv.token) argv.token = coerceOption(argv.token);
+      if (argv.apiUrl) argv.apiUrl = coerceOption(argv.apiUrl);
+      if (argv.graphqlUrl) argv.graphqlUrl = coerceOption(argv.graphqlUrl);
+    });
+}
+
+function pullRequestOptions(yargs: yargs.Argv): yargs.Argv {
   // common to ReleasePR and GitHubRelease
-  ya.option('label', {
-    default: 'autorelease: pending',
-    describe: 'label to remove from release PR',
-  });
-  ya.option('release-as', {
-    describe: 'override the semantically determined release version',
-    type: 'string',
-  });
-  ya.option('bump-minor-pre-major', {
-    describe:
-      'should we bump the semver minor prior to the first major release',
-    default: false,
-    type: 'boolean',
-  });
-  ya.option('bump-patch-for-minor-pre-major', {
-    describe:
-      'should we bump the semver patch instead of the minor for non-breaking' +
-      ' changes prior to the first major release',
-    default: false,
-    type: 'boolean',
-  });
-  ya.option('path', {
-    describe: 'release from path other than root directory',
-    type: 'string',
-  });
-  ya.option('package-name', {
-    describe: 'name of package release is being minted for',
-  });
-  ya.option('monorepo-tags', {
-    describe: 'include library name in tags and release branches',
-    type: 'boolean',
-    default: false,
-  });
-  ya.option('version-file', {
-    describe: 'path to version file to update, e.g., version.rb',
-  });
-  ya.option('last-package-version', {
-    describe: 'last version # that package was released as',
-  });
-  ya.option('snapshot', {
-    describe: 'is it a snapshot (or pre-release) being generated?',
-    type: 'boolean',
-    default: false,
-  });
-  ya.option('pull-request-title-pattern', {
-    describe: 'Title pattern to make release PR',
-    type: 'string',
-  });
-  ya.option('signoff', {
-    describe:
-      'Add Signed-off-by line at the end of the commit log message using the user and email provided. (format "Name <email@example.com>").',
-    type: 'string',
-  });
-  ya.option('changelog-path', {
-    default: 'CHANGELOG.md',
-    describe: 'where can the CHANGELOG be found in the project?',
-  });
-  ya.option('latest-tag-version', {
-    describe: 'Override the detected latest tag version',
-    type: 'string',
-  });
-  ya.option('latest-tag-sha', {
-    describe: 'Override the detected latest tag SHA',
-    type: 'string',
-  });
-  ya.option('latest-tag-name', {
-    describe: 'Override the detected latest tag name',
-    type: 'string',
-  });
-  ya.option('dry-run', {
-    describe: 'Prepare but do not take action',
-    type: 'boolean',
-    default: false,
-  });
+  return yargs
+    .option('label', {
+      default: 'autorelease: pending',
+      describe: 'label to remove from release PR',
+    })
+    .option('release-as', {
+      describe: 'override the semantically determined release version',
+      type: 'string',
+    })
+    .option('bump-minor-pre-major', {
+      describe:
+        'should we bump the semver minor prior to the first major release',
+      default: false,
+      type: 'boolean',
+    })
+    .option('bump-patch-for-minor-pre-major', {
+      describe:
+        'should we bump the semver patch instead of the minor for non-breaking' +
+        ' changes prior to the first major release',
+      default: false,
+      type: 'boolean',
+    })
+    .option('path', {
+      describe: 'release from path other than root directory',
+      type: 'string',
+    })
+    .option('package-name', {
+      describe: 'name of package release is being minted for',
+      type: 'string',
+    })
+    .option('monorepo-tags', {
+      describe: 'include library name in tags and release branches',
+      type: 'boolean',
+      default: false,
+    })
+    .option('version-file', {
+      describe: 'path to version file to update, e.g., version.rb',
+      type: 'string',
+    })
+    .option('snapshot', {
+      describe: 'is it a snapshot (or pre-release) being generated?',
+      type: 'boolean',
+      default: false,
+    })
+    .option('pull-request-title-pattern', {
+      describe: 'Title pattern to make release PR',
+      type: 'string',
+    })
+    .option('signoff', {
+      describe:
+        'Add Signed-off-by line at the end of the commit log message using the user and email provided. (format "Name <email@example.com>").',
+      type: 'string',
+    })
+    .option('changelog-path', {
+      default: 'CHANGELOG.md',
+      describe: 'where can the CHANGELOG be found in the project?',
+      type: 'string',
+    })
+    .option('last-package-version', {
+      describe: 'last version # that package was released as',
+      type: 'string',
+      deprecated: true,
+    })
+    .option('latest-tag-version', {
+      describe: 'Override the detected latest tag version',
+      type: 'string',
+    })
+    .option('latest-tag-sha', {
+      describe: 'Override the detected latest tag SHA',
+      type: 'string',
+    })
+    .option('latest-tag-name', {
+      describe: 'Override the detected latest tag name',
+      type: 'string',
+    })
+    .middleware(_argv => {
+      const argv = _argv as CreatePullRequestArgs;
+
+      if (argv.defaultBranch) {
+        logger.warn(
+          '--default-branch is deprecated. Please use --target-branch instead.'
+        );
+        argv.targetBranch = argv.targetBranch || argv.defaultBranch;
+      }
+
+      if (argv.lastPackageVersion) {
+        logger.warn(
+          '--latest-package-version is deprecated. Please use --latest-tag-version instead.'
+        );
+        argv.latestTagVersion =
+          argv.latestTagVersion || argv.lastPackageVersion;
+      }
+    });
 }
 
-function releaseType(ya: YargsOptionsBuilder, defaultType?: string) {
-  const relTypeOptions: YargsOptions = {
+function releaseType(yargs: yargs.Argv, defaultType?: string): yargs.Argv {
+  return yargs.option('release-type', {
     describe: 'what type of repo is a release being created for?',
     choices: getReleaserTypes(),
-  };
-  if (defaultType) {
-    relTypeOptions.default = defaultType;
-  }
-  ya.option('release-type', relTypeOptions);
+    default: defaultType,
+  });
 }
 
-// function manifestOptions(ya: YargsOptionsBuilder) {
-//   ya.option('config-file', {
-//     default: 'release-please-config.json',
-//     describe: 'where can the config file be found in the project?',
-//   });
-//   ya.option('manifest-file', {
-//     default: '.release-please-manifest.json',
-//     describe: 'where can the manifest file be found in the project?',
-//   });
-// }
+function manifestOptions(yargs: yargs.Argv): yargs.Argv {
+  return yargs
+    .option('config-file', {
+      default: 'release-please-config.json',
+      describe: 'where can the config file be found in the project?',
+    })
+    .option('manifest-file', {
+      default: '.release-please-manifest.json',
+      describe: 'where can the manifest file be found in the project?',
+    });
+}
+
+const createReleasePullRequestCommand: yargs.CommandModule<
+  {},
+  CreatePullRequestArgs
+> = {
+  command: 'release-pr',
+  describe: 'create or update a PR representing the next release',
+  builder(yargs) {
+    return releaseType(
+      manifestOptions(pullRequestOptions(gitHubOptions(yargs)))
+    );
+  },
+  async handler(argv) {
+    const github = await buildGitHub(argv);
+    const targetBranch = argv.targetBranch || github.repository.defaultBranch;
+    let manifest: Manifest;
+    if (argv.releaseType) {
+      manifest = await Manifest.fromConfig(github, targetBranch, {
+        releaseType: argv.releaseType,
+        packageName: argv.packageName || '',
+      });
+    } else {
+      manifest = await Manifest.fromManifest(
+        github,
+        targetBranch,
+        argv.configFile,
+        argv.manifestFile
+      );
+    }
+
+    if (argv.dryRun) {
+      const pullRequests = await manifest.buildPullRequests();
+      logger.info(pullRequests);
+    } else {
+      const pullRequestNumbers = await manifest.createPullRequests();
+      console.log(pullRequestNumbers);
+    }
+  },
+};
+const createManifestPullRequestCommand: yargs.CommandModule<
+  {},
+  CreateManifestPullRequestArgs
+> = {
+  command: 'manifest-pr',
+  describe: 'create a release-PR using a manifest file',
+  deprecated: true,
+  builder(yargs) {
+    return manifestOptions(pullRequestOptions(gitHubOptions(yargs)));
+  },
+  async handler(argv) {
+    logger.warn('manifest-pr is deprecated. Please use release-pr instead.');
+    const github = await buildGitHub(argv);
+    const targetBranch = argv.targetBranch || github.repository.defaultBranch;
+    const manifest = await Manifest.fromManifest(
+      github,
+      targetBranch,
+      argv.configFile,
+      argv.manifestFile
+    );
+
+    if (argv.dryRun) {
+      const pullRequests = await manifest.buildPullRequests();
+      logger.info(pullRequests);
+    } else {
+      const pullRequestNumbers = await manifest.createPullRequests();
+      console.log(pullRequestNumbers);
+    }
+  },
+};
+
+async function buildGitHub(argv: GitHubArgs): Promise<GitHub> {
+  const [owner, repo] = parseGithubRepoUrl(argv.repoUrl);
+  const github = await GitHub.create({
+    owner,
+    repo,
+    token: argv.token!,
+  });
+  return github;
+}
 
 export const parser = yargs
-  .command(
-    'release-pr',
-    'create or update a PR representing the next release',
-    (yargs: YargsOptionsBuilder) => {
-      releaserCommon(yargs);
-      releaseType(yargs);
-    },
-    async (argv: PullRequestOptions) => {
-      const [owner, repo] = parseGithubRepoUrl(argv.repoUrl);
-      const github = await GitHub.create({
-        owner,
-        repo,
-        token: process.env.GITHUB_TOKEN!,
-      });
-      const targetBranch =
-        argv.defaultBranch || github.repository.defaultBranch;
-      let manifest: Manifest;
-      if (argv.releaseType) {
-        manifest = await Manifest.fromConfig(github, targetBranch, {
-          releaseType: argv.releaseType,
-          packageName: argv.packageName || '',
-        });
-      } else {
-        manifest = await Manifest.fromManifest(github, targetBranch);
-      }
-
-      if (argv.dryRun) {
-        const pullRequests = await manifest.buildPullRequests();
-        logger.info(pullRequests);
-      } else {
-        const pullRequestNumbers = await manifest.createPullRequests();
-        console.log(pullRequestNumbers);
-      }
-    }
-  )
+  .command(createReleasePullRequestCommand)
+  .command(createManifestPullRequestCommand)
   // .command(
   //   'manifest-pr',
   //   'create a release-PR using a manifest file',
@@ -294,45 +411,45 @@ export const parser = yargs
   //     factory.runCommand('github-release', argv).catch(handleError);
   //   }
   // )
-  .middleware(_argv => {
-    const argv = _argv as PullRequestOptions;
-    // allow secrets to be loaded from file path
-    // rather than being passed directly to the bin.
-    if (argv.token) argv.token = coerceOption(argv.token);
-    if (argv.apiUrl) argv.apiUrl = coerceOption(argv.apiUrl);
-    if (argv.graphqlUrl) argv.graphqlUrl = coerceOption(argv.graphqlUrl);
-  })
-  .option('debug', {
-    describe: 'print verbose errors (use only for local debugging).',
-    default: false,
-    type: 'boolean',
-  })
+  // .middleware(_argv => {
+  //   const argv = _argv as PullRequestOptions;
+  //   // allow secrets to be loaded from file path
+  //   // rather than being passed directly to the bin.
+  //   if (argv.token) argv.token = coerceOption(argv.token);
+  //   if (argv.apiUrl) argv.apiUrl = coerceOption(argv.apiUrl);
+  //   if (argv.graphqlUrl) argv.graphqlUrl = coerceOption(argv.graphqlUrl);
+  // })
+  // .option('debug', {
+  //   describe: 'print verbose errors (use only for local debugging).',
+  //   default: false,
+  //   type: 'boolean',
+  // })
 
-  // See base GitHub options (e.g. GitHubFactoryOptions)
-  .option('token', {describe: 'GitHub token with repo write permissions'})
-  .option('api-url', {
-    describe: 'URL to use when making API requests',
-    default: GH_API_URL,
-    type: 'string',
-  })
-  .option('graphql-url', {
-    describe: 'URL to use when making GraphQL requests',
-    default: GH_GRAPHQL_URL,
-    type: 'string',
-  })
-  .option('default-branch', {
-    describe: 'The branch to open release PRs against and tag releases on',
-    type: 'string',
-  })
-  .option('fork', {
-    describe: 'should the PR be created from a fork',
-    type: 'boolean',
-    default: false,
-  })
-  .option('repo-url', {
-    describe: 'GitHub URL to generate release for',
-    demand: true,
-  })
+  // // See base GitHub options (e.g. GitHubFactoryOptions)
+  // .option('token', {describe: 'GitHub token with repo write permissions'})
+  // .option('api-url', {
+  //   describe: 'URL to use when making API requests',
+  //   default: GH_API_URL,
+  //   type: 'string',
+  // })
+  // .option('graphql-url', {
+  //   describe: 'URL to use when making GraphQL requests',
+  //   default: GH_GRAPHQL_URL,
+  //   type: 'string',
+  // })
+  // .option('default-branch', {
+  //   describe: 'The branch to open release PRs against and tag releases on',
+  //   type: 'string',
+  // })
+  // .option('fork', {
+  //   describe: 'should the PR be created from a fork',
+  //   type: 'boolean',
+  //   default: false,
+  // })
+  // .option('repo-url', {
+  //   describe: 'GitHub URL to generate release for',
+  //   demand: true,
+  // })
   .demandCommand(1)
   .strict(true)
   .scriptName('release-please');
