@@ -13,7 +13,6 @@
 // limitations under the License.
 
 import {ChangelogSection} from './release-notes';
-import {ReleaseType} from './factory';
 import {GitHub} from './github';
 import {Version} from './version';
 import {Commit} from './commit';
@@ -26,6 +25,7 @@ import {Repository} from './repository';
 import {BranchName} from './util/branch-name';
 import {PullRequestTitle} from './util/pull-request-title';
 import {ReleasePullRequest} from './release-pull-request';
+import {ReleaseType} from '.';
 
 export interface ReleaserConfig {
   releaseType?: ReleaseType;

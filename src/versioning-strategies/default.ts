@@ -18,12 +18,7 @@ import {Version} from '../version';
 import {logger} from '../util/logger';
 import * as semver from 'semver';
 import {ReleaseType} from 'semver';
-
-export interface ChangelogSection {
-  type: string;
-  section: string;
-  hidden?: boolean;
-}
+import {ChangelogSection} from '../release-notes';
 
 interface DefaultVersioningStrategyOptions {
   bumpMinorPreMajor?: boolean;

@@ -24,8 +24,8 @@ import {RequestError} from '@octokit/request-error';
 import {GitHubAPIError} from './errors';
 
 const MAX_ISSUE_BODY_SIZE = 65536;
-const GH_API_URL = 'https://api.github.com';
-const GH_GRAPHQL_URL = 'https://api.github.com';
+export const GH_API_URL = 'https://api.github.com';
+export const GH_GRAPHQL_URL = 'https://api.github.com';
 type OctokitType = InstanceType<typeof Octokit>;
 
 // The return types for responses have not yet been exposed in the

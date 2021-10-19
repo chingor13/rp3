@@ -20,25 +20,6 @@ import {GitHub, OctokitAPIs} from './github';
 // and GitHub Releases:
 
 type StrategyType = typeof Strategy;
-export type ReleaseType =
-  | 'go'
-  | 'go-yoshi'
-  | 'java-bom'
-  | 'java-lts'
-  | 'java-yoshi'
-  | 'krm-blueprint'
-  | 'node'
-  | 'ocaml'
-  | 'php'
-  | 'php-yoshi'
-  | 'python'
-  | 'ruby'
-  | 'ruby-yoshi'
-  | 'rust'
-  | 'simple'
-  | 'terraform-module'
-  | 'helm'
-  | 'elixir';
 
 export interface StrategyOptions {
   strategy: StrategyType;

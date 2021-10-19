@@ -17,9 +17,9 @@ import {Changelog} from '../updaters/changelog';
 // Terraform specific.
 import {ReadMe} from '../updaters/terraform/readme';
 import {ModuleVersion} from '../updaters/terraform/module-version';
-import { Strategy, BuildUpdatesOptions } from '../strategy';
-import { Update } from '../update';
-import { Version } from '../version';
+import {Strategy, BuildUpdatesOptions} from '../strategy';
+import {Update} from '../update';
+import {Version} from '../version';
 
 export class TerraformModule extends Strategy {
   async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
@@ -44,7 +44,7 @@ export class TerraformModule extends Strategy {
         createIfMissing: false,
         updater: new ReadMe({
           version,
-        })
+        }),
       });
     });
 
@@ -62,7 +62,7 @@ export class TerraformModule extends Strategy {
         createIfMissing: false,
         updater: new ModuleVersion({
           version,
-        })
+        }),
       });
     });
     return updates;
