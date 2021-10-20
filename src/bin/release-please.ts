@@ -64,13 +64,19 @@ interface VersioningArgs {
   latestTagName?: string;
 }
 
-interface CreatePullRequestArgs
-  extends GitHubArgs,
-    ManifestArgs,
-    VersioningArgs {
-  label?: string;
+interface ManifestConfigArgs {
   path?: string;
   packageName?: string;
+  releaseType?: ReleaseType;
+}
+
+interface ReleaseArgs {
+  draft?: boolean;
+  releaseLabel?: string;
+}
+
+interface PullRequestArgs {
+  label?: string;
   snapshot?: boolean;
   monorepoTags?: boolean;
   changelogSections?: ChangelogSection[];
@@ -82,9 +88,24 @@ interface CreatePullRequestArgs
   pullRequestTitlePattern?: string;
   signoff?: string;
   extraFiles?: string[];
-  releaseType?: ReleaseType;
 }
+
+interface CreatePullRequestArgs
+  extends GitHubArgs,
+    ManifestArgs,
+    ManifestConfigArgs,
+    VersioningArgs,
+    PullRequestArgs {}
+interface CreateReleaseArgs
+  extends GitHubArgs,
+    ManifestArgs,
+    ManifestConfigArgs,
+    ReleaseArgs {}
 interface CreateManifestPullRequestArgs extends GitHubArgs, ManifestArgs {}
+interface CreateManifestReleaseArgs
+  extends GitHubArgs,
+    ManifestArgs,
+    ReleaseArgs {}
 
 function gitHubOptions(yargs: yargs.Argv): yargs.Argv {
   return yargs
@@ -132,17 +153,25 @@ function gitHubOptions(yargs: yargs.Argv): yargs.Argv {
     });
 }
 
-function pullRequestOptions(
-  yargs: yargs.Argv,
-  defaultType?: string
-): yargs.Argv {
+function releaseOptions(yargs: yargs.Argv): yargs.Argv {
+  return yargs
+    .option('draft', {
+      describe:
+        'mark release as a draft. no tag is created but tag_name and ' +
+        'target_commitish are associated with the release for future ' +
+        'tag creation upon "un-drafting" the release.',
+      type: 'boolean',
+      default: false,
+    })
+    .option('release-label', {
+      describe: 'set a pull request label other than "autorelease: tagged"',
+      type: 'string',
+    });
+}
+
+function pullRequestOptions(yargs: yargs.Argv): yargs.Argv {
   // common to ReleasePR and GitHubRelease
   return yargs
-    .option('release-type', {
-      describe: 'what type of repo is a release being created for?',
-      choices: getReleaserTypes(),
-      default: defaultType,
-    })
     .option('label', {
       default: 'autorelease: pending',
       describe: 'label to remove from release PR',
@@ -163,14 +192,6 @@ function pullRequestOptions(
         ' changes prior to the first major release',
       default: false,
       type: 'boolean',
-    })
-    .option('path', {
-      describe: 'release from path other than root directory',
-      type: 'string',
-    })
-    .option('package-name', {
-      describe: 'name of package release is being minted for',
-      type: 'string',
     })
     .option('monorepo-tags', {
       describe: 'include library name in tags and release branches',
@@ -237,6 +258,26 @@ function pullRequestOptions(
     });
 }
 
+function manifestConfigOptions(
+  yargs: yargs.Argv,
+  defaultType?: string
+): yargs.Argv {
+  return yargs
+    .option('path', {
+      describe: 'release from path other than root directory',
+      type: 'string',
+    })
+    .option('package-name', {
+      describe: 'name of package release is being minted for',
+      type: 'string',
+    })
+    .option('release-type', {
+      describe: 'what type of repo is a release being created for?',
+      choices: getReleaserTypes(),
+      default: defaultType,
+    });
+}
+
 function manifestOptions(yargs: yargs.Argv): yargs.Argv {
   return yargs
     .option('config-file', {
@@ -256,7 +297,9 @@ const createReleasePullRequestCommand: yargs.CommandModule<
   command: 'release-pr',
   describe: 'create or update a PR representing the next release',
   builder(yargs) {
-    return manifestOptions(pullRequestOptions(gitHubOptions(yargs)));
+    return manifestOptions(
+      manifestConfigOptions(pullRequestOptions(gitHubOptions(yargs)))
+    );
   },
   async handler(argv) {
     const github = await buildGitHub(argv);
@@ -285,6 +328,40 @@ const createReleasePullRequestCommand: yargs.CommandModule<
     }
   },
 };
+
+const createReleaseCommand: yargs.CommandModule<{}, CreateReleaseArgs> = {
+  command: 'github-release',
+  describe: 'create a GitHub release from a release PR',
+  builder(yargs) {
+    return releaseOptions(manifestOptions(manifestConfigOptions(gitHubOptions(yargs))));
+  },
+  async handler(argv) {
+    const github = await buildGitHub(argv);
+    const targetBranch = argv.targetBranch || github.repository.defaultBranch;
+    let manifest: Manifest;
+    if (argv.releaseType) {
+      manifest = await Manifest.fromConfig(github, targetBranch, {
+        releaseType: argv.releaseType,
+        packageName: argv.packageName || '',
+      });
+    } else {
+      manifest = await Manifest.fromManifest(
+        github,
+        targetBranch,
+        argv.configFile,
+        argv.manifestFile
+      );
+    }
+
+    if (argv.dryRun) {
+      const releases = await manifest.buildReleases();
+      logger.info(releases);
+    } else {
+      const releaseNumbers = await manifest.createReleases();
+      console.log(releaseNumbers);
+    }
+  },
+};
 const createManifestPullRequestCommand: yargs.CommandModule<
   {},
   CreateManifestPullRequestArgs
@@ -293,7 +370,9 @@ const createManifestPullRequestCommand: yargs.CommandModule<
   describe: 'create a release-PR using a manifest file',
   deprecated: 'use release-pr instead.',
   builder(yargs) {
-    return manifestOptions(pullRequestOptions(gitHubOptions(yargs)));
+    return releaseOptions(manifestOptions(
+      manifestConfigOptions(pullRequestOptions(gitHubOptions(yargs)))
+    ));
   },
   async handler(argv) {
     logger.warn('manifest-pr is deprecated. Please use release-pr instead.');
@@ -316,6 +395,40 @@ const createManifestPullRequestCommand: yargs.CommandModule<
   },
 };
 
+const createManifestReleaseCommand: yargs.CommandModule<
+  {},
+  CreateManifestReleaseArgs
+> = {
+  command: 'manifest-release',
+  describe: 'create releases/tags from last release-PR using a manifest file',
+  deprecated: 'use github-release instead',
+  builder(yargs) {
+    return manifestOptions(pullRequestOptions(gitHubOptions(yargs)));
+  },
+  async handler(argv) {
+    logger.warn(
+      'manifest-release is deprecated. Please use github-release instead.'
+    );
+    logger.warn('manifest-pr is deprecated. Please use release-pr instead.');
+    const github = await buildGitHub(argv);
+    const targetBranch = argv.targetBranch || github.repository.defaultBranch;
+    const manifest = await Manifest.fromManifest(
+      github,
+      targetBranch,
+      argv.configFile,
+      argv.manifestFile
+    );
+
+    if (argv.dryRun) {
+      const releases = await manifest.buildReleases();
+      logger.info(releases);
+    } else {
+      const releaseNumbers = await manifest.createReleases();
+      console.log(releaseNumbers);
+    }
+  },
+};
+
 async function buildGitHub(argv: GitHubArgs): Promise<GitHub> {
   const [owner, repo] = parseGithubRepoUrl(argv.repoUrl);
   const github = await GitHub.create({
@@ -328,17 +441,9 @@ async function buildGitHub(argv: GitHubArgs): Promise<GitHub> {
 
 export const parser = yargs
   .command(createReleasePullRequestCommand)
+  .command(createReleaseCommand)
   .command(createManifestPullRequestCommand)
-  // .command(
-  //   'manifest-release',
-  //   'create releases/tags from last release-PR using a manifest file',
-  //   (yargs: YargsOptionsBuilder) => {
-  //     manifestOptions(yargs);
-  //   },
-  //   (argv: ManifestFactoryOptions) => {
-  //     factory.runCommand('manifest-release', argv).catch(handleError);
-  //   }
-  // )
+  .command(createManifestReleaseCommand)
   // .command(
   //   'latest-tag',
   //   'find the sha of the latest release',
@@ -359,30 +464,6 @@ export const parser = yargs
   //           process.exitCode = 1;
   //         }
   //       });
-  //   }
-  // )
-  // .command(
-  //   'github-release',
-  //   'create a GitHub release from a release PR',
-  //   // options unique to GitHubRelease
-  //   (yargs: YargsOptionsBuilder) => {
-  //     releaseType(yargs);
-  //     releaserCommon(yargs);
-  //     yargs.option('draft', {
-  //       describe:
-  //         'mark release as a draft. no tag is created but tag_name and ' +
-  //         'target_commitish are associated with the release for future ' +
-  //         'tag creation upon "un-drafting" the release.',
-  //       type: 'boolean',
-  //       default: false,
-  //     });
-  //     yargs.option('release-label', {
-  //       describe: 'set a pull request label other than "autorelease: tagged"',
-  //       type: 'string',
-  //     });
-  //   },
-  //   (argv: GitHubReleaseFactoryOptions) => {
-  //     factory.runCommand('github-release', argv).catch(handleError);
   //   }
   // )
   .demandCommand(1)

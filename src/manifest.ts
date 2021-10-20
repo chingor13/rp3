@@ -25,6 +25,7 @@ import {BranchName} from './util/branch-name';
 import {PullRequestTitle} from './util/pull-request-title';
 import {ReleasePullRequest} from './release-pull-request';
 import {buildStrategy, ReleaseType} from './factory';
+import {Release} from './release';
 
 export interface ReleaserConfig {
   releaseType: ReleaseType;
@@ -267,8 +268,12 @@ export class Manifest {
     return newReleasePullRequests;
   }
 
-  async createRelease(): Promise<string> {
-    return 'FIXME';
+  async buildReleases(): Promise<Release[]> {
+    return [];
+  }
+
+  async createReleases(): Promise<string[]> {
+    return ['FIXME'];
   }
 }
 
