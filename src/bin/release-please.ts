@@ -333,7 +333,9 @@ const createReleaseCommand: yargs.CommandModule<{}, CreateReleaseArgs> = {
   command: 'github-release',
   describe: 'create a GitHub release from a release PR',
   builder(yargs) {
-    return releaseOptions(manifestOptions(manifestConfigOptions(gitHubOptions(yargs))));
+    return releaseOptions(
+      manifestOptions(manifestConfigOptions(gitHubOptions(yargs)))
+    );
   },
   async handler(argv) {
     const github = await buildGitHub(argv);
@@ -362,6 +364,7 @@ const createReleaseCommand: yargs.CommandModule<{}, CreateReleaseArgs> = {
     }
   },
 };
+
 const createManifestPullRequestCommand: yargs.CommandModule<
   {},
   CreateManifestPullRequestArgs
@@ -370,9 +373,11 @@ const createManifestPullRequestCommand: yargs.CommandModule<
   describe: 'create a release-PR using a manifest file',
   deprecated: 'use release-pr instead.',
   builder(yargs) {
-    return releaseOptions(manifestOptions(
-      manifestConfigOptions(pullRequestOptions(gitHubOptions(yargs)))
-    ));
+    return releaseOptions(
+      manifestOptions(
+        manifestConfigOptions(pullRequestOptions(gitHubOptions(yargs)))
+      )
+    );
   },
   async handler(argv) {
     logger.warn('manifest-pr is deprecated. Please use release-pr instead.');
@@ -444,28 +449,6 @@ export const parser = yargs
   .command(createReleaseCommand)
   .command(createManifestPullRequestCommand)
   .command(createManifestReleaseCommand)
-  // .command(
-  //   'latest-tag',
-  //   'find the sha of the latest release',
-  //   // options unique to ReleasePR
-  //   (yargs: YargsOptionsBuilder) => {
-  //     releaseType(yargs, 'node');
-  //     releaserCommon(yargs);
-  //   },
-  //   (argv: ReleasePRFactoryOptions) => {
-  //     factory
-  //       .runCommand('latest-tag', argv)
-  //       .catch(handleError)
-  //       .then(latestTag => {
-  //         if (latestTag) {
-  //           console.log(latestTag);
-  //         } else {
-  //           console.log('No latest tag found.');
-  //           process.exitCode = 1;
-  //         }
-  //       });
-  //   }
-  // )
   .demandCommand(1)
   .strict(true)
   .scriptName('release-please');
