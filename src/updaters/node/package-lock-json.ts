@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {jsonStringify} from '../util/json-stringify';
-import {logger} from '../util/logger';
-import {DefaultUpdater} from './default';
+import {jsonStringify} from '../../util/json-stringify';
+import {logger} from '../../util/logger';
+import {DefaultUpdater} from '../default';
 
 type LockFileV2 = {
   version: string;

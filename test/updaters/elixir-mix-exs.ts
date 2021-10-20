@@ -16,7 +16,7 @@ import {readFileSync} from 'fs';
 import {resolve} from 'path';
 import * as snapshot from 'snap-shot-it';
 import {describe, it} from 'mocha';
-import {ElixirMixExs} from '../../src/updaters/elixir-mix-exs';
+import {ElixirMixExs} from '../../src/updaters/elixir/elixir-mix-exs';
 import {Version} from '../../src/version';
 
 const fixturesPath = './test/updaters/fixtures';

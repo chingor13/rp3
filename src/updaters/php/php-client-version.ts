@@ -12,17 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {jsonStringify} from '../util/json-stringify';
-import {logger} from '../util/logger';
-import {DefaultUpdater} from './default';
+import {DefaultUpdater} from '../default';
 
-type LockFile = {version: string};
-
-export class PackageJson extends DefaultUpdater {
+export class PHPClientVersion extends DefaultUpdater {
   updateContent(content: string): string {
-    const parsed = JSON.parse(content) as LockFile;
-    logger.info(`updating from ${parsed.version} to ${this.version}`);
-    parsed.version = this.version.toString();
-    return jsonStringify(parsed, content);
+    return content.replace(
+      /const VERSION = '[0-9]+\.[0-9]+\.[0-9]+'/,
+      `const VERSION = '${this.version}'`
+    );
   }
 }

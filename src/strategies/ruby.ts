@@ -18,7 +18,7 @@ import {indentCommit} from '../util/indent-commit';
 import {Changelog} from '../updaters/changelog';
 
 // Ruby
-import {VersionRB} from '../updaters/version-rb';
+import {VersionRB} from '../updaters/ruby/version-rb';
 import {StrategyOptions, Strategy, BuildUpdatesOptions} from '../strategy';
 import {ConventionalCommit} from '../commit';
 import {Update} from '../update';

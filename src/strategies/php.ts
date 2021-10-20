@@ -15,7 +15,7 @@
 // Generic
 import {Changelog} from '../updaters/changelog';
 // PHP Specific.
-import {RootComposerUpdatePackage} from '../updaters/root-composer-update-package';
+import {RootComposerUpdatePackage} from '../updaters/php/root-composer-update-package';
 import {Strategy, BuildUpdatesOptions, StrategyOptions} from '../strategy';
 import {Update} from '../update';
 import {VersionsMap} from '../version';

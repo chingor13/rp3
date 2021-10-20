@@ -1,4 +1,4 @@
-// Copyright 2021 Google LLC
+// Copyright 2019 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {logger} from '../util/logger';
-import {DefaultUpdater} from './default';
+import {jsonStringify} from '../../util/json-stringify';
+import {logger} from '../../util/logger';
+import {DefaultUpdater} from '../default';
 
-export class ElixirMixExs extends DefaultUpdater {
+type LockFile = {version: string};
+
+export class PackageJson extends DefaultUpdater {
   updateContent(content: string): string {
-    const oldVersion = content.match(/version: "([A-Za-z0-9_\-+.~]+)",/);
-    if (oldVersion) {
-      logger.info(`updating from ${oldVersion[1]} to ${this.version}`);
-    }
-    return content.replace(
-      /version: "[A-Za-z0-9_\-+.~]+",/,
-      `version: "${this.version}",`
-    );
+    const parsed = JSON.parse(content) as LockFile;
+    logger.info(`updating from ${parsed.version} to ${this.version}`);
+    parsed.version = this.version.toString();
+    return jsonStringify(parsed, content);
   }
 }

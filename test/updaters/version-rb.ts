@@ -16,7 +16,7 @@ import {readFileSync} from 'fs';
 import {resolve} from 'path';
 import * as snapshot from 'snap-shot-it';
 import {describe, it} from 'mocha';
-import {VersionRB} from '../../src/updaters/version-rb';
+import {VersionRB} from '../../src/updaters/ruby/version-rb';
 import {Version} from '../../src/version';
 
 const fixturesPath = './test/updaters/fixtures';

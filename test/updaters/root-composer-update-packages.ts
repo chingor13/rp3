@@ -16,7 +16,7 @@ import {readFileSync} from 'fs';
 import {resolve} from 'path';
 import * as snapshot from 'snap-shot-it';
 import {describe, it} from 'mocha';
-import {RootComposerUpdatePackages} from '../../src/updaters/root-composer-update-packages';
+import {RootComposerUpdatePackages} from '../../src/updaters/php/root-composer-update-packages';
 import {Version} from '../../src/version';
 
 const fixturesPath = './test/updaters/fixtures';

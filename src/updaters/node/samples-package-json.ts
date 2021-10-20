@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {UpdateOptions} from '../update';
-import {logger} from '../util/logger';
-import {jsonStringify} from '../util/json-stringify';
-import {DefaultUpdater} from './default';
+import {UpdateOptions} from '../../update';
+import {logger} from '../../util/logger';
+import {jsonStringify} from '../../util/json-stringify';
+import {DefaultUpdater} from '../default';
 
 interface SamplesPackageJsonOptions extends UpdateOptions {
   packageName: string;

@@ -14,10 +14,10 @@
 
 import {Strategy, BuildUpdatesOptions} from '../strategy';
 import {Update} from '../update';
-import {PackageLockJson} from '../updaters/package-lock-json';
-import {SamplesPackageJson} from '../updaters/samples-package-json';
+import {PackageLockJson} from '../updaters/node/package-lock-json';
+import {SamplesPackageJson} from '../updaters/node/samples-package-json';
 import {Changelog} from '../updaters/changelog';
-import {PackageJson} from '../updaters/package-json';
+import {PackageJson} from '../updaters/node/package-json';
 import {GitHubFileContents} from '../github';
 
 export class Node extends Strategy {

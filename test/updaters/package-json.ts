@@ -16,7 +16,7 @@ import {readFileSync} from 'fs';
 import {resolve} from 'path';
 import * as snapshot from 'snap-shot-it';
 import {describe, it} from 'mocha';
-import {PackageJson} from '../../src/updaters/package-json';
+import {PackageJson} from '../../src/updaters/node/package-json';
 import {Version} from '../../src/version';
 
 const fixturesPath = './test/updaters/fixtures';

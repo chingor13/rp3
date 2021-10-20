@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC
+// Copyright 2021 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {DefaultUpdater} from './default';
+import {logger} from '../../util/logger';
+import {DefaultUpdater} from '../default';
 
-export class PHPClientVersion extends DefaultUpdater {
+export class ElixirMixExs extends DefaultUpdater {
   updateContent(content: string): string {
+    const oldVersion = content.match(/version: "([A-Za-z0-9_\-+.~]+)",/);
+    if (oldVersion) {
+      logger.info(`updating from ${oldVersion[1]} to ${this.version}`);
+    }
     return content.replace(
-      /const VERSION = '[0-9]+\.[0-9]+\.[0-9]+'/,
-      `const VERSION = '${this.version}'`
+      /version: "[A-Za-z0-9_\-+.~]+",/,
+      `version: "${this.version}",`
     );
   }
 }

@@ -17,7 +17,7 @@ import {Changelog} from '../updaters/changelog';
 import * as yaml from 'js-yaml';
 
 // pubspec
-import {PubspecYaml} from '../updaters/pubspec-yaml';
+import {PubspecYaml} from '../updaters/dart/pubspec-yaml';
 import {Strategy, BuildUpdatesOptions} from '../strategy';
 import {GitHubFileContents} from '../github';
 import {Update} from '../update';

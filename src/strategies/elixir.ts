@@ -15,7 +15,7 @@
 // Generic
 import {Changelog} from '../updaters/changelog';
 // mix.exs support
-import {ElixirMixExs} from '../updaters/elixir-mix-exs';
+import {ElixirMixExs} from '../updaters/elixir/elixir-mix-exs';
 import {Strategy, BuildUpdatesOptions} from '../strategy';
 import {Update} from '../update';
 
