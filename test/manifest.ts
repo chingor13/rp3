@@ -12,27 +12,77 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {describe, it} from 'mocha';
+import {describe, it, beforeEach, afterEach} from 'mocha';
 import {Manifest} from '../src/manifest';
 import {GitHub} from '../src/github';
+import * as sinon from 'sinon';
+import {Commit} from '../src/commit';
+import {buildGitHubFileContent} from './helpers';
+
+const sandbox = sinon.createSandbox();
+const fixturesPath = './test/fixtures';
 
 describe('Manifest', () => {
+  let github: GitHub;
+  beforeEach(async () => {
+    github = await GitHub.create({
+      owner: 'fake-owner',
+      repo: 'fake-repo',
+      defaultBranch: 'main',
+      token: 'fake-token',
+    });
+  });
+  afterEach(() => {
+    sandbox.restore();
+  });
+
   describe('fromManifest', () => {});
 
-  describe('fromConfig', () => {});
+  describe('fromConfig', () => {
+    it('should pass strategy options to the strategy', async () => {
+      async function* fakeGenerator() {
+        const commit: Commit = {
+          sha: 'abc123',
+          message: 'some commit message',
+          files: [],
+        };
+        yield commit;
+      }
+      sandbox.stub(github, 'mergeCommitIterator').returns(fakeGenerator());
+
+      const manifest = await Manifest.fromConfig(github, 'target-branch', {
+        releaseType: 'node',
+        bumpMinorPreMajor: true,
+        bumpPatchForMinorPreMajor: true,
+      });
+      console.log(manifest);
+    });
+  });
 
   describe('createPullRequests', () => {
     it('should handle single package repository', async () => {
-      const github = await GitHub.create({
-        owner: 'googleapis',
-        repo: 'repo-automation-bots',
-        token: process.env.GITHUB_TOKEN!,
-      });
-      const rp = await Manifest.fromManifest(
+      const getFileContentsStub = sandbox.stub(
+        github,
+        'getFileContentsOnBranch'
+      );
+      getFileContentsStub
+        .withArgs('release-please-config.json', 'main')
+        .resolves(
+          buildGitHubFileContent(fixturesPath, 'manifest/config/config.json')
+        )
+        .withArgs('.release-please-manifest.json', 'main')
+        .resolves(
+          buildGitHubFileContent(
+            fixturesPath,
+            'manifest/versions/versions.json'
+          )
+        );
+      sandbox.stub(github, 'listReleases').resolves([]);
+      const manifest = await Manifest.fromManifest(
         github,
         github.repository.defaultBranch
       );
-      const pullRequestNumbers = await rp.createPullRequests();
+      const pullRequestNumbers = await manifest.createPullRequests();
       console.log(pullRequestNumbers);
     });
 

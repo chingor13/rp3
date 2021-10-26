@@ -199,16 +199,16 @@ export class Manifest {
     let commitsFound = 0;
     for await (const commit of commitGenerator) {
       commits.push({
-        sha: commit.commit.sha,
-        message: commit.commit.message,
-        files: commit.commit.files,
+        sha: commit.sha,
+        message: commit.message,
+        files: commit.files,
       });
-      if (shas.has(commit.commit.sha)) {
+      if (shas.has(commit.sha)) {
         if (commit.pullRequest) {
-          releasePullRequests[commit.commit.sha] = commit.pullRequest;
+          releasePullRequests[commit.sha] = commit.pullRequest;
         } else {
           logger.warn(
-            `Release SHA ${commit.commit.sha} did not have an associated pull request`
+            `Release SHA ${commit.sha} did not have an associated pull request`
           );
         }
         commitsFound += 1;

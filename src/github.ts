@@ -101,17 +101,12 @@ interface GraphQLCommit {
   };
 }
 
-interface CommitWithPullRequest {
-  commit: Commit;
-  pullRequest?: PullRequest;
-}
-
 interface PullRequestHistory {
   pageInfo: {
     hasNextPage: boolean;
     endCursor: string | undefined;
   };
-  data: CommitWithPullRequest[];
+  data: Commit[];
 }
 
 interface Release {
@@ -175,6 +170,14 @@ export class GitHub {
     return new GitHub(opts);
   }
 
+  /**
+   * Returns the default branch for a given repository.
+   *
+   * @param {string} owner The GitHub repository owner
+   * @param {string} repo The GitHub repository name
+   * @param {OctokitType} octokit An authenticated octokit instance
+   * @returns {string} Name of the default branch
+   */
   static async defaultBranch(
     owner: string,
     repo: string,
@@ -191,12 +194,12 @@ export class GitHub {
    * Returns the list of commits to the default branch after the provided filter
    * query has been satified.
    *
-   * @param {string} targetBranch target branch of commit
-   * @param {CommitFilter} filter - Callback function that returns whether a
+   * @param {string} targetBranch Target branch of commit
+   * @param {CommitFilter} filter Callback function that returns whether a
    *   commit/pull request matches certain criteria
-   * @param {number} maxResults - Limit the number of results searched.
+   * @param {number} maxResults Limit the number of results searched.
    *   Defaults to unlimited.
-   * @returns {Commit[]} - List of commits to current branch
+   * @returns {Commit[]} List of commits to current branch
    * @throws {GitHubAPIError} on an API error
    */
   async commitsSince(
@@ -206,13 +209,11 @@ export class GitHub {
   ): Promise<Commit[]> {
     const commits: Commit[] = [];
     const generator = this.mergeCommitIterator(targetBranch, maxResults);
-    for await (const commitWithPullRequest of generator) {
-      if (
-        filter(commitWithPullRequest.commit, commitWithPullRequest.pullRequest)
-      ) {
+    for await (const commit of generator) {
+      if (filter(commit, commit.pullRequest)) {
         break;
       }
-      commits.push(commitWithPullRequest.commit);
+      commits.push(commit);
     }
     return commits;
   }
@@ -223,7 +224,7 @@ export class GitHub {
    * @param {string} targetBranch target branch of commit
    * @param {number} maxResults maxResults - Limit the number of results searched.
    *   Defaults to unlimited.
-   * @yields {CommitWithPullRequest}
+   * @yields {Commit}
    * @throws {GitHubAPIError} on an API error
    */
   async *mergeCommitIterator(
@@ -250,10 +251,12 @@ export class GitHub {
     }
   }
 
+  // TODO: fetch files touched by merge commits
   private async mergeCommitsGraphQL(
     targetBranch: string,
     cursor?: string
   ): Promise<PullRequestHistory | null> {
+    logger.debug(`Fetching merge commits on branch ${targetBranch}`);
     const response = await this.graphqlRequest({
       query: `query pullRequestsSince($owner: String!, $repo: String!, $num: Int!, $targetBranch: String!, $cursor: String) {
         repository(owner: $owner, name: $repo) {
@@ -311,10 +314,10 @@ export class GitHub {
     return {
       pageInfo: history.pageInfo,
       data: commits.map(graphCommit => {
-        const commit = {
+        const commit: Commit = {
           sha: graphCommit.sha,
           message: graphCommit.message,
-          files: [] as string[],
+          files: [],
         };
         const pullRequest = graphCommit.associatedPullRequests.nodes.find(
           pr => {
@@ -322,23 +325,18 @@ export class GitHub {
           }
         );
         if (pullRequest) {
-          return {
-            commit,
-            pullRequest: {
-              sha: commit.sha,
-              number: pullRequest.number,
-              baseBranchName: pullRequest.baseRefName,
-              headBranchName: pullRequest.headRefName,
-              title: pullRequest.title,
-              body: pullRequest.body,
-              labels: pullRequest.labels.nodes.map(node => node.name),
-              files: [], // FIXME
-            },
+          commit.pullRequest = {
+            sha: commit.sha,
+            number: pullRequest.number,
+            baseBranchName: pullRequest.baseRefName,
+            headBranchName: pullRequest.headRefName,
+            title: pullRequest.title,
+            body: pullRequest.body,
+            labels: pullRequest.labels.nodes.map(node => node.name),
+            files: [], // FIXME
           };
         }
-        return {
-          commit,
-        };
+        return commit;
       }),
     };
   }
@@ -519,6 +517,7 @@ export class GitHub {
    */
   listReleases = wrapAsync(
     async (page = 1, perPage = 100): Promise<Release[]> => {
+      logger.debug(`Fetching releases page ${page}`);
       const releases = await this.octokit.repos.listReleases({
         owner: this.repository.owner,
         repo: this.repository.repo,
@@ -643,6 +642,7 @@ export class GitHub {
     path: string,
     branch: string
   ): Promise<GitHubFileContents> {
+    logger.debug(`Fetching ${path} from branch ${branch}`);
     try {
       return await this.getFileContentsWithSimpleAPI(path, branch);
     } catch (err) {
