@@ -66,7 +66,7 @@ interface VersioningArgs {
 
 interface ManifestConfigArgs {
   path?: string;
-  packageName?: string;
+  component?: string;
   releaseType?: ReleaseType;
 }
 
@@ -267,8 +267,8 @@ function manifestConfigOptions(
       describe: 'release from path other than root directory',
       type: 'string',
     })
-    .option('package-name', {
-      describe: 'name of package release is being minted for',
+    .option('component', {
+      describe: 'name of component release is being minted for',
       type: 'string',
     })
     .option('release-type', {
@@ -308,7 +308,7 @@ const createReleasePullRequestCommand: yargs.CommandModule<
     if (argv.releaseType) {
       manifest = await Manifest.fromConfig(github, targetBranch, {
         releaseType: argv.releaseType,
-        packageName: argv.packageName || '',
+        component: argv.component || '',
       });
     } else {
       manifest = await Manifest.fromManifest(
@@ -344,7 +344,7 @@ const createReleaseCommand: yargs.CommandModule<{}, CreateReleaseArgs> = {
     if (argv.releaseType) {
       manifest = await Manifest.fromConfig(github, targetBranch, {
         releaseType: argv.releaseType,
-        packageName: argv.packageName || '',
+        component: argv.component || '',
       });
     } else {
       manifest = await Manifest.fromManifest(

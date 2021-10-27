@@ -285,11 +285,11 @@ describe('Manifest', () => {
         {
           'path/a': {
             releaseType: 'simple',
-            packageName: 'pkg1',
+            component: 'pkg1',
           },
           'path/b': {
             releaseType: 'simple',
-            packageName: 'pkg2',
+            component: 'pkg2',
           },
         },
         {
@@ -366,11 +366,11 @@ describe('Manifest', () => {
         {
           'path/a': {
             releaseType: 'simple',
-            packageName: 'pkg1',
+            component: 'pkg1',
           },
           'path/b': {
             releaseType: 'simple',
-            packageName: 'pkg2',
+            component: 'pkg2',
           },
         },
         {

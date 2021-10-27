@@ -39,7 +39,7 @@ export interface ReleaserConfig {
   releaseAs?: string;
   skipGithubRelease?: boolean;
   draft?: boolean;
-  packageName?: string;
+  component?: string;
 }
 
 interface ReleaserConfigJson {
@@ -61,7 +61,9 @@ interface ManifestOptions {
 }
 
 interface ReleaserPackageConfig extends ReleaserConfigJson {
+  // deprecated in favor of component
   'package-name'?: string;
+  component?: string;
   'changelog-path'?: string;
 }
 
@@ -82,6 +84,7 @@ export type RepositoryConfig = Record<string, ReleaserConfig>;
 const RELEASE_PLEASE_CONFIG = 'release-please-config.json';
 const RELEASE_PLEASE_MANIFEST = '.release-please-manifest.json';
 const ROOT_PROJECT_PATH = '.';
+const DEFAULT_COMPONENT_NAME = '';
 
 export const MANIFEST_PULL_REQUEST_TITLE_PATTERN = 'chore: release ${scope}';
 
@@ -161,12 +164,8 @@ export class Manifest {
   }
 
   async buildPullRequests(): Promise<ReleasePullRequest[]> {
-    // collect versions by package name
-    logger.info('Collecting latest release versions by package');
-
+    logger.info('Building pull requests');
     const pathsByComponent: Record<string, string> = {};
-
-    // strategies by path
     const strategiesByPath: Record<string, Strategy> = {};
     for (const path in this.repositoryConfig) {
       const config = this.repositoryConfig[path];
@@ -177,22 +176,22 @@ export class Manifest {
         targetBranch: this.targetBranch,
       });
       strategiesByPath[path] = strategy;
-      if (!config.packageName) {
-        logger.warn(`No configured packageName for path: ${path}`);
-        config.packageName = await strategy.getDefaultComponent();
-        if (config.packageName === undefined) {
+      if (!config.component) {
+        logger.warn(`No configured component for path: ${path}`);
+        config.component = await strategy.getDefaultComponent();
+        if (config.component === undefined) {
           logger.error(`No default component for path: ${path}`);
           continue;
         }
       }
-      if (pathsByComponent[config.packageName]) {
+      if (pathsByComponent[config.component]) {
         logger.warn(
-          `Multiple paths for ${config.packageName}: ${
-            pathsByComponent[config.packageName]
+          `Multiple paths for ${config.component}: ${
+            pathsByComponent[config.component]
           }, ${path}`
         );
       }
-      pathsByComponent[config.packageName] = path;
+      pathsByComponent[config.component] = path;
     }
 
     // Collect all the SHAs of the latest release packages
@@ -342,7 +341,7 @@ function extractReleaserConfig(config: ReleaserPackageConfig): ReleaserConfig {
     releaseAs: config['release-as'],
     skipGithubRelease: config['skip-github-release'],
     draft: config.draft,
-    packageName: config['package-name'],
+    component: config['component'] || config['package-name'],
   };
 }
 
@@ -359,12 +358,6 @@ async function parseConfig(
       ...defaultConfig,
       ...extractReleaserConfig(config.packages[path]),
     };
-    if (!packageConfig.packageName) {
-      const packageNameFromPath = path.split(/[\\/]/).pop();
-      if (packageNameFromPath !== ROOT_PROJECT_PATH) {
-        packageConfig.packageName = packageNameFromPath;
-      }
-    }
     repositoryConfig[path] = packageConfig;
   }
   const manifestOptions = {
@@ -410,7 +403,7 @@ async function latestReleaseVersion(
     ? prefix.replace(/-$/, '')
     : prefix;
 
-  logger.info('Looking for latest release');
+  logger.info(`Looking for latest release on branch: ${targetBranch}`);
 
   // only look at the last 250 or so commits to find the latest tag - we
   // don't want to scan the entire repository history if this repo has never
