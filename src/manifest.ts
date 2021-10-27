@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import {ChangelogSection} from './release-notes';
-import {GitHub} from './github';
+import {GitHub, GitHubRelease} from './github';
 import {Version} from './version';
 import {Commit} from './commit';
 import {PullRequest} from './pull-request';
@@ -323,12 +323,40 @@ export class Manifest {
   }
 
   async buildReleases(): Promise<Release[]> {
+    // Find merged release pull requests
+    const pullRequestGenerator = this.github.mergedPullRequestIterator(
+      this.targetBranch,
+      500
+    );
+
+    for await (const pullRequest of pullRequestGenerator) {
+      if (
+        !pullRequest.labels.find(label => {
+          return label === 'autorelease: pending';
+        })
+      ) {
+        continue;
+      }
+
+      return extractReleases(pullRequest);
+    }
+
+    // Prepare release info
     return [];
   }
 
-  async createReleases(): Promise<string[]> {
-    return ['FIXME'];
+  async createReleases(): Promise<(GitHubRelease | undefined)[]> {
+    const promises: Promise<GitHubRelease | undefined>[] = [];
+    for (const release of await this.buildReleases()) {
+      promises.push(this.github.createRelease(release));
+    }
+    return await Promise.all(promises);
   }
+}
+
+function extractReleases(pullRequest: PullRequest): Release[] {
+  pullRequest.body;
+  return [];
 }
 
 function extractReleaserConfig(config: ReleaserPackageConfig): ReleaserConfig {

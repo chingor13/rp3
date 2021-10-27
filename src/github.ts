@@ -37,6 +37,7 @@ import {logger} from './util/logger';
 import {Repository} from './repository';
 import {ReleasePullRequest} from './release-pull-request';
 import {Update} from './update';
+import {Release} from './release';
 type GitGetTreeResponse = PromiseValue<
   ReturnType<InstanceType<typeof Octokit>['git']['getTree']>
 >['data'];
@@ -489,7 +490,7 @@ export class GitHub {
    *
    * @param {number} maxResults maxResults - Limit the number of results searched.
    *   Defaults to unlimited.
-   * @yields {MergedGitHubPR}
+   * @yields {GitHubRelease}
    * @throws {GitHubAPIError} on an API error
    */
   async *releaseIterator(maxResults: number = Number.MAX_SAFE_INTEGER) {
@@ -935,6 +936,24 @@ export class GitHub {
       prefix
     );
   }
+
+  createRelease = wrapAsync(
+    async (release: Release): Promise<GitHubRelease> => {
+      const resp = await this.octokit.repos.createRelease({
+        owner: this.repository.owner,
+        repo: this.repository.repo,
+        tag_name: release.tag.toString(),
+        body: release.notes,
+        sha: release.sha,
+      });
+      return {
+        name: resp.data.name || undefined,
+        tagName: resp.data.tag_name,
+        sha: resp.data.target_commitish,
+        notes: resp.data.body_text,
+      };
+    }
+  );
 }
 
 // Takes a potentially unqualified branch name, and turns it
