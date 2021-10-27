@@ -120,7 +120,7 @@ export class PullRequestTitle {
   static ofTargetBranch(targetBranch: string): PullRequestTitle {
     return new PullRequestTitle({
       targetBranch,
-    })
+    });
   }
 
   getTargetBranch(): string | undefined {
@@ -140,6 +140,7 @@ export class PullRequestTitle {
     return this.pullRequestTitlePattern
       .replace('${scope}', scope)
       .replace('${component}', component)
-      .replace('${version}', version).trim();
+      .replace('${version}', version)
+      .trim();
   }
 }

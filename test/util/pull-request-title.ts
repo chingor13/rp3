@@ -91,9 +91,7 @@ describe('PullRequestTitle', () => {
   });
   describe('ofTargetBranch', () => {
     it('builds branchname with only target branch', () => {
-      const pullRequestTitle = PullRequestTitle.ofTargetBranch(
-        'main'
-      );
+      const pullRequestTitle = PullRequestTitle.ofTargetBranch('main');
       expect(pullRequestTitle.toString()).to.eql('chore(main): release');
     });
   });

@@ -162,8 +162,12 @@ export class Manifest {
   async buildPullRequests(): Promise<ReleasePullRequest[]> {
     // collect versions by package name
     logger.info('Collecting latest release versions by package');
-    const packageVersions: Record<string, Version> = {};
-    const strategies: Record<string, Strategy> = {};
+
+    // latest released versions by component
+    const versionsByComponent: Record<string, Version> = {};
+
+    // strategies by path
+    const strategiesByPath: Record<string, Strategy> = {};
     for (const path in this.repositoryConfig) {
       const config = this.repositoryConfig[path];
       const strategy = await buildStrategy({
@@ -172,7 +176,7 @@ export class Manifest {
         path,
         targetBranch: this.targetBranch,
       });
-      strategies[path] = strategy;
+      strategiesByPath[path] = strategy;
       if (!config.packageName) {
         logger.warn(`No configured packageName for path: ${path}`);
         config.packageName = await strategy.getDefaultComponent();
@@ -181,36 +185,37 @@ export class Manifest {
           continue;
         }
       }
-      packageVersions[config.packageName] = this.releasedVersions[path];
+      versionsByComponent[config.packageName] = this.releasedVersions[path];
     }
-    logger.debug(packageVersions);
 
     // Collect all the SHAs of the latest release packages
     logger.info('Collecting release commit SHAs');
     let releasesFound = 0;
     const expectedReleases = Object.keys(this.releasedVersions).length;
 
-    // package => sha
-    const packageShas: Record<string, string> = {};
-    const packageReleases: Record<string, Release> = {};
+    // SHAs by component
+    const shasByComponent: Record<string, string> = {};
+
+    // Releases by component
+    const releasesByComponent: Record<string, Release> = {};
     for await (const release of this.github.releaseIterator(100)) {
       const tagName = TagName.parse(release.tagName);
       if (!tagName) {
         logger.warn(`Unable to parse release name: ${release.name}`);
         continue;
       }
-      const expectedVersion = packageVersions[tagName.component || ''];
+      const expectedVersion = versionsByComponent[tagName.component || ''];
       if (!expectedVersion) {
         logger.warn(`Unable to find package ${tagName.component} in manifest`);
         continue;
       }
       if (expectedVersion.toString() === tagName.version.toString()) {
-        packageShas[tagName.component || ''] = release.sha;
-        packageReleases[tagName.component || ''] = {
+        shasByComponent[tagName.component || ''] = release.sha;
+        releasesByComponent[tagName.component || ''] = {
           tag: tagName,
           sha: release.sha,
           notes: release.notes || '',
-        }
+        };
         releasesFound += 1;
       }
 
@@ -233,11 +238,11 @@ export class Manifest {
       this.targetBranch,
       500
     );
-    const shas = new Set(Object.values(packageShas));
+    const shas = new Set(Object.values(shasByComponent));
     const expectedShas = shas.size;
 
     // sha => release pull request
-    const releasePullRequests: Record<string, PullRequest> = {};
+    const releasepullRequestsBySha: Record<string, PullRequest> = {};
     let commitsFound = 0;
     for await (const commit of commitGenerator) {
       commits.push({
@@ -247,7 +252,7 @@ export class Manifest {
       });
       if (shas.has(commit.sha)) {
         if (commit.pullRequest) {
-          releasePullRequests[commit.sha] = commit.pullRequest;
+          releasepullRequestsBySha[commit.sha] = commit.pullRequest;
         } else {
           logger.warn(
             `Release SHA ${commit.sha} did not have an associated pull request`
@@ -288,16 +293,13 @@ export class Manifest {
       }
       const packageName = config.packageName || '';
       const latestReleasePullRequest =
-        releasePullRequests[packageShas[packageName]];
+        releasepullRequestsBySha[shasByComponent[packageName]];
       if (!latestReleasePullRequest) {
         logger.warn('No latest release pull request found.');
       }
 
-      const strategy = strategies[path];
-      const latestRelease = packageReleases[packageName];
-      // const latestRelease = latestReleasePullRequest
-      //   ? await strategy.buildRelease(latestReleasePullRequest)
-      //   : undefined;
+      const strategy = strategiesByPath[path];
+      const latestRelease = releasesByComponent[packageName];
       newReleasePullRequests.push(
         await strategy.buildReleasePullRequest(commits, latestRelease)
       );
