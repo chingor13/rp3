@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Update} from './update';
-import {Version} from './version';
+import {Updater} from '../update';
 
-export interface ReleasePullRequest {
-  title: string;
-  body: string;
-  updates: Update[];
-  labels: string[];
-  headRefName: string;
-  version?: Version;
+export class CompositeUpdater implements Updater {
+  updaters: Updater[];
+  constructor(...updaters: Updater[]) {
+    this.updaters = updaters;
+  }
+  updateContent(content: string | undefined): string {
+    for (const updater of this.updaters) {
+      content = updater.updateContent(content);
+    }
+    return content || '';
+  }
 }

@@ -72,7 +72,8 @@ export class Node extends Strategy {
   async getDefaultComponent(): Promise<string | undefined> {
     const pkgJsonContents = await this.getPkgJsonContents();
     const pkg = JSON.parse(pkgJsonContents.parsedContent);
-    return pkg.name;
+    const name = pkg.name;
+    return name.match(/^@[\w-]+\//) ? name.split('/')[1] : name;
   }
 
   private async getPkgJsonContents(): Promise<GitHubFileContents> {

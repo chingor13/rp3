@@ -26,6 +26,9 @@ import {PullRequestTitle} from './util/pull-request-title';
 import {ReleasePullRequest} from './release-pull-request';
 import {buildStrategy, ReleaseType} from './factory';
 import {Release} from './release';
+import {Strategy} from './strategy';
+import {Update} from './update';
+import {CompositeUpdater} from './updaters/composite';
 
 export interface ReleaserConfig {
   releaseType: ReleaseType;
@@ -49,6 +52,14 @@ interface ReleaserConfigJson {
   draft?: boolean;
 }
 
+interface ManifestOptions {
+  bootstrapSha?: string;
+  lastReleaseSha?: string;
+  alwaysLinkLocal?: boolean;
+  separatePullRequests?: boolean;
+  plugins?: PluginType[];
+}
+
 interface ReleaserPackageConfig extends ReleaserConfigJson {
   'package-name'?: string;
   'changelog-path'?: string;
@@ -61,6 +72,7 @@ export interface Config extends ReleaserConfigJson {
   'last-release-sha'?: string;
   'always-link-local'?: boolean;
   plugins?: PluginType[];
+  'separate-pull-requests'?: boolean;
 }
 // path => version
 export type ReleasedVersions = Record<string, Version>;
@@ -77,18 +89,21 @@ export class Manifest {
   repositoryConfig: RepositoryConfig;
   releasedVersions: ReleasedVersions;
   targetBranch: string;
+  separatePullRequests: boolean;
 
   constructor(
     github: GitHub,
     targetBranch: string,
     repositoryConfig: RepositoryConfig,
-    releasedVersions: ReleasedVersions
+    releasedVersions: ReleasedVersions,
+    manifestOptions?: ManifestOptions
   ) {
     this.repository = github.repository;
     this.github = github;
     this.targetBranch = targetBranch;
     this.repositoryConfig = repositoryConfig;
     this.releasedVersions = releasedVersions;
+    this.separatePullRequests = manifestOptions?.separatePullRequests || false;
   }
 
   static async fromManifest(
@@ -97,7 +112,10 @@ export class Manifest {
     configFile: string = RELEASE_PLEASE_CONFIG,
     manifestFile: string = RELEASE_PLEASE_MANIFEST
   ): Promise<Manifest> {
-    const [repositoryConfig, releasedVersions] = await Promise.all([
+    const [
+      {config: repositoryConfig, options: manifestOptions},
+      releasedVersions,
+    ] = await Promise.all([
       parseConfig(github, configFile, targetBranch),
       parseReleasedVersions(github, manifestFile, targetBranch),
     ]);
@@ -105,14 +123,16 @@ export class Manifest {
       github,
       targetBranch,
       repositoryConfig,
-      releasedVersions
+      releasedVersions,
+      manifestOptions
     );
   }
 
   static async fromConfig(
     github: GitHub,
     targetBranch: string,
-    config: ReleaserConfig
+    config: ReleaserConfig,
+    manifestOptions?: ManifestOptions
   ): Promise<Manifest> {
     const repositoryConfig = {'.': config};
     const releasedVersions: ReleasedVersions = {};
@@ -124,7 +144,8 @@ export class Manifest {
       github,
       targetBranch,
       repositoryConfig,
-      releasedVersions
+      releasedVersions,
+      manifestOptions
     );
   }
 
@@ -140,14 +161,27 @@ export class Manifest {
     // collect versions by package name
     logger.info('Collecting latest release versions by package');
     const packageVersions: Record<string, Version> = {};
+    const strategies: Record<string, Strategy> = {};
     for (const path in this.repositoryConfig) {
       const config = this.repositoryConfig[path];
-      if (config.packageName === undefined) {
-        logger.warn(`did not find packageName for path: ${path}`);
-        continue;
+      const strategy = await buildStrategy({
+        ...config,
+        github: this.github,
+        path,
+        targetBranch: this.targetBranch,
+      });
+      strategies[path] = strategy;
+      if (!config.packageName) {
+        logger.warn(`No configured packageName for path: ${path}`);
+        config.packageName = await strategy.getDefaultComponent();
+        if (config.packageName === undefined) {
+          logger.error(`No default component for path: ${path}`);
+          continue;
+        }
       }
       packageVersions[config.packageName] = this.releasedVersions[path];
     }
+    logger.debug(packageVersions);
 
     // Collect all the SHAs of the latest release packages
     logger.info('Collecting release commit SHAs');
@@ -251,13 +285,7 @@ export class Manifest {
         logger.warn('No latest release pull request found.');
       }
 
-      const strategy = await buildStrategy({
-        ...config,
-        github: this.github,
-        path,
-        targetBranch: this.targetBranch,
-      });
-
+      const strategy = strategies[path];
       const latestRelease = latestReleasePullRequest
         ? await strategy.buildRelease(latestReleasePullRequest)
         : undefined;
@@ -265,7 +293,13 @@ export class Manifest {
         await strategy.buildReleasePullRequest(commits, latestRelease)
       );
     }
-    return newReleasePullRequests;
+
+    // TODO: apply plugins
+    if (this.separatePullRequests || newReleasePullRequests.length === 1) {
+      return newReleasePullRequests;
+    }
+
+    return [mergePullRequests(newReleasePullRequests, this.targetBranch)];
   }
 
   async buildReleases(): Promise<Release[]> {
@@ -291,11 +325,11 @@ function extractReleaserConfig(config: ReleaserPackageConfig): ReleaserConfig {
   };
 }
 
-export async function parseConfig(
+async function parseConfig(
   github: GitHub,
   configFile: string,
   branch: string
-): Promise<RepositoryConfig> {
+): Promise<{config: RepositoryConfig; options: ManifestOptions}> {
   const config = await github.getFileJson<Config>(configFile, branch);
   const defaultConfig = extractReleaserConfig(config);
   const repositoryConfig: RepositoryConfig = {};
@@ -312,10 +346,17 @@ export async function parseConfig(
     }
     repositoryConfig[path] = packageConfig;
   }
-  return repositoryConfig;
+  const manifestOptions = {
+    bootstrapSha: config['bootstrap-sha'],
+    lastReleaseSha: config['last-release-sha'],
+    alwaysLinkLocal: config['always-link-local'],
+    separatePullRequests: config['separate-pull-requests'],
+    plugins: config['plugins'],
+  };
+  return {config: repositoryConfig, options: manifestOptions};
 }
 
-export async function parseReleasedVersions(
+async function parseReleasedVersions(
   github: GitHub,
   manifestFile: string,
   branch: string
@@ -385,4 +426,43 @@ async function latestReleaseVersion(
     return version;
   }
   return;
+}
+
+function mergePullRequests(
+  pullRequests: ReleasePullRequest[],
+  targetBranch: string
+): ReleasePullRequest {
+  const updatesByPath: Record<string, Update[]> = {};
+  const bodyParts: string[] = [];
+  const labels = new Set<string>();
+  for (const pullRequest of pullRequests) {
+    for (const update of pullRequest.updates) {
+      if (updatesByPath[update.path]) {
+        updatesByPath[update.path].push(update);
+      } else {
+        updatesByPath[update.path] = [update];
+      }
+    }
+    bodyParts.push(pullRequest.body);
+  }
+
+  const updates: Update[] = [];
+  for (const path in updatesByPath) {
+    const update = updatesByPath[path];
+    const updaters = update.map(u => u.updater);
+    updates.push({
+      path,
+      createIfMissing: update[0].createIfMissing,
+      updater: new CompositeUpdater(...updaters),
+    });
+  }
+
+  return {
+    title: `chore: release ${targetBranch}`,
+    body: bodyParts.join('\n\n'),
+    updates,
+    labels: Array.from(labels),
+    headRefName: BranchName.ofTargetBranch(targetBranch).toString(),
+    version: Version.parse('0.0.0'),
+  };
 }

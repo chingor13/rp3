@@ -109,7 +109,7 @@ interface PullRequestHistory {
   data: Commit[];
 }
 
-interface Release {
+export interface GitHubRelease {
   name?: string;
   tagName: string;
   sha: string;
@@ -516,7 +516,7 @@ export class GitHub {
    * @throws {GitHubAPIError} on an API error
    */
   listReleases = wrapAsync(
-    async (page = 1, perPage = 100): Promise<Release[]> => {
+    async (page = 1, perPage = 100): Promise<GitHubRelease[]> => {
       logger.debug(`Fetching releases page ${page}`);
       const releases = await this.octokit.repos.listReleases({
         owner: this.repository.owner,

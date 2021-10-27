@@ -65,7 +65,7 @@ describe('Python', () => {
         COMMITS,
         latestRelease
       );
-      expect(release.version.toString()).to.eql(expectedVersion);
+      expect(release.version?.toString()).to.eql(expectedVersion);
     });
     it('returns release PR changes with semver patch bump', async () => {
       const expectedVersion = '0.123.5';
@@ -84,7 +84,7 @@ describe('Python', () => {
         COMMITS,
         latestRelease
       );
-      expect(release.version.toString()).to.eql(expectedVersion);
+      expect(release.version?.toString()).to.eql(expectedVersion);
     });
   });
   describe('buildUpdates', () => {
