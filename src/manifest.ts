@@ -210,7 +210,7 @@ export class Manifest {
         logger.warn(`Unable to parse release name: ${release.name}`);
         continue;
       }
-      const component = tagName.component || '';
+      const component = tagName.component || DEFAULT_COMPONENT_NAME;
       const path = pathsByComponent[component];
       const expectedVersion = this.releasedVersions[path];
       if (!expectedVersion) {
