@@ -29,6 +29,7 @@ import {Release} from './release';
 import {Strategy} from './strategy';
 import {Update} from './update';
 import {CompositeUpdater} from './updaters/composite';
+import {PullRequestBody, ReleaseData} from './util/pull-request-body';
 
 export interface ReleaserConfig {
   releaseType: ReleaseType;
@@ -475,7 +476,7 @@ function mergePullRequests(
   targetBranch: string
 ): ReleasePullRequest {
   const updatesByPath: Record<string, Update[]> = {};
-  const bodyParts: string[] = [];
+  const releaseData: ReleaseData[] = [];
   const labels = new Set<string>();
   for (const pullRequest of pullRequests) {
     for (const update of pullRequest.updates) {
@@ -485,7 +486,7 @@ function mergePullRequests(
         updatesByPath[update.path] = [update];
       }
     }
-    bodyParts.push(pullRequest.body);
+    releaseData.concat(pullRequest.body.releaseData);
   }
 
   const updates: Update[] = [];
@@ -503,8 +504,8 @@ function mergePullRequests(
     title: PullRequestTitle.ofTargetBranch(
       targetBranch,
       MANIFEST_PULL_REQUEST_TITLE_PATTERN
-    ).toString(),
-    body: bodyParts.join('\n\n'),
+    ),
+    body: new PullRequestBody(releaseData),
     updates,
     labels: Array.from(labels),
     headRefName: BranchName.ofTargetBranch(targetBranch).toString(),

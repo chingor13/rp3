@@ -14,10 +14,12 @@
 
 import {Update} from './update';
 import {Version} from './version';
+import {PullRequestBody} from './util/pull-request-body';
+import {PullRequestTitle} from './util/pull-request-title';
 
 export interface ReleasePullRequest {
-  title: string;
-  body: string;
+  title: PullRequestTitle;
+  body: PullRequestBody;
   updates: Update[];
   labels: string[];
   headRefName: string;

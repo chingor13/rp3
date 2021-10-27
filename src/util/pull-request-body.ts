@@ -88,9 +88,9 @@ function splitBody(
 }
 
 const SUMMARY_PATTERN = /^(?<component>.*): (?<version>\d+\.\d+\.\d+.*)$/;
-interface ReleaseData {
+export interface ReleaseData {
   component?: string;
-  versionString: string;
+  versionString?: string;
   notes: string;
 }
 export function extractMultipleReleases(notes: string): ReleaseData[] {

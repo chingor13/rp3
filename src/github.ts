@@ -776,13 +776,15 @@ export class GitHub {
       const prNumber = await createPullRequest(this.octokit, changes, {
         upstreamOwner: this.repository.owner,
         upstreamRepo: this.repository.repo,
-        title: releasePullRequest.title,
+        title: releasePullRequest.title.toString(),
         branch: releasePullRequest.headRefName,
-        description: releasePullRequest.body.slice(0, MAX_ISSUE_BODY_SIZE),
+        description: releasePullRequest.body
+          .toString()
+          .slice(0, MAX_ISSUE_BODY_SIZE),
         primary: targetBranch,
         force: true,
         fork: true, // FIXME
-        message: releasePullRequest.title,
+        message: releasePullRequest.title.toString(),
         logger: logger,
       });
 

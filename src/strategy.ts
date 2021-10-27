@@ -28,6 +28,7 @@ import {BranchName} from './util/branch-name';
 import {TagName} from './util/tag-name';
 import {logger} from './util/logger';
 import {MANIFEST_PULL_REQUEST_TITLE_PATTERN} from './manifest';
+import {PullRequestBody} from './util/pull-request-body';
 
 const DEFAULT_LABELS = ['autorelease: pending', 'type: release'];
 const DEFAULT_CHANGELOG_PATH = 'CHANGELOG.md';
@@ -148,10 +149,17 @@ export class Strategy {
       versionsMap,
       latestVersion: latestRelease?.tag.version,
     });
+    const pullRequestBody = new PullRequestBody([
+      {
+        component,
+        versionString: newVersion.toString(),
+        notes: releaseNotesBody,
+      },
+    ]);
 
     return {
-      title: pullRequestTitle.toString(),
-      body: releaseNotesBody,
+      title: pullRequestTitle,
+      body: pullRequestBody,
       updates,
       labels: this.labels,
       headRefName: branchName.toString() + '-testing',
