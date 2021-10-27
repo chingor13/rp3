@@ -259,16 +259,16 @@ describe('PullRequestTitle with custom pullRequestTitlePattern', () => {
       ).to.throw("pullRequestTitlePattern miss the part of '${scope}'");
     });
 
-    it('throw Error with custom Pattern missing ${component}', () => {
-      expect(() =>
-        generateMatchPattern('chore${scope}: 🔖 release ${version}')
-      ).to.throw("pullRequestTitlePattern miss the part of '${component}'");
-    });
+    // it('throw Error with custom Pattern missing ${component}', () => {
+    //   expect(() =>
+    //     generateMatchPattern('chore${scope}: 🔖 release ${version}')
+    //   ).to.throw("pullRequestTitlePattern miss the part of '${component}'");
+    // });
 
-    it('throw Error with custom Pattern missing ${version}', () => {
-      expect(() =>
-        generateMatchPattern('chore${scope}: 🔖 release${component}')
-      ).to.throw("pullRequestTitlePattern miss the part of '${version}'");
-    });
+    // it('throw Error with custom Pattern missing ${version}', () => {
+    //   expect(() =>
+    //     generateMatchPattern('chore${scope}: 🔖 release${component}')
+    //   ).to.throw("pullRequestTitlePattern miss the part of '${version}'");
+    // });
   });
 });

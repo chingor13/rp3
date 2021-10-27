@@ -472,11 +472,13 @@ function mergePullRequests(
   }
 
   return {
-    title: `chore: release ${targetBranch}`,
+    title: PullRequestTitle.ofTargetBranch(
+      targetBranch,
+      MANIFEST_PULL_REQUEST_TITLE_PATTERN
+    ).toString(),
     body: bodyParts.join('\n\n'),
     updates,
     labels: Array.from(labels),
     headRefName: BranchName.ofTargetBranch(targetBranch).toString(),
-    version: Version.parse('0.0.0'),
   };
 }

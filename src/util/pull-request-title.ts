@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { logger } from "./logger";
+
 // cannot import from '..' - transpiled code references to RELEASE_PLEASE
 // at the script level are undefined, they are only defined inside function
 // or instance methods/properties.
@@ -28,12 +30,12 @@ export function generateMatchPattern(pullRequestTitlePattern?: string): RegExp {
     pullRequestTitlePattern &&
     pullRequestTitlePattern.search(/\$\{component\}/) === -1
   )
-    throw Error("pullRequestTitlePattern miss the part of '${component}'");
+    logger.warn("pullRequestTitlePattern miss the part of '${component}'");
   if (
     pullRequestTitlePattern &&
     pullRequestTitlePattern.search(/\$\{version\}/) === -1
   )
-    throw Error("pullRequestTitlePattern miss the part of '${version}'");
+    logger.warn("pullRequestTitlePattern miss the part of '${version}'");
   return new RegExp(
     `^${(pullRequestTitlePattern || DEFAULT_PR_TITLE_PATTERN)
       .replace('${scope}', '(\\((?<branch>[\\w-.]+)\\))?')
@@ -117,9 +119,13 @@ export class PullRequestTitle {
       pullRequestTitlePattern,
     });
   }
-  static ofTargetBranch(targetBranch: string): PullRequestTitle {
+  static ofTargetBranch(
+    targetBranch: string,
+    pullRequestTitlePattern?: string
+  ): PullRequestTitle {
     return new PullRequestTitle({
       targetBranch,
+      pullRequestTitlePattern,
     });
   }
 
