@@ -83,6 +83,8 @@ const RELEASE_PLEASE_CONFIG = 'release-please-config.json';
 const RELEASE_PLEASE_MANIFEST = '.release-please-manifest.json';
 const ROOT_PROJECT_PATH = '.';
 
+export const MANIFEST_PULL_REQUEST_TITLE_PATTERN = 'chore: release ${scope}';
+
 export class Manifest {
   repository: Repository;
   github: GitHub;
@@ -190,6 +192,7 @@ export class Manifest {
 
     // package => sha
     const packageShas: Record<string, string> = {};
+    const packageReleases: Record<string, Release> = {};
     for await (const release of this.github.releaseIterator(100)) {
       const tagName = TagName.parse(release.tagName);
       if (!tagName) {
@@ -203,6 +206,11 @@ export class Manifest {
       }
       if (expectedVersion.toString() === tagName.version.toString()) {
         packageShas[tagName.component || ''] = release.sha;
+        packageReleases[tagName.component || ''] = {
+          tag: tagName,
+          sha: release.sha,
+          notes: release.notes || '',
+        }
         releasesFound += 1;
       }
 
@@ -278,17 +286,18 @@ export class Manifest {
         logger.info(`No commits for path: ${path}, skipping`);
         continue;
       }
-      const packageName = config.packageName;
+      const packageName = config.packageName || '';
       const latestReleasePullRequest =
-        releasePullRequests[packageShas[packageName || '']];
+        releasePullRequests[packageShas[packageName]];
       if (!latestReleasePullRequest) {
         logger.warn('No latest release pull request found.');
       }
 
       const strategy = strategies[path];
-      const latestRelease = latestReleasePullRequest
-        ? await strategy.buildRelease(latestReleasePullRequest)
-        : undefined;
+      const latestRelease = packageReleases[packageName];
+      // const latestRelease = latestReleasePullRequest
+      //   ? await strategy.buildRelease(latestReleasePullRequest)
+      //   : undefined;
       newReleasePullRequests.push(
         await strategy.buildReleasePullRequest(commits, latestRelease)
       );
@@ -417,7 +426,7 @@ async function latestReleaseVersion(
       continue;
     }
 
-    const version = Version.parse(pullRequestTitle.getVersion());
+    const version = Version.parse(pullRequestTitle.getVersion() || '');
     if (version.preRelease?.includes('SNAPSHOT')) {
       // FIXME, don't hardcode this
       continue;

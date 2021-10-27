@@ -45,12 +45,12 @@ export function generateMatchPattern(pullRequestTitlePattern?: string): RegExp {
 export class PullRequestTitle {
   component?: string;
   targetBranch?: string;
-  version: string;
+  version?: string;
   pullRequestTitlePattern: string;
   matchPattern: RegExp;
 
   private constructor(opts: {
-    version: string;
+    version?: string;
     component?: string;
     targetBranch?: string;
     pullRequestTitlePattern?: string;
@@ -117,6 +117,11 @@ export class PullRequestTitle {
       pullRequestTitlePattern,
     });
   }
+  static ofTargetBranch(targetBranch: string): PullRequestTitle {
+    return new PullRequestTitle({
+      targetBranch,
+    })
+  }
 
   getTargetBranch(): string | undefined {
     return this.targetBranch;
@@ -124,16 +129,17 @@ export class PullRequestTitle {
   getComponent(): string | undefined {
     return this.component;
   }
-  getVersion(): string {
+  getVersion(): string | undefined {
     return this.version;
   }
 
   toString(): string {
     const scope = this.targetBranch ? `(${this.targetBranch})` : '';
     const component = this.component ? ` ${this.component}` : '';
+    const version = this.version ?? '';
     return this.pullRequestTitlePattern
       .replace('${scope}', scope)
       .replace('${component}', component)
-      .replace('${version}', this.getVersion());
+      .replace('${version}', version).trim();
   }
 }

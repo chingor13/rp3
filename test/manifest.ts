@@ -240,13 +240,13 @@ describe('Manifest', () => {
         },
         {
           sha: 'abc123',
-          message: 'chore: release 1.0.0',
+          message: 'chore: release main',
           files: [],
           pullRequest: {
-            headBranchName: 'release-please/branches/main/components/pkg1',
+            headBranchName: 'release-please/branches/main',
             baseBranchName: 'main',
             number: 123,
-            title: 'chore: release 1.0.0',
+            title: 'chore: release main',
             body: '',
             labels: [],
             files: [],
@@ -265,13 +265,13 @@ describe('Manifest', () => {
         },
         {
           sha: 'def234',
-          message: 'chore: release 0.2.3',
+          message: 'chore: release main',
           files: [],
           pullRequest: {
-            headBranchName: 'release-please/branches/main/components/pkg2',
+            headBranchName: 'release-please/branches/main',
             baseBranchName: 'main',
             number: 123,
-            title: 'chore: release 0.2.3',
+            title: 'chore: release main',
             body: '',
             labels: [],
             files: [],
@@ -299,7 +299,7 @@ describe('Manifest', () => {
       );
       const pullRequests = await manifest.buildPullRequests();
       expect(pullRequests).lengthOf(1);
-      console.log(pullRequests)
+      console.log(pullRequests);
     });
 
     it('should allow creating multiple pull requests', async () => {

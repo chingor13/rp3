@@ -113,6 +113,7 @@ export interface GitHubRelease {
   name?: string;
   tagName: string;
   sha: string;
+  notes?: string;
 }
 
 export class GitHub {
@@ -530,6 +531,7 @@ export class GitHub {
           name: release.name || undefined,
           tagName: release.tag_name,
           sha: release.target_commitish,
+          notes: release.body_text,
         };
       });
     }

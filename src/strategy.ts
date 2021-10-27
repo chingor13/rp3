@@ -27,6 +27,7 @@ import {PullRequest} from './pull-request';
 import {BranchName} from './util/branch-name';
 import {TagName} from './util/tag-name';
 import {logger} from './util/logger';
+import {MANIFEST_PULL_REQUEST_TITLE_PATTERN} from './manifest';
 
 const DEFAULT_LABELS = ['autorelease: pending', 'type: release'];
 const DEFAULT_CHANGELOG_PATH = 'CHANGELOG.md';
@@ -163,7 +164,12 @@ export class Strategy {
   }
 
   async buildRelease(mergedPullRequest: PullRequest): Promise<Release> {
-    const pullRequestTitle = PullRequestTitle.parse(mergedPullRequest.title);
+    const pullRequestTitle =
+      PullRequestTitle.parse(mergedPullRequest.title) ||
+      PullRequestTitle.parse(
+        mergedPullRequest.title,
+        MANIFEST_PULL_REQUEST_TITLE_PATTERN
+      );
     if (!pullRequestTitle) {
       throw new Error(`Bad pull request title: ${mergedPullRequest.title}`);
     }
@@ -174,10 +180,14 @@ export class Strategy {
     if (!mergedPullRequest.sha) {
       throw new Error('Pull request should have been merged');
     }
+    const versionString = pullRequestTitle.getVersion();
+    if (!versionString) {
+      throw new Error('Pull request should have included version');
+    }
 
     return {
       tag: new TagName(
-        Version.parse(pullRequestTitle.getVersion()),
+        Version.parse(versionString),
         branchName.getComponent() || ''
       ),
       notes: 'FIXME',
