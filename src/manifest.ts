@@ -30,6 +30,7 @@ import {Strategy} from './strategy';
 import {Update} from './update';
 import {CompositeUpdater} from './updaters/composite';
 import {PullRequestBody, ReleaseData} from './util/pull-request-body';
+import {release} from 'os';
 
 export interface ReleaserConfig {
   releaseType: ReleaseType;
@@ -339,7 +340,32 @@ export class Manifest {
         continue;
       }
 
-      return extractReleases(pullRequest);
+      const pullRequestBody = PullRequestBody.parse(pullRequest.body);
+      if (!pullRequestBody) {
+        continue;
+      }
+
+      const pullRequestTitle = PullRequestTitle.parse(pullRequest.title);
+      const branchName = BranchName.parse(pullRequest.headBranchName);
+
+      const releases: Release[] = [];
+      for (const releaseData of pullRequestBody.releaseData) {
+        const version =
+          releaseData.version ||
+          pullRequestTitle?.getVersion() ||
+          branchName?.getVersion();
+        if (!version) {
+          logger.warn(`Couldn't find version for ${releaseData.component}`);
+          continue;
+        }
+        releases.push({
+          tag: new TagName(version, releaseData.component),
+          sha: pullRequest.sha!,
+          notes: pullRequestBody.toString(),
+        });
+      }
+
+      return releases;
     }
 
     // Prepare release info
@@ -353,11 +379,6 @@ export class Manifest {
     }
     return await Promise.all(promises);
   }
-}
-
-function extractReleases(pullRequest: PullRequest): Release[] {
-  pullRequest.body;
-  return [];
 }
 
 function extractReleaserConfig(config: ReleaserPackageConfig): ReleaserConfig {
@@ -460,8 +481,8 @@ async function latestReleaseVersion(
       continue;
     }
 
-    const version = Version.parse(pullRequestTitle.getVersion() || '');
-    if (version.preRelease?.includes('SNAPSHOT')) {
+    const version = pullRequestTitle.getVersion();
+    if (version?.preRelease?.includes('SNAPSHOT')) {
       // FIXME, don't hardcode this
       continue;
     }

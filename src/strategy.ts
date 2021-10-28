@@ -125,7 +125,7 @@ export class Strategy {
     const pullRequestTitle = PullRequestTitle.ofComponentTargetBranchVersion(
       component || '',
       this.targetBranch,
-      newVersion.toString()
+      newVersion
     );
     const branchName = component
       ? BranchName.ofComponentTargetBranch(component, this.targetBranch)
@@ -152,7 +152,7 @@ export class Strategy {
     const pullRequestBody = new PullRequestBody([
       {
         component,
-        versionString: newVersion.toString(),
+        version: newVersion,
         notes: releaseNotesBody,
       },
     ]);
@@ -188,16 +188,13 @@ export class Strategy {
     if (!mergedPullRequest.sha) {
       throw new Error('Pull request should have been merged');
     }
-    const versionString = pullRequestTitle.getVersion();
-    if (!versionString) {
+    const version = pullRequestTitle.getVersion();
+    if (!version) {
       throw new Error('Pull request should have included version');
     }
 
     return {
-      tag: new TagName(
-        Version.parse(versionString),
-        branchName.getComponent() || ''
-      ),
+      tag: new TagName(version, branchName.getComponent() || ''),
       notes: 'FIXME',
       sha: mergedPullRequest.sha,
     };

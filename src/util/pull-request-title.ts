@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import {logger} from './logger';
+import {Version} from '../version';
 
 // cannot import from '..' - transpiled code references to RELEASE_PLEASE
 // at the script level are undefined, they are only defined inside function
@@ -47,12 +48,12 @@ export function generateMatchPattern(pullRequestTitlePattern?: string): RegExp {
 export class PullRequestTitle {
   component?: string;
   targetBranch?: string;
-  version?: string;
+  version?: Version;
   pullRequestTitlePattern: string;
   matchPattern: RegExp;
 
   private constructor(opts: {
-    version?: string;
+    version?: Version;
     component?: string;
     targetBranch?: string;
     pullRequestTitlePattern?: string;
@@ -73,7 +74,7 @@ export class PullRequestTitle {
     const match = title.match(matchPattern);
     if (match?.groups) {
       return new PullRequestTitle({
-        version: match.groups['version'],
+        version: Version.parse(match.groups['version']),
         component: match.groups['component'],
         targetBranch: match.groups['branch'],
         pullRequestTitlePattern: pullRequestTitlePattern,
@@ -84,20 +85,20 @@ export class PullRequestTitle {
 
   static ofComponentVersion(
     component: string,
-    version: string,
+    version: Version,
     pullRequestTitlePattern?: string
   ): PullRequestTitle {
     return new PullRequestTitle({version, component, pullRequestTitlePattern});
   }
   static ofVersion(
-    version: string,
+    version: Version,
     pullRequestTitlePattern?: string
   ): PullRequestTitle {
     return new PullRequestTitle({version, pullRequestTitlePattern});
   }
   static ofTargetBranchVersion(
     targetBranch: string,
-    version: string,
+    version: Version,
     pullRequestTitlePattern?: string
   ): PullRequestTitle {
     return new PullRequestTitle({
@@ -109,7 +110,7 @@ export class PullRequestTitle {
   static ofComponentTargetBranchVersion(
     component: string,
     targetBranch: string,
-    version: string,
+    version: Version,
     pullRequestTitlePattern?: string
   ): PullRequestTitle {
     return new PullRequestTitle({
@@ -135,7 +136,7 @@ export class PullRequestTitle {
   getComponent(): string | undefined {
     return this.component;
   }
-  getVersion(): string | undefined {
+  getVersion(): Version | undefined {
     return this.version;
   }
 
@@ -146,7 +147,7 @@ export class PullRequestTitle {
     return this.pullRequestTitlePattern
       .replace('${scope}', scope)
       .replace('${component}', component)
-      .replace('${version}', version)
+      .replace('${version}', version.toString())
       .trim();
   }
 }

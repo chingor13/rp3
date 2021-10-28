@@ -14,6 +14,7 @@
 
 import {logger} from './logger';
 import {parse} from 'node-html-parser';
+import {Version} from '../version';
 
 const DEFAULT_HEADER = ':robot: I have created a release *beep* *boop*';
 const DEFAULT_FOOTER =
@@ -90,10 +91,10 @@ function splitBody(
 const SUMMARY_PATTERN = /^(?<component>.*): (?<version>\d+\.\d+\.\d+.*)$/;
 export interface ReleaseData {
   component?: string;
-  versionString?: string;
+  version?: Version;
   notes: string;
 }
-export function extractMultipleReleases(notes: string): ReleaseData[] {
+function extractMultipleReleases(notes: string): ReleaseData[] {
   const data: ReleaseData[] = [];
   const root = parse(notes);
   for (const detail of root.getElementsByTagName('details')) {
@@ -108,7 +109,7 @@ export function extractMultipleReleases(notes: string): ReleaseData[] {
     const notes = detail.textContent.trim();
     data.push({
       component: match.groups.component,
-      versionString: match.groups.version,
+      version: Version.parse(match.groups.version),
       notes,
     });
   }
@@ -124,7 +125,7 @@ function extractSingleRelease(body: string): ReleaseData[] {
   }
   return [
     {
-      versionString,
+      version: Version.parse(versionString),
       notes: body,
     },
   ];
@@ -134,7 +135,11 @@ function combineReleaseNotes(releaseData: ReleaseData[]): string {
   if (releaseData.length > 1) {
     return releaseData
       .map(release => {
-        return `<details><summary>${release.component}: ${release.versionString}</summary>\n\n${release.notes}\n</details>`;
+        return `<details><summary>${
+          release.component
+        }: ${release.version?.toString()}</summary>\n\n${
+          release.notes
+        }\n</details>`;
       })
       .join('\n\n');
   }

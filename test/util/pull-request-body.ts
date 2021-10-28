@@ -35,22 +35,22 @@ describe('PullRequestBody', () => {
       expect(releaseData[0].component).to.eql(
         '@google-automations/bot-config-utils'
       );
-      expect(releaseData[0].versionString).to.eql('3.2.0');
+      expect(releaseData[0].version?.toString()).to.eql('3.2.0');
       expect(releaseData[0].notes).matches(/^### Features/);
       expect(releaseData[1].component).to.eql(
         '@google-automations/label-utils'
       );
-      expect(releaseData[1].versionString).to.eql('1.1.0');
+      expect(releaseData[1].version?.toString()).to.eql('1.1.0');
       expect(releaseData[1].notes).matches(/^### Features/);
       expect(releaseData[2].component).to.eql(
         '@google-automations/object-selector'
       );
-      expect(releaseData[2].versionString).to.eql('1.1.0');
+      expect(releaseData[2].version?.toString()).to.eql('1.1.0');
       expect(releaseData[2].notes).matches(/^### Features/);
       expect(releaseData[3].component).to.eql(
         '@google-automations/datastore-lock'
       );
-      expect(releaseData[3].versionString).to.eql('2.1.0');
+      expect(releaseData[3].version?.toString()).to.eql('2.1.0');
       expect(releaseData[3].notes).matches(/^### Features/);
     });
     it('should parse single component from legacy manifest release', () => {
@@ -63,7 +63,7 @@ describe('PullRequestBody', () => {
       const releaseData = pullRequestBody!.releaseData;
       expect(releaseData).lengthOf(1);
       expect(releaseData[0].component).to.eql('@google-cloud/release-brancher');
-      expect(releaseData[0].versionString).to.eql('1.3.1');
+      expect(releaseData[0].version?.toString()).to.eql('1.3.1');
       expect(releaseData[0].notes).matches(/^### Bug Fixes/);
     });
     it('should parse standalone release', () => {
@@ -76,7 +76,7 @@ describe('PullRequestBody', () => {
       const releaseData = pullRequestBody!.releaseData;
       expect(releaseData).lengthOf(1);
       expect(releaseData[0].component).to.be.undefined;
-      expect(releaseData[0].versionString).to.eql('3.2.7');
+      expect(releaseData[0].version?.toString()).to.eql('3.2.7');
       expect(releaseData[0].notes).matches(/^### \[3\.2\.7\]/);
     });
   });

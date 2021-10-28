@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import {Version} from '../version';
+
 // cannot import from '..' - transpiled code references to RELEASE_PLEASE
 // at the script level are undefined, they are only defined inside function
 // or instance methods/properties.
@@ -28,7 +30,7 @@ function getAllResourceNames(): BranchNameType[] {
 export class BranchName {
   component?: string;
   targetBranch?: string;
-  version?: string;
+  version?: Version;
 
   static parse(branchName: string): BranchName | undefined {
     const branchNameClass = getAllResourceNames().find(clazz => {
@@ -39,10 +41,13 @@ export class BranchName {
     }
     return new branchNameClass(branchName);
   }
-  static ofComponentVersion(branchPrefix: string, version: string): BranchName {
+  static ofComponentVersion(
+    branchPrefix: string,
+    version: Version
+  ): BranchName {
     return new AutoreleaseBranchName(`release-${branchPrefix}-v${version}`);
   }
-  static ofVersion(version: string): BranchName {
+  static ofVersion(version: Version): BranchName {
     return new AutoreleaseBranchName(`release-v${version}`);
   }
   static ofTargetBranch(targetBranch: string): BranchName {
@@ -67,7 +72,7 @@ export class BranchName {
   getComponent(): string | undefined {
     return this.component;
   }
-  getVersion(): string | undefined {
+  getVersion(): Version | undefined {
     return this.version;
   }
   toString(): string {
@@ -86,14 +91,14 @@ class AutoreleaseBranchName extends BranchName {
     const match = branchName.match(AUTORELEASE_PATTERN);
     if (match?.groups) {
       this.component = match.groups['component'];
-      this.version = match.groups['version'];
+      this.version = Version.parse(match.groups['version']);
     }
   }
   toString(): string {
     if (this.component) {
-      return `release-${this.component}-v${this.version}`;
+      return `release-${this.component}-v${this.version?.toString}`;
     }
-    return `release-v${this.version}`;
+    return `release-v${this.version?.toString()}`;
   }
 }
 
