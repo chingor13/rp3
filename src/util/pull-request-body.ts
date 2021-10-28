@@ -53,8 +53,22 @@ export class PullRequestBody {
       footer: parts.footer,
     });
   }
+  notes(): string {
+    if (this.releaseData.length > 1) {
+      return this.releaseData
+        .map(release => {
+          return `<details><summary>${
+            release.component
+          }: ${release.version?.toString()}</summary>\n\n${
+            release.notes
+          }\n</details>`;
+        })
+        .join('\n\n');
+    }
+    return this.releaseData.map(release => release.notes).join('\n\n');
+  }
   toString(): string {
-    const notes = combineReleaseNotes(this.releaseData);
+    const notes = this.notes();
     return `${this.header}
 ${NOTES_DELIMITER}
 
@@ -129,19 +143,4 @@ function extractSingleRelease(body: string): ReleaseData[] {
       notes: body,
     },
   ];
-}
-
-function combineReleaseNotes(releaseData: ReleaseData[]): string {
-  if (releaseData.length > 1) {
-    return releaseData
-      .map(release => {
-        return `<details><summary>${
-          release.component
-        }: ${release.version?.toString()}</summary>\n\n${
-          release.notes
-        }\n</details>`;
-      })
-      .join('\n\n');
-  }
-  return releaseData.map(release => release.notes).join('\n\n');
 }

@@ -26,7 +26,7 @@ export function generateMatchPattern(pullRequestTitlePattern?: string): RegExp {
     pullRequestTitlePattern &&
     pullRequestTitlePattern.search(/\$\{scope\}/) === -1
   )
-    throw Error("pullRequestTitlePattern miss the part of '${scope}'");
+    logger.warn("pullRequestTitlePattern miss the part of '${scope}'");
   if (
     pullRequestTitlePattern &&
     pullRequestTitlePattern.search(/\$\{component\}/) === -1
@@ -41,7 +41,8 @@ export function generateMatchPattern(pullRequestTitlePattern?: string): RegExp {
     `^${(pullRequestTitlePattern || DEFAULT_PR_TITLE_PATTERN)
       .replace('${scope}', '(\\((?<branch>[\\w-.]+)\\))?')
       .replace('${component}', ' ?(?<component>[\\w-.]*)?')
-      .replace('${version}', 'v?(?<version>[0-9].*)')}$`
+      .replace('${version}', 'v?(?<version>[0-9].*)')
+      .replace('${branch}', '(?<branch>[\\w-.]+)?')}$`
   );
 }
 
@@ -74,7 +75,9 @@ export class PullRequestTitle {
     const match = title.match(matchPattern);
     if (match?.groups) {
       return new PullRequestTitle({
-        version: Version.parse(match.groups['version']),
+        version: match.groups['version']
+          ? Version.parse(match.groups['version'])
+          : undefined,
         component: match.groups['component'],
         targetBranch: match.groups['branch'],
         pullRequestTitlePattern: pullRequestTitlePattern,

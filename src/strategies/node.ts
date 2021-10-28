@@ -19,6 +19,7 @@ import {SamplesPackageJson} from '../updaters/node/samples-package-json';
 import {Changelog} from '../updaters/changelog';
 import {PackageJson} from '../updaters/node/package-json';
 import {GitHubFileContents} from '../github';
+import {logger} from '../util/logger';
 
 export class Node extends Strategy {
   private pkgJsonContents?: GitHubFileContents;
@@ -73,11 +74,21 @@ export class Node extends Strategy {
     const pkgJsonContents = await this.getPkgJsonContents();
     const pkg = JSON.parse(pkgJsonContents.parsedContent);
     const name = pkg.name;
-    return name.match(/^@[\w-]+\//) ? name.split('/')[1] : name;
+    return this.normalizeComponent(name);
+  }
+
+  protected normalizeComponent(
+    component: string | undefined
+  ): string | undefined {
+    if (!component) {
+      return undefined;
+    }
+    return component.match(/^@[\w-]+\//) ? component.split('/')[1] : component;
   }
 
   private async getPkgJsonContents(): Promise<GitHubFileContents> {
     if (!this.pkgJsonContents) {
+      logger.info(`fetching file: ${this.addPath('package.json')}`);
       this.pkgJsonContents = await this.github.getFileContentsOnBranch(
         this.addPath('package.json'),
         this.targetBranch

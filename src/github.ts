@@ -401,7 +401,7 @@ export class GitHub {
    *   the configured default branch.
    * @param {number} page - Page of results. Defaults to 1.
    * @param {number} perPage - Number of results per page. Defaults to 100.
-   * @returns {MergedGitHubPR[]} - List of merged pull requests
+   * @returns {PullRequest[]} - List of merged pull requests
    * @throws {GitHubAPIError} on an API error
    */
   findMergedPullRequests = wrapAsync(

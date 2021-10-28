@@ -87,6 +87,15 @@ export class Strategy {
     return '';
   }
 
+  protected normalizeComponent(
+    component: string | undefined
+  ): string | undefined {
+    if (!component) {
+      return undefined;
+    }
+    return component;
+  }
+
   protected postProcessCommits(
     commits: ConventionalCommit[]
   ): ConventionalCommit[] {
@@ -179,7 +188,7 @@ export class Strategy {
         MANIFEST_PULL_REQUEST_TITLE_PATTERN
       );
     if (!pullRequestTitle) {
-      throw new Error(`Bad pull request title: ${mergedPullRequest.title}`);
+      throw new Error(`Bad pull request title: '${mergedPullRequest.title}'`);
     }
     const branchName = BranchName.parse(mergedPullRequest.headBranchName);
     if (!branchName) {
@@ -188,14 +197,30 @@ export class Strategy {
     if (!mergedPullRequest.sha) {
       throw new Error('Pull request should have been merged');
     }
-    const version = pullRequestTitle.getVersion();
+    const pullRequestBody = PullRequestBody.parse(mergedPullRequest.body);
+    if (!pullRequestBody) {
+      throw new Error('could not parse pull request body as a release PR');
+    }
+    const component = this.component || (await this.getDefaultComponent());
+    logger.debug('component:', component);
+    const releaseData = pullRequestBody.releaseData.find(releaseData => {
+      return (
+        this.normalizeComponent(releaseData.component) ===
+        this.normalizeComponent(component)
+      );
+    });
+    const notes = releaseData?.notes;
+    if (notes === undefined) {
+      logger.warn('Failed to find release notes');
+    }
+    const version = pullRequestTitle.getVersion() || releaseData?.version;
     if (!version) {
       throw new Error('Pull request should have included version');
     }
 
     return {
-      tag: new TagName(version, branchName.getComponent() || ''),
-      notes: 'FIXME',
+      tag: new TagName(version, component),
+      notes: notes || '',
       sha: mergedPullRequest.sha,
     };
   }

@@ -107,5 +107,14 @@ export async function buildStrategy(
   return new clazz({
     github: options.github,
     targetBranch,
+    path: options.path,
+    bumpMinorPreMajor: options.bumpMinorPreMajor,
+    bumpPatchForMinorPreMajor: options.bumpPatchForMinorPreMajor,
+    component: options.component,
+    changelogPath: options.changelogPath,
+    changelogSections: options.changelogSections,
+    // versioningStrategy: FIXME,
+    // labels: FIXME,
+    // language specific options here
   });
 }

@@ -87,7 +87,7 @@ const RELEASE_PLEASE_MANIFEST = '.release-please-manifest.json';
 const ROOT_PROJECT_PATH = '.';
 const DEFAULT_COMPONENT_NAME = '';
 
-export const MANIFEST_PULL_REQUEST_TITLE_PATTERN = 'chore: release ${scope}';
+export const MANIFEST_PULL_REQUEST_TITLE_PATTERN = 'chore: release ${branch}';
 
 export class Manifest {
   repository: Repository;
@@ -96,6 +96,8 @@ export class Manifest {
   releasedVersions: ReleasedVersions;
   targetBranch: string;
   separatePullRequests: boolean;
+  private _strategiesByPath?: Record<string, Strategy>;
+  private _pathsByComponent?: Record<string, string>;
 
   constructor(
     github: GitHub,
@@ -166,34 +168,8 @@ export class Manifest {
 
   async buildPullRequests(): Promise<ReleasePullRequest[]> {
     logger.info('Building pull requests');
-    const pathsByComponent: Record<string, string> = {};
-    const strategiesByPath: Record<string, Strategy> = {};
-    for (const path in this.repositoryConfig) {
-      const config = this.repositoryConfig[path];
-      const strategy = await buildStrategy({
-        ...config,
-        github: this.github,
-        path,
-        targetBranch: this.targetBranch,
-      });
-      strategiesByPath[path] = strategy;
-      if (!config.component) {
-        logger.warn(`No configured component for path: ${path}`);
-        config.component = await strategy.getDefaultComponent();
-        if (config.component === undefined) {
-          logger.error(`No default component for path: ${path}`);
-          continue;
-        }
-      }
-      if (pathsByComponent[config.component]) {
-        logger.warn(
-          `Multiple paths for ${config.component}: ${
-            pathsByComponent[config.component]
-          }, ${path}`
-        );
-      }
-      pathsByComponent[config.component] = path;
-    }
+    const pathsByComponent = await this.getPathsByComponent();
+    const strategiesByPath = await this.getStrategiesByPath();
 
     // Collect all the SHAs of the latest release packages
     logger.info('Collecting release commit SHAs');
@@ -324,51 +300,60 @@ export class Manifest {
   }
 
   async buildReleases(): Promise<Release[]> {
+    logger.info('Building releases');
+    const strategiesByPath = await this.getStrategiesByPath();
+
     // Find merged release pull requests
     const pullRequestGenerator = this.github.mergedPullRequestIterator(
       this.targetBranch,
       500
     );
 
+    const releases: Release[] = [];
     for await (const pullRequest of pullRequestGenerator) {
-      if (
-        !pullRequest.labels.find(label => {
-          return label === 'autorelease: pending';
-        })
-      ) {
-        continue;
-      }
+      logger.info(
+        `Found pull request #${pullRequest.number}: '${pullRequest.title}'`
+      );
 
       const pullRequestBody = PullRequestBody.parse(pullRequest.body);
       if (!pullRequestBody) {
+        logger.info('could not parse pull request body as a release PR');
         continue;
       }
 
-      const pullRequestTitle = PullRequestTitle.parse(pullRequest.title);
-      const branchName = BranchName.parse(pullRequest.headBranchName);
-
-      const releases: Release[] = [];
-      for (const releaseData of pullRequestBody.releaseData) {
-        const version =
-          releaseData.version ||
-          pullRequestTitle?.getVersion() ||
-          branchName?.getVersion();
-        if (!version) {
-          logger.warn(`Couldn't find version for ${releaseData.component}`);
+      logger.info('Looking at files touched by path');
+      const cs = new CommitSplit({
+        includeEmpty: true,
+        packagePaths: Object.keys(this.repositoryConfig),
+      });
+      const commits = [
+        {
+          sha: pullRequest.sha!,
+          message: pullRequest.title,
+          files: pullRequest.files,
+        },
+      ];
+      const commitsPerPath = cs.split(commits);
+      for (const path in this.repositoryConfig) {
+        const config = this.repositoryConfig[path];
+        logger.info(`Building release for path: ${path}`);
+        logger.debug(`type: ${config.releaseType}`);
+        logger.debug(`targetBranch: ${this.targetBranch}`);
+        const pathCommits =
+          path === ROOT_PROJECT_PATH ? commits : commitsPerPath[path];
+        if (!pathCommits || pathCommits.length === 0) {
+          logger.info(`No commits for path: ${path}, skipping`);
           continue;
         }
-        releases.push({
-          tag: new TagName(version, releaseData.component),
-          sha: pullRequest.sha!,
-          notes: pullRequestBody.toString(),
-        });
+        const strategy = strategiesByPath[path];
+        const release = await strategy.buildRelease(pullRequest);
+        if (release) {
+          releases.push(release);
+        }
       }
-
-      return releases;
     }
 
-    // Prepare release info
-    return [];
+    return releases;
   }
 
   async createReleases(): Promise<(GitHubRelease | undefined)[]> {
@@ -377,6 +362,51 @@ export class Manifest {
       promises.push(this.github.createRelease(release));
     }
     return await Promise.all(promises);
+  }
+
+  private async getStrategiesByPath(): Promise<Record<string, Strategy>> {
+    if (!this._strategiesByPath) {
+      this._strategiesByPath = {};
+      for (const path in this.repositoryConfig) {
+        const config = this.repositoryConfig[path];
+        const strategy = await buildStrategy({
+          ...config,
+          github: this.github,
+          path,
+          targetBranch: this.targetBranch,
+        });
+        this._strategiesByPath[path] = strategy;
+      }
+    }
+    return this._strategiesByPath;
+  }
+
+  private async getPathsByComponent(): Promise<Record<string, string>> {
+    if (!this._pathsByComponent) {
+      this._pathsByComponent = {};
+      const strategiesByPath = await this.getStrategiesByPath();
+      for (const path in this.repositoryConfig) {
+        const config = this.repositoryConfig[path];
+        const strategy = strategiesByPath[path];
+        if (!config.component) {
+          logger.warn(`No configured component for path: ${path}`);
+          config.component = await strategy.getDefaultComponent();
+          if (config.component === undefined) {
+            logger.error(`No default component for path: ${path}`);
+            continue;
+          }
+        }
+        if (this._pathsByComponent[config.component]) {
+          logger.warn(
+            `Multiple paths for ${config.component}: ${
+              this._pathsByComponent[config.component]
+            }, ${path}`
+          );
+        }
+        this._pathsByComponent[config.component] = path;
+      }
+    }
+    return this._pathsByComponent;
   }
 }
 
