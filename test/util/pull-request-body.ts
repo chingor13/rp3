@@ -18,6 +18,7 @@ import {readFileSync} from 'fs';
 import {resolve} from 'path';
 import {PullRequestBody} from '../../src/util/pull-request-body';
 import snapshot = require('snap-shot-it');
+import {Version} from '../../src/version';
 
 const fixturesPath = './test/fixtures/release-notes';
 
@@ -85,12 +86,12 @@ describe('PullRequestBody', () => {
       const data = [
         {
           component: 'pkg1',
-          versionString: '1.2.3',
+          version: Version.parse('1.2.3'),
           notes: 'some special notes go here',
         },
         {
           component: 'pkg2',
-          versionString: '2.0.0',
+          version: Version.parse('2.0.0'),
           notes: 'more special notes go here',
         },
       ];
@@ -102,7 +103,7 @@ describe('PullRequestBody', () => {
       const data = [
         {
           component: 'pkg1',
-          versionString: '1.2.3',
+          version: Version.parse('1.2.3'),
           notes: 'some special notes go here',
         },
       ];
@@ -114,12 +115,12 @@ describe('PullRequestBody', () => {
       const data = [
         {
           component: 'pkg1',
-          versionString: '1.2.3',
+          version: Version.parse('1.2.3'),
           notes: 'some special notes go here',
         },
         {
           component: 'pkg2',
-          versionString: '2.0.0',
+          version: Version.parse('2.0.0'),
           notes: 'more special notes go here',
         },
       ];
@@ -134,12 +135,12 @@ describe('PullRequestBody', () => {
       const data = [
         {
           component: 'pkg1',
-          versionString: '1.2.3',
+          version: Version.parse('1.2.3'),
           notes: 'some special notes go here',
         },
         {
           component: 'pkg2',
-          versionString: '2.0.0',
+          version: Version.parse('2.0.0'),
           notes: 'more special notes go here',
         },
       ];
