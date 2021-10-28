@@ -30,7 +30,6 @@ import {Strategy} from './strategy';
 import {Update} from './update';
 import {CompositeUpdater} from './updaters/composite';
 import {PullRequestBody, ReleaseData} from './util/pull-request-body';
-import {release} from 'os';
 
 export interface ReleaserConfig {
   releaseType: ReleaseType;
