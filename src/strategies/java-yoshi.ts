@@ -19,7 +19,6 @@ import {JavaUpdate} from '../updaters/java/java-update';
 import {Strategy, StrategyOptions, BuildUpdatesOptions} from '../strategy';
 import {Changelog} from '../updaters/changelog';
 import {GitHubFileContents} from '../github';
-import {logger} from '../util/logger';
 import {JavaSnapshot} from '../versioning-strategies/java-snapshot';
 
 const CHANGELOG_SECTIONS = [
@@ -94,7 +93,6 @@ export class JavaYoshi extends Strategy {
     );
 
     const pomFiles = await pomFilesSearch;
-    logger.info(pomFiles);
     pomFiles.forEach(path => {
       updates.push({
         path: this.addPath(path),
