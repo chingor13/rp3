@@ -27,7 +27,9 @@ const hasKRMBlueprintAttrib = (content: string) =>
   content.includes(KRMBlueprintAttribAnnotation);
 
 export class KRMBlueprint extends Strategy {
-  protected async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
+  protected async buildUpdates(
+    options: BuildUpdatesOptions
+  ): Promise<Update[]> {
     const updates: Update[] = [];
     const version = options.newVersion;
 

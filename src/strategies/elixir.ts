@@ -20,7 +20,9 @@ import {Strategy, BuildUpdatesOptions} from '../strategy';
 import {Update} from '../update';
 
 export class Elixir extends Strategy {
-  protected async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
+  protected async buildUpdates(
+    options: BuildUpdatesOptions
+  ): Promise<Update[]> {
     const updates: Update[] = [];
     const version = options.newVersion;
 

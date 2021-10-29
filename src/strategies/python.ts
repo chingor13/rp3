@@ -27,7 +27,9 @@ import {logger} from '../util/logger';
 import {PythonFileWithVersion} from '../updaters/python/python-file-with-version';
 
 export class Python extends Strategy {
-  protected async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
+  protected async buildUpdates(
+    options: BuildUpdatesOptions
+  ): Promise<Update[]> {
     const updates: Update[] = [];
     const version = options.newVersion;
 

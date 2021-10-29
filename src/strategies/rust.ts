@@ -29,7 +29,9 @@ export class Rust extends Strategy {
   private packageManifest?: CargoManifest | null;
   private workspaceManifest?: CargoManifest | null;
 
-  protected async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
+  protected async buildUpdates(
+    options: BuildUpdatesOptions
+  ): Promise<Update[]> {
     const updates: Update[] = [];
     const version = options.newVersion;
 

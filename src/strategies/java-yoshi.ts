@@ -63,7 +63,9 @@ export class JavaYoshi extends Strategy {
     return VersionsManifest.parseVersions(this.versionsContent.parsedContent);
   }
 
-  protected async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
+  protected async buildUpdates(
+    options: BuildUpdatesOptions
+  ): Promise<Update[]> {
     const updates: Update[] = [];
     const version = options.newVersion;
     const versionsMap = options.versionsMap;

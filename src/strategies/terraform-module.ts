@@ -22,7 +22,9 @@ import {Update} from '../update';
 import {Version} from '../version';
 
 export class TerraformModule extends Strategy {
-  protected async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
+  protected async buildUpdates(
+    options: BuildUpdatesOptions
+  ): Promise<Update[]> {
     const updates: Update[] = [];
     const version = options.newVersion;
 

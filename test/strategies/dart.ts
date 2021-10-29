@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {describe, it, afterEach} from 'mocha';
+import {describe, it, afterEach, beforeEach} from 'mocha';
 import {Dart} from '../../src/strategies/dart';
-import {readFileSync} from 'fs';
-import {resolve} from 'path';
-import {readPOJO, stubSuggesterWithSnapshot, buildMockCommit, buildGitHubFileContent} from '../helpers';
+import {buildMockCommit, buildGitHubFileContent} from '../helpers';
 import * as nock from 'nock';
 import * as sinon from 'sinon';
 import {GitHub} from '../../src/github';
-import { Version } from '../../src/version';
-import { TagName } from '../../src/util/tag-name';
-import { expect } from 'chai';
+import {Version} from '../../src/version';
+import {TagName} from '../../src/util/tag-name';
+import {expect} from 'chai';
 import snapshot = require('snap-shot-it');
 
 nock.disableNetConnect();
@@ -52,13 +50,17 @@ describe('Dart', () => {
       const commits = [
         buildMockCommit(
           'fix(deps): update dependency com.google.cloud:google-cloud-storage to v1.120.0'
-        ),];
+        ),
+      ];
       const latestRelease = {
         tag: new TagName(Version.parse('0.123.4'), 'some-dart-package'),
         sha: 'abc123',
         notes: 'some notes',
       };
-      const pullRequest = await strategy.buildReleasePullRequest(commits, latestRelease)
+      const pullRequest = await strategy.buildReleasePullRequest(
+        commits,
+        latestRelease
+      );
       expect(pullRequest.version?.toString()).to.eql(expectedVersion);
       expect(pullRequest.updates).lengthOf(2);
       snapshot(pullRequest);
@@ -72,7 +74,8 @@ describe('Dart', () => {
       const commits = [
         buildMockCommit(
           'fix(deps): update dependency com.google.cloud:google-cloud-storage to v1.120.0'
-        ),];
+        ),
+      ];
       const latestRelease = {
         tag: new TagName(Version.parse('0.123.4'), 'hello_world'),
         sha: 'abc123',
@@ -84,16 +87,14 @@ describe('Dart', () => {
       );
       getFileContentsStub
         .withArgs('pubspec.yaml', 'main')
-        .resolves(
-          buildGitHubFileContent(fixturesPath, 'pubspec.yaml')
-        );
-      const pullRequest = await strategy.buildReleasePullRequest(commits, latestRelease)
+        .resolves(buildGitHubFileContent(fixturesPath, 'pubspec.yaml'));
+      const pullRequest = await strategy.buildReleasePullRequest(
+        commits,
+        latestRelease
+      );
       expect(pullRequest.version?.toString()).to.eql(expectedVersion);
       expect(pullRequest.updates).lengthOf(2);
       snapshot(pullRequest);
     });
-  });
-  describe('getDefaultComponent', () => {
-
   });
 });

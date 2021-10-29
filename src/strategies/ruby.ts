@@ -34,7 +34,9 @@ export class Ruby extends Strategy {
     this.versionFile = options.versionFile ?? '';
   }
 
-  protected async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
+  protected async buildUpdates(
+    options: BuildUpdatesOptions
+  ): Promise<Update[]> {
     const updates: Update[] = [];
     const version = options.newVersion;
 

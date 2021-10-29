@@ -25,7 +25,9 @@ import {Update} from '../update';
 export class Helm extends Strategy {
   private chartYmlContents?: GitHubFileContents;
 
-  protected async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
+  protected async buildUpdates(
+    options: BuildUpdatesOptions
+  ): Promise<Update[]> {
     const updates: Update[] = [];
     const version = options.newVersion;
 

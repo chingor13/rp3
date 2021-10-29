@@ -20,7 +20,9 @@ import {Update} from '../update';
 import {DefaultUpdater} from '../updaters/default';
 
 export class Simple extends Strategy {
-  protected async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
+  protected async buildUpdates(
+    options: BuildUpdatesOptions
+  ): Promise<Update[]> {
     const updates: Update[] = [];
     const version = options.newVersion;
 
