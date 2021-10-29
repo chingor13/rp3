@@ -18,22 +18,18 @@ import {Version} from '../version';
 import {logger} from '../util/logger';
 import * as semver from 'semver';
 import {ReleaseType} from 'semver';
-import {ChangelogSection} from '../release-notes';
 
 interface DefaultVersioningStrategyOptions {
   bumpMinorPreMajor?: boolean;
   bumpPatchForMinorPreMajor?: boolean;
-  changelogSections?: ChangelogSection[];
 }
 
 export class DefaultVersioningStrategy implements VersioningStrategy {
   bumpMinorPreMajor: boolean;
   bumpPatchForMinorPreMajor: boolean;
-  changelogSections?: ChangelogSection[];
   constructor(options: DefaultVersioningStrategyOptions = {}) {
     this.bumpMinorPreMajor = options.bumpMinorPreMajor === true;
     this.bumpPatchForMinorPreMajor = options.bumpPatchForMinorPreMajor === true;
-    this.changelogSections = options.changelogSections;
   }
 
   determineReleaseType(

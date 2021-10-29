@@ -29,6 +29,10 @@ import {Dart} from './strategies/dart';
 import {Node} from './strategies/node';
 import {GitHub} from './github';
 import {ReleaserConfig} from './manifest';
+import {DefaultVersioningStrategy} from './versioning-strategies/default';
+import {VersioningStrategy} from './versioning-strategy';
+import {AlwaysBumpPatch} from './versioning-strategies/always-bump-patch';
+import {ServicePackVersioningStrategy} from './versioning-strategies/service-pack';
 
 // Factory shared by GitHub Action and CLI for creating Release PRs
 // and GitHub Releases:
@@ -36,43 +40,35 @@ import {ReleaserConfig} from './manifest';
 // object below.
 export type ReleaseType =
   | 'go'
-  // | 'go-yoshi'
-  // | 'java-backport'
-  // | 'java-bom'
-  // | 'java-lts'
+  | 'go-yoshi'
+  | 'java-backport'
+  | 'java-bom'
+  | 'java-lts'
   | 'java-yoshi'
   | 'krm-blueprint'
   | 'node'
   | 'ocaml'
   | 'php'
-  // | 'php-yoshi'
+  | 'php-yoshi'
   | 'python'
   | 'ruby'
-  // | 'ruby-yoshi'
+  | 'ruby-yoshi'
   | 'rust'
   | 'simple'
   | 'terraform-module'
   | 'helm'
   | 'elixir'
   | 'dart';
-
-type Releasers = Record<ReleaseType, typeof Strategy>;
-
+type Releasers = Record<string, typeof Strategy>;
 const releasers: Releasers = {
   go: Go,
-  // 'go-yoshi': GoYoshi,
-  // 'java-backport': JavaBackport,
-  // 'java-bom': JavaBom,
-  // 'java-lts': JavaLTS,
   'java-yoshi': JavaYoshi,
   'krm-blueprint': KRMBlueprint,
   node: Node,
   ocaml: OCaml,
   php: PHP,
-  // 'php-yoshi': PHPYoshi,
   python: Python,
   ruby: Ruby,
-  // 'ruby-yoshi': RubyYoshi,
   rust: Rust,
   simple: Simple,
   'terraform-module': TerraformModule,
@@ -80,9 +76,6 @@ const releasers: Releasers = {
   elixir: Elixir,
   dart: Dart,
 };
-export function getReleasers(): Releasers {
-  return releasers;
-}
 
 export function getReleaserTypes(): readonly ReleaseType[] {
   const names: ReleaseType[] = [];
@@ -103,8 +96,10 @@ export async function buildStrategy(
 ): Promise<Strategy> {
   const targetBranch =
     options.targetBranch ?? options.github.repository.defaultBranch;
-  const clazz = releasers[options.releaseType];
-  return new clazz({
+  const versioningStrategy = buildVersioningStrategy({
+    type: options.versioning,
+  });
+  const strategyOptions = {
     github: options.github,
     targetBranch,
     path: options.path,
@@ -113,8 +108,70 @@ export async function buildStrategy(
     component: options.component,
     changelogPath: options.changelogPath,
     changelogSections: options.changelogSections,
-    // versioningStrategy: FIXME,
-    // labels: FIXME,
-    // language specific options here
-  });
+    versioningStrategy,
+  };
+  switch (options.releaseType) {
+    case 'ruby': {
+      return new Ruby({
+        ...strategyOptions,
+        versionFile: options.versionFile,
+      });
+    }
+    case 'java-yoshi': {
+      return new JavaYoshi({
+        ...strategyOptions,
+        extraFiles: options.extraFiles,
+      });
+    }
+    case 'java-backport': {
+      return new JavaYoshi({
+        ...strategyOptions,
+        extraFiles: options.extraFiles,
+        versioningStrategy: new AlwaysBumpPatch(),
+      });
+    }
+    case 'java-bom': {
+      return new JavaYoshi({
+        ...strategyOptions,
+        extraFiles: options.extraFiles,
+        // FIXME: do dependency version bumps
+      });
+    }
+    case 'java-lts': {
+      return new JavaYoshi({
+        ...strategyOptions,
+        extraFiles: options.extraFiles,
+        versioningStrategy: new ServicePackVersioningStrategy(),
+      });
+    }
+    default: {
+      const clazz = releasers[options.releaseType];
+      if (clazz) {
+        return new clazz(strategyOptions);
+      }
+      throw new Error(`Unknown release type: ${options.releaseType}`);
+    }
+  }
+}
+
+export type VersioningStrategyType =
+  | 'default'
+  | 'always-bump-patch'
+  | 'service-pack';
+interface VersioningStrategyFactoryOptions {
+  type?: VersioningStrategyType;
+  bumpMinorPreMajor?: boolean;
+  bumpPatchForMinorPreMajor?: boolean;
+}
+export function buildVersioningStrategy(
+  options: VersioningStrategyFactoryOptions
+): VersioningStrategy {
+  switch (options.type) {
+    case 'always-bump-patch':
+      return new AlwaysBumpPatch(options);
+    case 'service-pack':
+      return new ServicePackVersioningStrategy(options);
+    default:
+      return new DefaultVersioningStrategy(options);
+  }
 }

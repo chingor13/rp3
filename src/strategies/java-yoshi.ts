@@ -20,6 +20,7 @@ import {Strategy, StrategyOptions, BuildUpdatesOptions} from '../strategy';
 import {Changelog} from '../updaters/changelog';
 import {GitHubFileContents} from '../github';
 import {logger} from '../util/logger';
+import {JavaSnapshot} from '../versioning-strategies/java-snapshot';
 
 const CHANGELOG_SECTIONS = [
   {type: 'feat', section: 'Features'},
@@ -49,6 +50,8 @@ export class JavaYoshi extends Strategy {
       ...options,
       changelogSections: CHANGELOG_SECTIONS,
     });
+    // wrap the configured versioning strategy with snapshotting
+    this.versioningStrategy = new JavaSnapshot(this.versioningStrategy);
     this.extraFiles = options.extraFiles || [];
   }
 

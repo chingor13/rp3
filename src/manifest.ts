@@ -24,7 +24,7 @@ import {Repository} from './repository';
 import {BranchName} from './util/branch-name';
 import {PullRequestTitle} from './util/pull-request-title';
 import {ReleasePullRequest} from './release-pull-request';
-import {buildStrategy, ReleaseType} from './factory';
+import {buildStrategy, ReleaseType, VersioningStrategyType} from './factory';
 import {Release} from './release';
 import {Strategy} from './strategy';
 import {Update} from './update';
@@ -33,6 +33,7 @@ import {PullRequestBody, ReleaseData} from './util/pull-request-body';
 
 export interface ReleaserConfig {
   releaseType: ReleaseType;
+  versioning?: VersioningStrategyType;
   bumpMinorPreMajor?: boolean;
   bumpPatchForMinorPreMajor?: boolean;
   changelogSections?: ChangelogSection[];
@@ -41,6 +42,11 @@ export interface ReleaserConfig {
   skipGithubRelease?: boolean;
   draft?: boolean;
   component?: string;
+
+  // Ruby-only
+  versionFile?: string;
+  // Java-only
+  extraFiles?: string[];
 }
 
 interface ReleaserConfigJson {
@@ -51,6 +57,11 @@ interface ReleaserConfigJson {
   'release-as'?: string;
   'skip-github-release'?: boolean;
   draft?: boolean;
+
+  // Ruby-only
+  'version-file'?: string;
+  // Java-only
+  'extra-files'?: string[];
 }
 
 interface ManifestOptions {
@@ -421,6 +432,8 @@ function extractReleaserConfig(config: ReleaserPackageConfig): ReleaserConfig {
     skipGithubRelease: config['skip-github-release'],
     draft: config.draft,
     component: config['component'] || config['package-name'],
+    versionFile: config['version-file'],
+    extraFiles: config['extra-files'],
   };
 }
 
