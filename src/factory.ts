@@ -40,8 +40,11 @@ import {DependencyManifest} from './versioning-strategies/dependency-manifest';
 // add any new releasers you create to this type as well as the `releasers`
 // object below.
 export type ReleaseType =
+  | 'dart'
+  | 'elixir'
   | 'go'
   | 'go-yoshi'
+  | 'helm'
   | 'java-backport'
   | 'java-bom'
   | 'java-lts'
@@ -56,10 +59,7 @@ export type ReleaseType =
   | 'ruby-yoshi'
   | 'rust'
   | 'simple'
-  | 'terraform-module'
-  | 'helm'
-  | 'elixir'
-  | 'dart';
+  | 'terraform-module';
 type Releasers = Record<string, typeof Strategy>;
 const releasers: Releasers = {
   go: Go,
@@ -137,7 +137,10 @@ export async function buildStrategy(
       return new JavaYoshi({
         ...strategyOptions,
         extraFiles: options.extraFiles,
-        versioningStrategy: new DependencyManifest(),
+        versioningStrategy: new DependencyManifest({
+          bumpMinorPreMajor: options.bumpMinorPreMajor,
+          bumpPatchForMinorPreMajor: options.bumpPatchForMinorPreMajor,
+        }),
       });
     }
     case 'java-lts': {

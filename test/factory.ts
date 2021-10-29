@@ -145,6 +145,8 @@ describe('factory', () => {
       const strategy = await buildStrategy({
         github,
         releaseType: 'java-bom',
+        bumpMinorPreMajor: true,
+        bumpPatchForMinorPreMajor: true,
         extraFiles: ['path1/foo1.java', 'path2/foo2.java'],
       });
       expect(strategy).instanceof(JavaYoshi);
@@ -155,6 +157,10 @@ describe('factory', () => {
       expect(strategy.versioningStrategy).instanceof(JavaSnapshot);
       const versioningStrategy = strategy.versioningStrategy as JavaSnapshot;
       expect(versioningStrategy.strategy).instanceof(DependencyManifest);
+      const innerVersioningStrategy =
+        versioningStrategy.strategy as DependencyManifest;
+      expect(innerVersioningStrategy.bumpMinorPreMajor).to.be.true;
+      expect(innerVersioningStrategy.bumpPatchForMinorPreMajor).to.be.true;
     });
   });
 });
