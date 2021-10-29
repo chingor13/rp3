@@ -122,7 +122,7 @@ export interface StubFiles {
   github: GitHub;
 
   // "master" TODO update all test code to use "main"
-  defaultBranch?: string;
+  targetBranch?: string;
 
   // Example1: test/updaters/fixtures/python
   // Example2: test/fixtures/releaser/repo
@@ -163,7 +163,7 @@ export function stubFilesFromFixtures(options: StubFiles) {
       'Overlap between files and inlineFiles: ' + JSON.stringify(overlap)
     );
   }
-  const defaultBranch = options.defaultBranch ?? 'master';
+  const targetBranch = options.targetBranch ?? 'master';
   const flatten = options.flatten ?? true;
   const stub = sandbox.stub(github, 'getFileContentsOnBranch');
   for (const file of files) {
@@ -173,11 +173,11 @@ export function stubFilesFromFixtures(options: StubFiles) {
       fixtureFile = parts[parts.length - 1];
     }
     stub
-      .withArgs(file, defaultBranch)
+      .withArgs(file, targetBranch)
       .resolves(buildGitHubFileContent(fixturePath, fixtureFile));
   }
   for (const [file, content] of inlineFiles) {
-    stub.withArgs(file, defaultBranch).resolves(buildGitHubFileRaw(content));
+    stub.withArgs(file, targetBranch).resolves(buildGitHubFileRaw(content));
   }
   stub.rejects(Object.assign(Error('not found'), {status: 404}));
 }
