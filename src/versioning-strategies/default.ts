@@ -16,7 +16,6 @@ import {VersioningStrategy} from '../versioning-strategy';
 import {ConventionalCommit} from '../commit';
 import {Version} from '../version';
 import {logger} from '../util/logger';
-import * as semver from 'semver';
 import {ReleaseType} from 'semver';
 
 interface DefaultVersioningStrategyOptions {
@@ -53,7 +52,7 @@ export class DefaultVersioningStrategy implements VersioningStrategy {
       releaseType = 'minor';
     }
 
-    if (semver.lt(version.toString(), 'v1.0.0')) {
+    if (version.major < 1) {
       if (this.bumpMinorPreMajor && releaseType === 'major') {
         releaseType = 'minor';
       } else if (this.bumpPatchForMinorPreMajor && releaseType === 'minor') {

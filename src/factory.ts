@@ -33,6 +33,7 @@ import {DefaultVersioningStrategy} from './versioning-strategies/default';
 import {VersioningStrategy} from './versioning-strategy';
 import {AlwaysBumpPatch} from './versioning-strategies/always-bump-patch';
 import {ServicePackVersioningStrategy} from './versioning-strategies/service-pack';
+import {DependencyManifest} from './versioning-strategies/dependency-manifest';
 
 // Factory shared by GitHub Action and CLI for creating Release PRs
 // and GitHub Releases:
@@ -136,7 +137,7 @@ export async function buildStrategy(
       return new JavaYoshi({
         ...strategyOptions,
         extraFiles: options.extraFiles,
-        // FIXME: do dependency version bumps
+        versioningStrategy: new DependencyManifest(),
       });
     }
     case 'java-lts': {
