@@ -52,8 +52,6 @@ export interface StrategyOptions {
   changelogSections?: ChangelogSection[];
 }
 export class Strategy {
-  bumpMinorPreMajor: boolean;
-  bumpPatchForMinorPreMajor: boolean;
   path: string | undefined;
   labels: string[];
   github: GitHub;
@@ -65,8 +63,6 @@ export class Strategy {
   changelogSections?: ChangelogSection[];
 
   constructor(options: StrategyOptions) {
-    this.bumpMinorPreMajor = options.bumpMinorPreMajor || false;
-    this.bumpPatchForMinorPreMajor = options.bumpPatchForMinorPreMajor || false;
     this.path = options.path;
     this.labels = options.labels || DEFAULT_LABELS;
     this.github = options.github;

@@ -98,6 +98,8 @@ export async function buildStrategy(
     options.targetBranch ?? options.github.repository.defaultBranch;
   const versioningStrategy = buildVersioningStrategy({
     type: options.versioning,
+    bumpMinorPreMajor: options.bumpMinorPreMajor,
+    bumpPatchForMinorPreMajor: options.bumpPatchForMinorPreMajor,
   });
   const strategyOptions = {
     github: options.github,
@@ -163,7 +165,7 @@ interface VersioningStrategyFactoryOptions {
   bumpMinorPreMajor?: boolean;
   bumpPatchForMinorPreMajor?: boolean;
 }
-export function buildVersioningStrategy(
+function buildVersioningStrategy(
   options: VersioningStrategyFactoryOptions
 ): VersioningStrategy {
   switch (options.type) {
