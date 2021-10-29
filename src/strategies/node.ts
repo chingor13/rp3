@@ -24,7 +24,7 @@ import {logger} from '../util/logger';
 export class Node extends Strategy {
   private pkgJsonContents?: GitHubFileContents;
 
-  async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
+  protected async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
     const updates: Update[] = [];
     const version = options.newVersion;
     const packageName = this.component || '';

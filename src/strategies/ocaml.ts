@@ -26,7 +26,7 @@ import {Update} from '../update';
 const notEsyLock = (path: string) => !path.startsWith('esy.lock');
 
 export class OCaml extends Strategy {
-  async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
+  protected async buildUpdates(options: BuildUpdatesOptions): Promise<Update[]> {
     const updates: Update[] = [];
     const version = options.newVersion;
 

@@ -75,7 +75,7 @@ export class Strategy {
     this.changelogSections = options.changelogSections;
   }
 
-  async buildUpdates(_options: BuildUpdatesOptions): Promise<Update[]> {
+  protected async buildUpdates(_options: BuildUpdatesOptions): Promise<Update[]> {
     return [];
   }
 
