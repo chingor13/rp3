@@ -167,7 +167,7 @@ export class Strategy {
       body: pullRequestBody,
       updates,
       labels: this.labels,
-      headRefName: branchName.toString() + '-testing',
+      headRefName: branchName.toString(),
       version: newVersion,
     };
   }
