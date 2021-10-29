@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {describe, it, beforeEach, afterEach} from 'mocha';
+import {describe, it, beforeEach} from 'mocha';
 import {buildStrategy} from '../src/factory';
 import {GitHub} from '../src/github';
-import * as sinon from 'sinon';
 import {expect} from 'chai';
 import {Simple} from '../src/strategies/simple';
 import {DefaultVersioningStrategy} from '../src/versioning-strategies/default';
@@ -26,8 +25,6 @@ import {JavaSnapshot} from '../src/versioning-strategies/java-snapshot';
 import {ServicePackVersioningStrategy} from '../src/versioning-strategies/service-pack';
 import {DependencyManifest} from '../src/versioning-strategies/dependency-manifest';
 
-const sandbox = sinon.createSandbox();
-
 describe('factory', () => {
   let github: GitHub;
   beforeEach(async () => {
@@ -37,9 +34,6 @@ describe('factory', () => {
       defaultBranch: 'main',
       token: 'fake-token',
     });
-  });
-  afterEach(() => {
-    sandbox.restore();
   });
   describe('buildStrategy', () => {
     it('should build a basic strategy', async () => {
