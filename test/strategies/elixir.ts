@@ -13,8 +13,8 @@
 // limitations under the License.
 
 import {describe, it, afterEach, beforeEach} from 'mocha';
-import {Dart} from '../../src/strategies/dart';
-import {buildMockCommit, buildGitHubFileContent} from '../helpers';
+import {Elixir} from '../../src/strategies/elixir';
+import {buildMockCommit} from '../helpers';
 import * as nock from 'nock';
 import * as sinon from 'sinon';
 import {GitHub} from '../../src/github';
@@ -25,14 +25,13 @@ import snapshot = require('snap-shot-it');
 
 nock.disableNetConnect();
 const sandbox = sinon.createSandbox();
-const fixturesPath = './test/fixtures/strategies/dart';
 
-describe('Dart', () => {
+describe('Elixir', () => {
   let github: GitHub;
   beforeEach(async () => {
     github = await GitHub.create({
       owner: 'googleapis',
-      repo: 'dart-test-repo',
+      repo: 'elixir-test-repo',
       defaultBranch: 'main',
     });
   });
@@ -42,10 +41,10 @@ describe('Dart', () => {
   describe('buildReleasePullRequest', () => {
     it('builds a release pull request', async () => {
       const expectedVersion = '0.123.5';
-      const strategy = new Dart({
+      const strategy = new Elixir({
         targetBranch: 'main',
         github,
-        component: 'some-dart-package',
+        component: 'some-elixir-package',
       });
       const commits = [
         buildMockCommit(
@@ -53,41 +52,10 @@ describe('Dart', () => {
         ),
       ];
       const latestRelease = {
-        tag: new TagName(Version.parse('0.123.4'), 'some-dart-package'),
+        tag: new TagName(Version.parse('0.123.4'), 'some-elixir-package'),
         sha: 'abc123',
         notes: 'some notes',
       };
-      const pullRequest = await strategy.buildReleasePullRequest(
-        commits,
-        latestRelease
-      );
-      expect(pullRequest.version?.toString()).to.eql(expectedVersion);
-      expect(pullRequest.updates).lengthOf(2);
-      snapshot(pullRequest);
-    });
-    it('detects a default component', async () => {
-      const expectedVersion = '0.123.5';
-      const strategy = new Dart({
-        targetBranch: 'main',
-        github,
-      });
-      const commits = [
-        buildMockCommit(
-          'fix(deps): update dependency com.google.cloud:google-cloud-storage to v1.120.0'
-        ),
-      ];
-      const latestRelease = {
-        tag: new TagName(Version.parse('0.123.4'), 'hello_world'),
-        sha: 'abc123',
-        notes: 'some notes',
-      };
-      const getFileContentsStub = sandbox.stub(
-        github,
-        'getFileContentsOnBranch'
-      );
-      getFileContentsStub
-        .withArgs('pubspec.yaml', 'main')
-        .resolves(buildGitHubFileContent(fixturesPath, 'pubspec.yaml'));
       const pullRequest = await strategy.buildReleasePullRequest(
         commits,
         latestRelease
