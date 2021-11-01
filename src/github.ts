@@ -560,7 +560,7 @@ export class GitHub {
    * @returns {Tag[]} - List of tags
    * @throws {GitHubAPIError} on an API error
    */
-  listReleases = wrapAsync(
+  private listReleases = wrapAsync(
     async (page = 1, perPage = 100): Promise<GitHubRelease[]> => {
       logger.debug(`Fetching releases page ${page}`);
       const releases = await this.octokit.repos.listReleases({

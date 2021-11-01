@@ -21,7 +21,7 @@ import {readFileSync} from 'fs';
 import {resolve} from 'path';
 import * as snapshot from 'snap-shot-it';
 
-import {GitHub} from '../src/github';
+import {GitHub, GitHubRelease} from '../src/github';
 import {PullRequest} from '../src/pull-request';
 
 const fixturesPath = './test/fixtures';
@@ -50,6 +50,28 @@ describe('GitHub', () => {
 
     // This shared nock will take care of some common requests.
     req = getNock();
+  });
+
+  describe('create', () => {
+    it('allows configuring the default branch explicitly', async () => {
+      const github = await GitHub.create({
+        owner: 'some-owner',
+        repo: 'some-repo',
+        defaultBranch: 'some-branch',
+      });
+      expect(github.repository.defaultBranch).to.eql('some-branch');
+    });
+
+    it('fetches the default branch', async () => {
+      req.get('/repos/some-owner/some-repo').reply(200, {
+        default_branch: 'some-branch-from-api',
+      });
+      const github = await GitHub.create({
+        owner: 'some-owner',
+        repo: 'some-repo',
+      });
+      expect(github.repository.defaultBranch).to.eql('some-branch-from-api');
+    });
   });
 
   describe('findFilesByFilename', () => {
@@ -437,6 +459,25 @@ describe('GitHub', () => {
       );
       expect(commitsSinceSha.length).to.eql(0);
       req.done();
+    });
+  });
+
+  describe('releaseIterator', () => {
+    it('iterates through releases', async () => {
+      const releasesResponse = JSON.parse(
+        readFileSync(resolve(fixturesPath, 'list-releases.json'), 'utf8')
+      );
+      req
+        .get('/repos/fake/fake/releases?page=1&per_page=100')
+        .reply(200, releasesResponse)
+        .get('/repos/fake/fake/releases?page=2&per_page=100')
+        .reply(200, []);
+      const generator = github.releaseIterator();
+      const releases: GitHubRelease[] = [];
+      for await (const release of generator) {
+        releases.push(release);
+      }
+      expect(releases).lengthOf(2);
     });
   });
 
