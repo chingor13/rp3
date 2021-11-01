@@ -863,17 +863,17 @@ export class GitHub {
     for (const update of updates) {
       let content;
       try {
-        // if (update.contents) {
-        //   // we already loaded the file contents earlier, let's not
-        //   // hit GitHub again.
-        //   content = {data: update.contents};
-        // } else {
-        const fileContent = await this.getFileContentsOnBranch(
-          update.path,
-          defaultBranch
-        );
-        content = {data: fileContent};
-        // }
+        if (update.cachedFileContents) {
+          // we already loaded the file contents earlier, let's not
+          // hit GitHub again.
+          content = {data: update.cachedFileContents};
+        } else {
+          const fileContent = await this.getFileContentsOnBranch(
+            update.path,
+            defaultBranch
+          );
+          content = {data: fileContent};
+        }
       } catch (err) {
         if (err.status !== 404) throw err;
         // if the file is missing and create = false, just continue
