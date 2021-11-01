@@ -401,7 +401,7 @@ export class GitHub {
     const results = 0;
     while (results < maxResults) {
       const response: PullRequestHistory | null =
-        await this.findMergedPullRequests(targetBranch, cursor);
+        await this.pullRequestsGraphQL(targetBranch, cursor);
       // no response usually means we ran out of results
       if (!response) {
         break;
@@ -424,17 +424,16 @@ export class GitHub {
    *   the configured default branch.
    * @param {number} page - Page of results. Defaults to 1.
    * @param {number} perPage - Number of results per page. Defaults to 100.
-   * @returns {PullRequest[]} - List of merged pull requests
+   * @returns {PullRequestHistory | null} - List of merged pull requests
    * @throws {GitHubAPIError} on an API error
    */
-  findMergedPullRequests = wrapAsync(
-    async (
-      targetBranch: string,
-      cursor?: string
-    ): Promise<PullRequestHistory | null> => {
-      logger.debug(`Fetching merged pull requests on branch ${targetBranch}`);
-      const response = await this.graphqlRequest({
-        query: `query mergedPullRequests($owner: String!, $repo: String!, $num: Int!, $maxFilesChanged: Int, $targetBranch: String!, $cursor: String) {
+  private async pullRequestsGraphQL(
+    targetBranch: string,
+    cursor?: string
+  ): Promise<PullRequestHistory | null> {
+    logger.debug(`Fetching merged pull requests on branch ${targetBranch}`);
+    const response = await this.graphqlRequest({
+      query: `query mergedPullRequests($owner: String!, $repo: String!, $num: Int!, $maxFilesChanged: Int, $targetBranch: String!, $cursor: String) {
           repository(owner: $owner, name: $repo) {
             pullRequests(first: $num, after: $cursor, baseRefName: $targetBranch, states: MERGED, orderBy: {field: CREATED_AT, direction: DESC}) {
               nodes {
@@ -468,39 +467,38 @@ export class GitHub {
             }
           }
         }`,
-        cursor,
-        owner: this.repository.owner,
-        repo: this.repository.repo,
-        num: 25,
-        targetBranch,
-      });
-      if (!response.repository.pullRequests) {
-        logger.warn(
-          `Could not find merged pull requests for branch ${targetBranch} - it likely does not exist.`
-        );
-        return null;
-      }
-      const pullRequests = (response.repository.pullRequests.nodes ||
-        []) as GraphQLPullRequest[];
-      return {
-        pageInfo: response.repository.pullRequests.pageInfo,
-        data: pullRequests
-          .filter(pullRequest => !!pullRequest.mergeCommit)
-          .map(pullRequest => {
-            return {
-              sha: pullRequest.mergeCommit?.oid, // already filtered non-merged
-              number: pullRequest.number,
-              baseBranchName: pullRequest.baseRefName,
-              headBranchName: pullRequest.headRefName,
-              labels: (pullRequest.labels.nodes || []).map(l => l.name),
-              title: pullRequest.title,
-              body: pullRequest.body + '',
-              files: pullRequest.files.nodes.map(node => node.path),
-            };
-          }),
-      };
+      cursor,
+      owner: this.repository.owner,
+      repo: this.repository.repo,
+      num: 25,
+      targetBranch,
+    });
+    if (!response.repository.pullRequests) {
+      logger.warn(
+        `Could not find merged pull requests for branch ${targetBranch} - it likely does not exist.`
+      );
+      return null;
     }
-  );
+    const pullRequests = (response.repository.pullRequests.nodes ||
+      []) as GraphQLPullRequest[];
+    return {
+      pageInfo: response.repository.pullRequests.pageInfo,
+      data: pullRequests
+        .filter(pullRequest => !!pullRequest.mergeCommit)
+        .map(pullRequest => {
+          return {
+            sha: pullRequest.mergeCommit?.oid, // already filtered non-merged
+            number: pullRequest.number,
+            baseBranchName: pullRequest.baseRefName,
+            headBranchName: pullRequest.headRefName,
+            labels: (pullRequest.labels.nodes || []).map(l => l.name),
+            title: pullRequest.title,
+            body: pullRequest.body + '',
+            files: pullRequest.files.nodes.map(node => node.path),
+          };
+        }),
+    };
+  }
 
   /**
    * Helper to find the first merged pull request that matches the
