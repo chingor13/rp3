@@ -16,7 +16,6 @@ import {createPullRequest, Changes} from 'code-suggester';
 import {PullRequest} from './pull-request';
 import {Commit} from './commit';
 
-import {OctokitResponse} from '@octokit/types';
 import {Octokit} from '@octokit/rest';
 import {request} from '@octokit/request';
 import {graphql} from '@octokit/graphql';
@@ -28,19 +27,11 @@ export const GH_API_URL = 'https://api.github.com';
 export const GH_GRAPHQL_URL = 'https://api.github.com';
 type OctokitType = InstanceType<typeof Octokit>;
 
-// The return types for responses have not yet been exposed in the
-// @octokit/* libraries, we explicitly define the types below to work
-// around this,. See: https://github.com/octokit/rest.js/issues/1624
-// https://github.com/octokit/types.ts/issues/25.
-import {PromiseValue} from 'type-fest';
 import {logger} from './util/logger';
 import {Repository} from './repository';
 import {ReleasePullRequest} from './release-pull-request';
 import {Update} from './update';
 import {Release} from './release';
-type GitGetTreeResponse = PromiseValue<
-  ReturnType<InstanceType<typeof Octokit>['git']['getTree']>
->['data'];
 
 // Extract some types from the `request` package.
 type RequestBuilderType = typeof request;
@@ -651,15 +642,11 @@ export class GitHub {
    */
   getFileContentsWithDataAPI = wrapAsync(
     async (path: string, branch: string): Promise<GitHubFileContents> => {
-      const options: RequestOptionsType = {
+      const repoTree = await this.octokit.git.getTree({
         owner: this.repository.owner,
         repo: this.repository.repo,
-        branch,
-      };
-      const repoTree: OctokitResponse<GitGetTreeResponse> = await this.request(
-        'GET /repos/:owner/:repo/git/trees/:branch',
-        options
-      );
+        tree_sha: branch,
+      });
 
       const blobDescriptor = repoTree.data.tree.find(
         tree => tree.path === path
@@ -668,14 +655,11 @@ export class GitHub {
         throw new Error(`Could not find requested path: ${path}`);
       }
 
-      const resp = await this.request(
-        'GET /repos/:owner/:repo/git/blobs/:sha',
-        {
-          owner: this.repository.owner,
-          repo: this.repository.repo,
-          sha: blobDescriptor.sha,
-        }
-      );
+      const resp = await this.octokit.git.getBlob({
+        owner: this.repository.owner,
+        repo: this.repository.repo,
+        file_sha: blobDescriptor.sha!,
+      });
 
       return {
         parsedContent: Buffer.from(resp.data.content, 'base64').toString(
@@ -760,9 +744,7 @@ export class GitHub {
       logger.info(
         `finding files by filename and ref: ${filename}/${ref}/${prefix}`
       );
-      const response: {
-        data: GitGetTreeResponse;
-      } = await this.octokit.git.getTree({
+      const response = await this.octokit.git.getTree({
         owner: this.repository.owner,
         repo: this.repository.repo,
         tree_sha: ref,
@@ -938,9 +920,7 @@ export class GitHub {
       if (prefix) {
         prefix = normalizePrefix(prefix);
       }
-      const response: {
-        data: GitGetTreeResponse;
-      } = await this.octokit.git.getTree({
+      const response = await this.octokit.git.getTree({
         owner: this.repository.owner,
         repo: this.repository.repo,
         tree_sha: ref,
