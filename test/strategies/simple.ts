@@ -15,18 +15,16 @@
 import {describe, it, afterEach, beforeEach} from 'mocha';
 import {expect} from 'chai';
 import {GitHub} from '../../src/github';
-import {Rust} from '../../src/strategies/rust';
+import {Simple} from '../../src/strategies/simple';
 import * as sinon from 'sinon';
-import {buildGitHubFileContent, assertHasUpdate} from '../helpers';
+import {assertHasUpdate} from '../helpers';
 import {buildMockCommit} from '../helpers';
 import {TagName} from '../../src/util/tag-name';
 import {Version} from '../../src/version';
 import {Changelog} from '../../src/updaters/changelog';
-import {CargoLock} from '../../src/updaters/rust/cargo-lock';
-import {CargoToml} from '../../src/updaters/rust/cargo-toml';
+import {DefaultUpdater} from '../../src/updaters/default';
 
 const sandbox = sinon.createSandbox();
-const fixturesPath = './test/fixtures/strategies/rust';
 
 const COMMITS = [
   buildMockCommit(
@@ -38,12 +36,12 @@ const COMMITS = [
   buildMockCommit('chore: update common templates'),
 ];
 
-describe('Rust', () => {
+describe('Simple', () => {
   let github: GitHub;
   beforeEach(async () => {
     github = await GitHub.create({
       owner: 'googleapis',
-      repo: 'rust-test-repo',
+      repo: 'simple-test-repo',
       defaultBranch: 'main',
     });
   });
@@ -52,8 +50,8 @@ describe('Rust', () => {
   });
   describe('buildReleasePullRequest', () => {
     it('returns release PR changes with defaultInitialVersion', async () => {
-      const expectedVersion = '0.1.0';
-      const strategy = new Rust({
+      const expectedVersion = '1.0.0';
+      const strategy = new Simple({
         targetBranch: 'main',
         github,
         component: 'google-cloud-automl',
@@ -67,7 +65,7 @@ describe('Rust', () => {
     });
     it('returns release PR changes with semver patch bump', async () => {
       const expectedVersion = '0.123.5';
-      const strategy = new Rust({
+      const strategy = new Simple({
         targetBranch: 'main',
         github,
         component: 'google-cloud-automl',
@@ -86,7 +84,7 @@ describe('Rust', () => {
   });
   describe('buildUpdates', () => {
     it('builds common files', async () => {
-      const strategy = new Rust({
+      const strategy = new Simple({
         targetBranch: 'main',
         github,
         component: 'google-cloud-automl',
@@ -98,29 +96,7 @@ describe('Rust', () => {
       );
       const updates = release.updates;
       assertHasUpdate(updates, 'CHANGELOG.md', Changelog);
-      assertHasUpdate(updates, 'Cargo.toml', CargoToml);
-      assertHasUpdate(updates, 'Cargo.lock', CargoLock);
-    });
-
-    it('finds crates from workspace manifest', async () => {
-      const strategy = new Rust({
-        targetBranch: 'main',
-        github,
-        component: 'google-cloud-automl',
-      });
-      sandbox
-        .stub(github, 'getFileContentsOnBranch')
-        .withArgs('Cargo.toml', 'main')
-        .resolves(buildGitHubFileContent(fixturesPath, 'Cargo-workspace.toml'));
-      const latestRelease = undefined;
-      const release = await strategy.buildReleasePullRequest(
-        COMMITS,
-        latestRelease
-      );
-      const updates = release.updates;
-      assertHasUpdate(updates, 'crates/crate1/Cargo.toml', CargoToml);
-      assertHasUpdate(updates, 'crates/crate2/Cargo.toml', CargoToml);
-      assertHasUpdate(updates, 'Cargo.lock', CargoLock);
+      assertHasUpdate(updates, 'version.txt', DefaultUpdater);
     });
   });
 });
