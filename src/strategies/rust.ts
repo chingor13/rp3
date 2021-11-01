@@ -64,7 +64,7 @@ export class Rust extends Strategy {
     } else {
       const manifestPath = this.addPath('Cargo.toml');
       logger.info(`single crate found, updating ${manifestPath}`);
-      manifestPaths.push(this.addPath('Cargo.toml'));
+      manifestPaths.push(manifestPath);
       lockPath = this.addPath('Cargo.lock');
     }
 
@@ -138,20 +138,4 @@ export class Rust extends Strategy {
     }
     return parseCargoManifest(content.parsedContent);
   }
-
-  protected async exists(path: string): Promise<boolean> {
-    try {
-      await this.github.getFileContentsOnBranch(path, this.targetBranch);
-      return true;
-    } catch (_e) {
-      return false;
-    }
-  }
-}
-
-interface GetCommitsOptions {
-  sha?: string;
-  perPage?: number;
-  labels?: boolean;
-  path?: string;
 }
