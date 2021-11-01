@@ -98,6 +98,11 @@ interface GraphQLCommit {
       mergeCommit?: {
         oid: string;
       };
+      files: {
+        nodes: {
+          path: string;
+        }[];
+      };
     }[];
   };
 }
@@ -260,7 +265,7 @@ export class GitHub {
   ): Promise<PullRequestHistory | null> {
     logger.debug(`Fetching merge commits on branch ${targetBranch}`);
     const response = await this.graphqlRequest({
-      query: `query pullRequestsSince($owner: String!, $repo: String!, $num: Int!, $targetBranch: String!, $cursor: String) {
+      query: `query pullRequestsSince($owner: String!, $repo: String!, $num: Int!, $maxFilesChanged: Int, $targetBranch: String!, $cursor: String) {
         repository(owner: $owner, name: $repo) {
           ref(qualifiedName: $targetBranch) {
             target {
@@ -282,6 +287,15 @@ export class GitHub {
                         mergeCommit {
                           oid
                         }
+                        files(first: $maxFilesChanged) {
+                          nodes {
+                            path
+                          }
+                          pageInfo {
+                            endCursor
+                            hasNextPage
+                          }
+                        }
                       }
                     }
                     sha: oid
@@ -302,6 +316,7 @@ export class GitHub {
       repo: this.repository.repo,
       num: 25,
       targetBranch,
+      maxFilesChanged: 64,
     });
 
     // if the branch does exist, return null
@@ -327,6 +342,7 @@ export class GitHub {
           }
         );
         if (pullRequest) {
+          const files = pullRequest.files.nodes.map(node => node.path);
           commit.pullRequest = {
             sha: commit.sha,
             number: pullRequest.number,
@@ -335,8 +351,9 @@ export class GitHub {
             title: pullRequest.title,
             body: pullRequest.body,
             labels: pullRequest.labels.nodes.map(node => node.name),
-            files: [], // FIXME
+            files,
           };
+          commit.files = files;
         }
         return commit;
       }),
