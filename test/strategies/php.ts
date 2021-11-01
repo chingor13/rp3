@@ -15,23 +15,16 @@
 import {describe, it, afterEach, beforeEach} from 'mocha';
 import {expect} from 'chai';
 import {GitHub} from '../../src/github';
-import {OCaml} from '../../src/strategies/ocaml';
+import {PHP} from '../../src/strategies/php';
 import * as sinon from 'sinon';
-import {
-  assertHasUpdate,
-  assertNoHasUpdate,
-  stubFilesFromFixtures,
-} from '../helpers';
+import {assertHasUpdate} from '../helpers';
 import {buildMockCommit} from '../helpers';
 import {TagName} from '../../src/util/tag-name';
 import {Version} from '../../src/version';
 import {Changelog} from '../../src/updaters/changelog';
-import {EsyJson} from '../../src/updaters/ocaml/esy-json';
-import {Opam} from '../../src/updaters/ocaml/opam';
-import {DuneProject} from '../../src/updaters/ocaml/dune-project';
+import {RootComposerUpdatePackage} from '../../src/updaters/php/root-composer-update-package';
 
 const sandbox = sinon.createSandbox();
-const fixturesPath = './test/fixtures/strategies/ocaml';
 
 const COMMITS = [
   buildMockCommit(
@@ -43,12 +36,12 @@ const COMMITS = [
   buildMockCommit('chore: update common templates'),
 ];
 
-describe('OCaml', () => {
+describe('PHP', () => {
   let github: GitHub;
   beforeEach(async () => {
     github = await GitHub.create({
       owner: 'googleapis',
-      repo: 'ocaml-test-repo',
+      repo: 'php-test-repo',
       defaultBranch: 'main',
     });
   });
@@ -58,12 +51,11 @@ describe('OCaml', () => {
   describe('buildReleasePullRequest', () => {
     it('returns release PR changes with defaultInitialVersion', async () => {
       const expectedVersion = '1.0.0';
-      const strategy = new OCaml({
+      const strategy = new PHP({
         targetBranch: 'main',
         github,
         component: 'google-cloud-automl',
       });
-      sandbox.stub(github, 'findFilesByExtension').resolves([]);
       const latestRelease = undefined;
       const release = await strategy.buildReleasePullRequest(
         COMMITS,
@@ -73,12 +65,11 @@ describe('OCaml', () => {
     });
     it('returns release PR changes with semver patch bump', async () => {
       const expectedVersion = '0.123.5';
-      const strategy = new OCaml({
+      const strategy = new PHP({
         targetBranch: 'main',
         github,
         component: 'google-cloud-automl',
       });
-      sandbox.stub(github, 'findFilesByExtension').resolves([]);
       const latestRelease = {
         tag: new TagName(Version.parse('0.123.4'), 'google-cloud-automl'),
         sha: 'abc123',
@@ -93,12 +84,11 @@ describe('OCaml', () => {
   });
   describe('buildUpdates', () => {
     it('builds common files', async () => {
-      const strategy = new OCaml({
+      const strategy = new PHP({
         targetBranch: 'main',
         github,
         component: 'google-cloud-automl',
       });
-      sandbox.stub(github, 'findFilesByExtension').resolves([]);
       const latestRelease = undefined;
       const release = await strategy.buildReleasePullRequest(
         COMMITS,
@@ -107,37 +97,7 @@ describe('OCaml', () => {
       const updates = release.updates;
       expect(updates).lengthOf(2);
       assertHasUpdate(updates, 'CHANGELOG.md', Changelog);
-      assertHasUpdate(updates, 'dune-project', DuneProject);
-    });
-
-    it('finds and updates a project files', async () => {
-      const strategy = new OCaml({
-        targetBranch: 'main',
-        github,
-        component: 'google-cloud-automl',
-      });
-      const findFilesStub = sandbox.stub(github, 'findFilesByExtension');
-      findFilesStub
-        .withArgs('json', undefined)
-        .resolves(['esy.json', 'other.json']);
-      findFilesStub.withArgs('opam', undefined).resolves(['sample.opam']);
-      stubFilesFromFixtures({
-        sandbox,
-        github,
-        targetBranch: 'main',
-        fixturePath: fixturesPath,
-        files: ['esy.json', 'other.json', 'sample.opam'],
-      });
-      const latestRelease = undefined;
-      const release = await strategy.buildReleasePullRequest(
-        COMMITS,
-        latestRelease
-      );
-      const updates = release.updates;
-      expect(updates).lengthOf(4);
-      assertHasUpdate(updates, 'esy.json', EsyJson);
-      assertNoHasUpdate(updates, 'other.json');
-      assertHasUpdate(updates, 'sample.opam', Opam);
+      assertHasUpdate(updates, 'composer.json', RootComposerUpdatePackage);
     });
   });
 });
