@@ -26,7 +26,6 @@ import {GitHub} from '../../src/github';
 import {Version} from '../../src/version';
 import {TagName} from '../../src/util/tag-name';
 import {expect} from 'chai';
-import snapshot = require('snap-shot-it');
 import {KRMBlueprintVersion} from '../../src/updaters/krm/krm-blueprint-version';
 import {Changelog} from '../../src/updaters/changelog';
 
@@ -36,6 +35,11 @@ const fixturesPath = './test/fixtures/strategies/krm-blueprint';
 
 describe('KRMBlueprint', () => {
   let github: GitHub;
+  const commits = [
+    buildMockCommit(
+      'fix(deps): update dependency com.google.cloud:google-cloud-storage to v1.120.0'
+    ),
+  ];
   beforeEach(async () => {
     github = await GitHub.create({
       owner: 'googleapis',
@@ -47,6 +51,21 @@ describe('KRMBlueprint', () => {
     sandbox.restore();
   });
   describe('buildReleasePullRequest', () => {
+    it('returns release PR changes with defaultInitialVersion', async () => {
+      const expectedVersion = '0.1.0';
+      const strategy = new KRMBlueprint({
+        targetBranch: 'main',
+        github,
+        component: 'google-cloud-automl',
+      });
+      sandbox.stub(github, 'findFilesByExtension').resolves([]);
+      const latestRelease = undefined;
+      const release = await strategy.buildReleasePullRequest(
+        commits,
+        latestRelease
+      );
+      expect(release.version?.toString()).to.eql(expectedVersion);
+    });
     it('builds a release pull request', async () => {
       const expectedVersion = '0.123.5';
       const strategy = new KRMBlueprint({
@@ -54,11 +73,7 @@ describe('KRMBlueprint', () => {
         github,
         component: 'some-krm-blueprint-package',
       });
-      const commits = [
-        buildMockCommit(
-          'fix(deps): update dependency com.google.cloud:google-cloud-storage to v1.120.0'
-        ),
-      ];
+      sandbox.stub(github, 'findFilesByExtension').resolves([]);
       const latestRelease = {
         tag: new TagName(
           Version.parse('0.123.4'),
@@ -67,6 +82,36 @@ describe('KRMBlueprint', () => {
         sha: 'abc123',
         notes: 'some notes',
       };
+      const pullRequest = await strategy.buildReleasePullRequest(
+        commits,
+        latestRelease
+      );
+      expect(pullRequest.version?.toString()).to.eql(expectedVersion);
+    });
+  });
+  describe('buildUpdates', () => {
+    it('builds common files', async () => {
+      const strategy = new KRMBlueprint({
+        targetBranch: 'main',
+        github,
+        component: 'google-cloud-automl',
+      });
+      sandbox.stub(github, 'findFilesByExtension').resolves([]);
+      const latestRelease = undefined;
+      const release = await strategy.buildReleasePullRequest(
+        commits,
+        latestRelease
+      );
+      const updates = release.updates;
+      assertHasUpdate(updates, 'CHANGELOG.md', Changelog);
+    });
+
+    it('finds and updates a yaml files', async () => {
+      const strategy = new KRMBlueprint({
+        targetBranch: 'main',
+        github,
+        component: 'google-cloud-automl',
+      });
       sandbox
         .stub(github, 'findFilesByExtension')
         .withArgs('yaml', undefined)
@@ -78,16 +123,14 @@ describe('KRMBlueprint', () => {
         files: ['project.yaml', 'no-attrib-bucket.yaml'],
         targetBranch: 'main',
       });
-      const pullRequest = await strategy.buildReleasePullRequest(
+      const latestRelease = undefined;
+      const release = await strategy.buildReleasePullRequest(
         commits,
         latestRelease
       );
-      expect(pullRequest.version?.toString()).to.eql(expectedVersion);
-      expect(pullRequest.updates).lengthOf(2);
-      assertHasUpdate(pullRequest.updates, 'CHANGELOG.md', Changelog);
-      assertHasUpdate(pullRequest.updates, 'project.yaml', KRMBlueprintVersion);
-      assertNoHasUpdate(pullRequest.updates, 'no-attrib-bucket.yaml');
-      snapshot(pullRequest);
+      const updates = release.updates;
+      assertHasUpdate(updates, 'project.yaml', KRMBlueprintVersion);
+      assertNoHasUpdate(updates, 'no-attrib-bucket.yaml');
     });
   });
 });

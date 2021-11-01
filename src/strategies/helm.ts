@@ -43,7 +43,7 @@ export class Helm extends Strategy {
     updates.push({
       path: this.addPath('Chart.yaml'),
       createIfMissing: false,
-      cachedFileContents: await this.getChartYmlContents(),
+      cachedFileContents: this.chartYmlContents,
       updater: new ChartYaml({
         version,
       }),
