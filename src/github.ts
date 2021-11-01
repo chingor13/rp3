@@ -41,9 +41,6 @@ import {Release} from './release';
 type GitGetTreeResponse = PromiseValue<
   ReturnType<InstanceType<typeof Octokit>['git']['getTree']>
 >['data'];
-type PullsListResponseItems = PromiseValue<
-  ReturnType<InstanceType<typeof Octokit>['pulls']['list']>
->['data'];
 
 // Extract some types from the `request` package.
 type RequestBuilderType = typeof request;
@@ -84,35 +81,44 @@ interface GraphQLCommit {
   sha: string;
   message: string;
   associatedPullRequests: {
+    nodes: GraphQLPullRequest[];
+  };
+}
+
+interface GraphQLPullRequest {
+  number: number;
+  title: string;
+  body: string;
+  baseRefName: string;
+  headRefName: string;
+  labels: {
     nodes: {
-      number: number;
-      title: string;
-      body: string;
-      baseRefName: string;
-      headRefName: string;
-      labels: {
-        nodes: {
-          name: string;
-        }[];
-      };
-      mergeCommit?: {
-        oid: string;
-      };
-      files: {
-        nodes: {
-          path: string;
-        }[];
-      };
+      name: string;
+    }[];
+  };
+  mergeCommit?: {
+    oid: string;
+  };
+  files: {
+    nodes: {
+      path: string;
     }[];
   };
 }
 
-interface PullRequestHistory {
+interface CommitHistory {
   pageInfo: {
     hasNextPage: boolean;
     endCursor: string | undefined;
   };
   data: Commit[];
+}
+interface PullRequestHistory {
+  pageInfo: {
+    hasNextPage: boolean;
+    endCursor: string | undefined;
+  };
+  data: PullRequest[];
 }
 
 export interface GitHubRelease {
@@ -241,8 +247,10 @@ export class GitHub {
     let cursor: string | undefined = undefined;
     let results = 0;
     while (results < maxResults) {
-      const response: PullRequestHistory | null =
-        await this.mergeCommitsGraphQL(targetBranch, cursor);
+      const response: CommitHistory | null = await this.mergeCommitsGraphQL(
+        targetBranch,
+        cursor
+      );
       // no response usually means that the branch can't be found
       if (!response) {
         break;
@@ -262,7 +270,7 @@ export class GitHub {
   private async mergeCommitsGraphQL(
     targetBranch: string,
     cursor?: string
-  ): Promise<PullRequestHistory | null> {
+  ): Promise<CommitHistory | null> {
     logger.debug(`Fetching merge commits on branch ${targetBranch}`);
     const response = await this.graphqlRequest({
       query: `query pullRequestsSince($owner: String!, $repo: String!, $num: Int!, $maxFilesChanged: Int, $targetBranch: String!, $cursor: String) {
@@ -353,7 +361,13 @@ export class GitHub {
             labels: pullRequest.labels.nodes.map(node => node.name),
             files,
           };
+          // We cannot directly fetch files on commits via graphql, only provide file
+          // information for commits with associated pull requests
           commit.files = files;
+        } else {
+          logger.warn(
+            `No merged pull request for commit: ${graphCommit.sha} - files unavailable`
+          );
         }
         return commit;
       }),
@@ -385,28 +399,29 @@ export class GitHub {
    *
    * @param {number} maxResults maxResults - Limit the number of results searched.
    *   Defaults to unlimited.
-   * @yields {MergedGitHubPR}
+   * @yields {PullRequest}
    * @throws {GitHubAPIError} on an API error
    */
   async *mergedPullRequestIterator(
     targetBranch: string,
     maxResults: number = Number.MAX_SAFE_INTEGER
   ) {
-    let page = 1;
+    let cursor: string | undefined = undefined;
     const results = 0;
     while (results < maxResults) {
-      const pullRequests = await this.findMergedPullRequests(
-        targetBranch,
-        page
-      );
+      const response: PullRequestHistory | null =
+        await this.findMergedPullRequests(targetBranch, cursor);
       // no response usually means we ran out of results
-      if (pullRequests.length === 0) {
+      if (!response) {
         break;
       }
-      for (let i = 0; i < pullRequests.length; i++) {
-        yield pullRequests[i];
+      for (let i = 0; i < response.data.length; i++) {
+        yield response.data[i];
       }
-      page += 1;
+      if (!response.pageInfo.hasNextPage) {
+        break;
+      }
+      cursor = response.pageInfo.endCursor;
     }
   }
 
@@ -423,54 +438,76 @@ export class GitHub {
    */
   findMergedPullRequests = wrapAsync(
     async (
-      targetBranch?: string,
-      page = 1,
-      perPage = 100
-    ): Promise<PullRequest[]> => {
-      if (!targetBranch) {
-        targetBranch = this.repository.defaultBranch;
+      targetBranch: string,
+      cursor?: string
+    ): Promise<PullRequestHistory | null> => {
+      logger.debug(`Fetching merged pull requests on branch ${targetBranch}`);
+      const response = await this.graphqlRequest({
+        query: `query mergedPullRequests($owner: String!, $repo: String!, $num: Int!, $maxFilesChanged: Int, $targetBranch: String!, $cursor: String) {
+          repository(owner: $owner, name: $repo) {
+            pullRequests(first: $num, after: $cursor, baseRefName: $targetBranch, states: MERGED, orderBy: {field: CREATED_AT, direction: DESC}) {
+              nodes {
+                number
+                title
+                baseRefName
+                headRefName
+                labels(first: 10) {
+                  nodes {
+                    name
+                  }
+                }
+                body
+                mergeCommit {
+                  oid
+                }
+                files(first: $maxFilesChanged) {
+                  nodes {
+                    path
+                  }
+                  pageInfo {
+                    endCursor
+                    hasNextPage
+                  }
+                }
+              }
+              pageInfo {
+                endCursor
+                hasNextPage
+              }
+            }
+          }
+        }`,
+        cursor,
+        owner: this.repository.owner,
+        repo: this.repository.repo,
+        num: 25,
+        targetBranch,
+      });
+      if (!response.repository.pullRequests) {
+        logger.warn(
+          `Could not find merged pull requests for branch ${targetBranch} - it likely does not exist.`
+        );
+        return null;
       }
-      // TODO: is sorting by updated better?
-      const pullsResponse = (await this.request(
-        `GET /repos/:owner/:repo/pulls?state=closed&per_page=${perPage}&page=${page}&base=${targetBranch}&sort=created&direction=desc`,
-        {
-          owner: this.repository.owner,
-          repo: this.repository.repo,
-        }
-      )) as {data: PullsListResponseItems};
-
-      // TODO: distinguish between no more pages and a full page of
-      // closed, non-merged pull requests. At page size of 100, this unlikely
-      // to matter
-
-      if (!pullsResponse.data) {
-        return [];
-      }
-
-      return (
-        pullsResponse.data
-          // only return merged pull requests
-          .filter(pull => {
-            return !!pull.merged_at;
-          })
-          .map(pull => {
-            const labels = pull.labels
-              ? pull.labels.map(l => {
-                  return l.name + '';
-                })
-              : [];
+      const pullRequests = (response.repository.pullRequests.nodes ||
+        []) as GraphQLPullRequest[];
+      return {
+        pageInfo: response.repository.pullRequests.pageInfo,
+        data: pullRequests
+          .filter(pullRequest => !!pullRequest.mergeCommit)
+          .map(pullRequest => {
             return {
-              sha: pull.merge_commit_sha!, // already filtered non-merged
-              number: pull.number,
-              baseBranchName: pull.base.ref,
-              headBranchName: pull.head.ref,
-              labels,
-              title: pull.title,
-              body: pull.body + '',
-              files: [], // FIXME
+              sha: pullRequest.mergeCommit?.oid, // already filtered non-merged
+              number: pullRequest.number,
+              baseBranchName: pullRequest.baseRefName,
+              headBranchName: pullRequest.headRefName,
+              labels: (pullRequest.labels.nodes || []).map(l => l.name),
+              title: pullRequest.title,
+              body: pullRequest.body + '',
+              files: pullRequest.files.nodes.map(node => node.path),
             };
-          })
-      );
+          }),
+      };
     }
   );
 

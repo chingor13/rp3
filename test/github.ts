@@ -22,6 +22,7 @@ import {resolve} from 'path';
 import * as snapshot from 'snap-shot-it';
 
 import {GitHub} from '../src/github';
+import {PullRequest} from '../src/pull-request';
 
 const fixturesPath = './test/fixtures';
 
@@ -293,18 +294,21 @@ describe('GitHub', () => {
     });
   });
 
-  describe('findMergedPullRequests', () => {
+  describe('mergedPullRequestIterator', () => {
     it('finds merged pull requests with labels', async () => {
-      const pullRequests = JSON.parse(
+      const graphql = JSON.parse(
         readFileSync(resolve(fixturesPath, 'merged-pull-requests.json'), 'utf8')
       );
-      req
-        .get(
-          '/repos/fake/fake/pulls?state=closed&per_page=100&page=1&base=main&sort=created&direction=desc'
-        )
-        .reply(200, pullRequests);
-      const mergedPullRequests = await github.findMergedPullRequests();
-      snapshot(mergedPullRequests);
+      req.post('/graphql').reply(200, {
+        data: graphql,
+      });
+      const generator = github.mergedPullRequestIterator('main');
+      const pullRequests: PullRequest[] = [];
+      for await (const pullRequest of generator) {
+        pullRequests.push(pullRequest);
+      }
+      expect(pullRequests).lengthOf(25);
+      snapshot(pullRequests!);
       req.done();
     });
   });
