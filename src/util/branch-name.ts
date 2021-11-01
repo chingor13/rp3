@@ -96,7 +96,7 @@ class AutoreleaseBranchName extends BranchName {
   }
   toString(): string {
     if (this.component) {
-      return `release-${this.component}-v${this.version?.toString}`;
+      return `release-${this.component}-v${this.version?.toString()}`;
     }
     return `release-v${this.version?.toString()}`;
   }
