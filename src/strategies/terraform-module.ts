@@ -39,7 +39,10 @@ export class TerraformModule extends Strategy {
 
     // Update version in README to current candidate version.
     // A module may have submodules, so find all submodules.
-    const readmeFiles = await this.github.findFilesByFilename('readme.md');
+    const readmeFiles = await this.github.findFilesByFilename(
+      'readme.md',
+      this.path
+    );
     readmeFiles.forEach(path => {
       updates.push({
         path: this.addPath(path),
@@ -53,8 +56,8 @@ export class TerraformModule extends Strategy {
     // Update versions.tf to current candidate version.
     // A module may have submodules, so find all versions.tfand versions.tf.tmpl to update.
     const versionFiles = await Promise.all([
-      this.github.findFilesByFilename('versions.tf'),
-      this.github.findFilesByFilename('versions.tf.tmpl'),
+      this.github.findFilesByFilename('versions.tf', this.path),
+      this.github.findFilesByFilename('versions.tf.tmpl', this.path),
     ]).then(([v, vt]) => {
       return v.concat(vt);
     });
