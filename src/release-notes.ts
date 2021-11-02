@@ -83,9 +83,18 @@ export class ReleaseNotes {
 
     const changelogCommits = commits.map(commit => {
       return {
-        ...commit,
+        body: '', // commit.body,
+        subject: commit.bareMessage,
+        type: commit.type,
+        scope: commit.scope,
+        notes: commit.notes,
+        references: commit.references,
+        mentions: [],
+        merge: null,
+        revert: null,
         header: commit.message,
-        notes: [],
+        footer: null,
+        hash: commit.sha,
       };
     });
 

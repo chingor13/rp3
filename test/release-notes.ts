@@ -81,6 +81,25 @@ describe('ReleaseNotes', () => {
       expect(notes).to.is.string;
       snapshot(dateSafe(notes));
     });
+    it('should handle BREAKING CHANGE notes', async () => {
+      const commits = [
+        {
+          sha: 'sha2',
+          message: 'fix: some bugfix',
+          files: ['path1/file1.rb'],
+          type: 'fix',
+          scope: null,
+          bareMessage: 'some bugfix',
+          notes: [{title: 'BREAKING CHANGE', text: 'some bugfix'}],
+          references: [],
+          breaking: true,
+        },
+      ];
+      const releaseNotes = new ReleaseNotes();
+      const notes = await releaseNotes.buildNotes(commits, notesOptions);
+      expect(notes).to.is.string;
+      snapshot(dateSafe(notes));
+    });
     it('should ignore RELEASE AS notes', async () => {
       const commits = [
         {
@@ -185,6 +204,7 @@ describe('ReleaseNotes', () => {
       });
       it('should not include content two newlines after BREAKING CHANGE', async () => {
         const commits = [buildCommitFromFixture('breaking-body-content-after')];
+        console.log(parseConventionalCommits(commits));
         const releaseNotes = new ReleaseNotes();
         const notes = await releaseNotes.buildNotes(
           parseConventionalCommits(commits),
