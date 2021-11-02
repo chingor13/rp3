@@ -371,6 +371,32 @@ exports['GitHub commitsSince paginates through commits 1'] = [
   }
 ]
 
+exports['GitHub createRelease should create a release with a package prefix 1'] = {
+  "tag_name": "v1.2.3",
+  "body": "Some release notes",
+  "sha": "abc123"
+}
+
+exports['GitHub createRelease should raise a DuplicateReleaseError if already_exists 1'] = {
+  "tag_name": "v1.2.3",
+  "body": "Some release notes",
+  "sha": "abc123"
+}
+
+exports['GitHub createRelease should raise a RequestError for other validation errors 1'] = {
+  "tag_name": "v1.2.3",
+  "body": "Some release notes",
+  "sha": "abc123"
+}
+
+exports['GitHub findFilesByExtension returns files matching the requested pattern 1'] = [
+  "appengine/pom.xml",
+  "bom/pom.xml",
+  "credentials/pom.xml",
+  "oauth2_http/pom.xml",
+  "pom.xml"
+]
+
 exports['GitHub findFilesByFilename returns files matching the requested pattern 1'] = [
   "appengine/pom.xml",
   "bom/pom.xml",

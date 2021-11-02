@@ -20,7 +20,7 @@ import {Octokit} from '@octokit/rest';
 import {request} from '@octokit/request';
 import {graphql} from '@octokit/graphql';
 import {RequestError} from '@octokit/request-error';
-import {GitHubAPIError} from './errors';
+import {GitHubAPIError, DuplicateReleaseError} from './errors';
 
 const MAX_ISSUE_BODY_SIZE = 65536;
 export const GH_API_URL = 'https://api.github.com';
@@ -986,6 +986,18 @@ export class GitHub {
         sha: resp.data.target_commitish,
         notes: resp.data.body_text,
       };
+    },
+    e => {
+      if (e instanceof RequestError) {
+        if (
+          e.status === 422 &&
+          GitHubAPIError.parseErrors(e).some(error => {
+            return error.code === 'already_exists';
+          })
+        ) {
+          throw new DuplicateReleaseError(e, 'tagName');
+        }
+      }
     }
   );
 }

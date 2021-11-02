@@ -23,6 +23,10 @@ import * as snapshot from 'snap-shot-it';
 
 import {GitHub, GitHubRelease} from '../src/github';
 import {PullRequest} from '../src/pull-request';
+import {TagName} from '../src/util/tag-name';
+import {Version} from '../src/version';
+import assert = require('assert');
+import {DuplicateReleaseError, GitHubAPIError} from '../src/errors';
 
 const fixturesPath = './test/fixtures';
 
@@ -114,45 +118,45 @@ describe('GitHub', () => {
     });
   });
 
-  // describe('findFilesByExtension', () => {
-  //   it('returns files matching the requested pattern', async () => {
-  //     const fileSearchResponse = JSON.parse(
-  //       readFileSync(resolve(fixturesPath, 'pom-file-search.json'), 'utf8')
-  //     );
-  //     req
-  //       .get('/repos/fake/fake/git/trees/main?recursive=true')
-  //       .reply(200, fileSearchResponse);
-  //     const pomFiles = await github.findFilesByExtension('xml');
-  //     snapshot(pomFiles);
-  //     req.done();
-  //   });
+  describe('findFilesByExtension', () => {
+    it('returns files matching the requested pattern', async () => {
+      const fileSearchResponse = JSON.parse(
+        readFileSync(resolve(fixturesPath, 'pom-file-search.json'), 'utf8')
+      );
+      req
+        .get('/repos/fake/fake/git/trees/main?recursive=true')
+        .reply(200, fileSearchResponse);
+      const pomFiles = await github.findFilesByExtension('xml');
+      snapshot(pomFiles);
+      req.done();
+    });
 
-  //   const prefixes = [
-  //     'appengine',
-  //     'appengine/',
-  //     '/appengine',
-  //     '/appengine/',
-  //     'appengine\\',
-  //     '\\appengine',
-  //     '\\appengine\\',
-  //   ];
-  //   prefixes.forEach(prefix => {
-  //     it(`scopes pattern matching files to prefix(${prefix})`, async () => {
-  //       const fileSearchResponse = JSON.parse(
-  //         readFileSync(
-  //           resolve(fixturesPath, 'pom-file-search-with-prefix.json'),
-  //           'utf8'
-  //         )
-  //       );
-  //       req
-  //         .get('/repos/fake/fake/git/trees/main?recursive=true')
-  //         .reply(200, fileSearchResponse);
-  //       const pomFiles = await github.findFilesByExtension('xml', prefix);
-  //       req.done();
-  //       expect(pomFiles).to.deep.equal(['pom.xml', 'foo/pom.xml']);
-  //     });
-  //   });
-  // });
+    const prefixes = [
+      'appengine',
+      'appengine/',
+      '/appengine',
+      '/appengine/',
+      'appengine\\',
+      '\\appengine',
+      '\\appengine\\',
+    ];
+    prefixes.forEach(prefix => {
+      it(`scopes pattern matching files to prefix(${prefix})`, async () => {
+        const fileSearchResponse = JSON.parse(
+          readFileSync(
+            resolve(fixturesPath, 'pom-file-search-with-prefix.json'),
+            'utf8'
+          )
+        );
+        req
+          .get('/repos/fake/fake/git/trees/main?recursive=true')
+          .reply(200, fileSearchResponse);
+        const pomFiles = await github.findFilesByExtension('xml', prefix);
+        req.done();
+        expect(pomFiles).to.deep.equal(['pom.xml', 'foo/pom.xml']);
+      });
+    });
+  });
 
   // describe('findOpenReleasePRs', () => {
   //   it('returns PRs that have all release labels', async () => {
@@ -481,124 +485,94 @@ describe('GitHub', () => {
     });
   });
 
-  // describe('createRelease', () => {
-  //   it('should create a release with a package prefix', async () => {
-  //     req
-  //       .post('/repos/fake/fake/releases', body => {
-  //         snapshot(body);
-  //         return true;
-  //       })
-  //       .reply(200, {
-  //         tag_name: 'v1.2.3',
-  //         draft: false,
-  //         html_url: 'https://github.com/fake/fake/releases/v1.2.3',
-  //         upload_url:
-  //           'https://uploads.github.com/repos/fake/fake/releases/1/assets{?name,label}',
-  //       });
-  //     const release = await github.createRelease(
-  //       'my package',
-  //       'v1.2.3',
-  //       'abc123',
-  //       'Some release notes',
-  //       false
-  //     );
-  //     req.done();
-  //     expect(release).to.not.be.undefined;
-  //     expect(release!.tag_name).to.eql('v1.2.3');
-  //     expect(release!.draft).to.be.false;
-  //   });
+  describe('createRelease', () => {
+    it('should create a release with a package prefix', async () => {
+      req
+        .post('/repos/fake/fake/releases', body => {
+          snapshot(body);
+          return true;
+        })
+        .reply(200, {
+          tag_name: 'v1.2.3',
+          draft: false,
+          html_url: 'https://github.com/fake/fake/releases/v1.2.3',
+          upload_url:
+            'https://uploads.github.com/repos/fake/fake/releases/1/assets{?name,label}',
+          target_commitish: 'abc123',
+        });
+      const release = await github.createRelease({
+        tag: new TagName(Version.parse('1.2.3')),
+        sha: 'abc123',
+        notes: 'Some release notes',
+      });
+      req.done();
+      expect(release).to.not.be.undefined;
+      expect(release.tagName).to.eql('v1.2.3');
+      expect(release.sha).to.eql('abc123');
+      // expect(release!.draft).to.be.false; // FIXME
+    });
 
-  //   it('should create a release without a package prefix', async () => {
-  //     req
-  //       .post('/repos/fake/fake/releases', body => {
-  //         snapshot(body);
-  //         return true;
-  //       })
-  //       .reply(200, {
-  //         tag_name: 'v1.2.3',
-  //         draft: false,
-  //         html_url: 'https://github.com/fake/fake/releases/v1.2.3',
-  //         upload_url:
-  //           'https://uploads.github.com/repos/fake/fake/releases/1/assets{?name,label}',
-  //       });
-  //     const release = await github.createRelease(
-  //       '',
-  //       'v1.2.3',
-  //       'abc123',
-  //       'Some release notes',
-  //       false
-  //     );
-  //     req.done();
-  //     expect(release).to.not.be.undefined;
-  //     expect(release!.tag_name).to.eql('v1.2.3');
-  //     expect(release!.draft).to.be.false;
-  //   });
+    it('should raise a DuplicateReleaseError if already_exists', async () => {
+      req
+        .post('/repos/fake/fake/releases', body => {
+          snapshot(body);
+          return true;
+        })
+        .reply(422, {
+          message: 'Validation Failed',
+          errors: [
+            {
+              resource: 'Release',
+              code: 'already_exists',
+              field: 'tag_name',
+            },
+          ],
+          documentation_url:
+            'https://docs.github.com/rest/reference/repos#create-a-release',
+        });
 
-  //   it('should raise a DuplicateReleaseError if already_exists', async () => {
-  //     req
-  //       .post('/repos/fake/fake/releases', body => {
-  //         snapshot(body);
-  //         return true;
-  //       })
-  //       .reply(422, {
-  //         message: 'Validation Failed',
-  //         errors: [
-  //           {
-  //             resource: 'Release',
-  //             code: 'already_exists',
-  //             field: 'tag_name',
-  //           },
-  //         ],
-  //         documentation_url:
-  //           'https://docs.github.com/rest/reference/repos#create-a-release',
-  //       });
+      const promise = github.createRelease({
+        tag: new TagName(Version.parse('1.2.3')),
+        sha: 'abc123',
+        notes: 'Some release notes',
+      });
+      await assert.rejects(promise, error => {
+        return (
+          error instanceof DuplicateReleaseError &&
+          // ensure stack contains calling method
+          error.stack?.includes('GitHub.createRelease') &&
+          !!error.cause
+        );
+      });
+    });
 
-  //     const promise = github.createRelease(
-  //       '',
-  //       'v1.2.3',
-  //       'abc123',
-  //       'Some release notes',
-  //       false
-  //     );
-  //     await assert.rejects(promise, error => {
-  //       return (
-  //         error instanceof DuplicateReleaseError &&
-  //         // ensure stack contains calling method
-  //         error.stack?.includes('GitHub.createRelease') &&
-  //         !!error.cause
-  //       );
-  //     });
-  //   });
+    it('should raise a RequestError for other validation errors', async () => {
+      req
+        .post('/repos/fake/fake/releases', body => {
+          snapshot(body);
+          return true;
+        })
+        .reply(422, {
+          message: 'Invalid request.\n\n"tag_name" wasn\'t supplied.',
+          documentation_url:
+            'https://docs.github.com/rest/reference/repos#create-a-release',
+        });
 
-  //   it('should raise a RequestError for other validation errors', async () => {
-  //     req
-  //       .post('/repos/fake/fake/releases', body => {
-  //         snapshot(body);
-  //         return true;
-  //       })
-  //       .reply(422, {
-  //         message: 'Invalid request.\n\n"tag_name" wasn\'t supplied.',
-  //         documentation_url:
-  //           'https://docs.github.com/rest/reference/repos#create-a-release',
-  //       });
-
-  //     const promise = github.createRelease(
-  //       '',
-  //       'v1.2.3',
-  //       'abc123',
-  //       'Some release notes',
-  //       false
-  //     );
-  //     await assert.rejects(promise, error => {
-  //       return (
-  //         error instanceof GitHubAPIError &&
-  //         // ensure stack contains calling method
-  //         error.stack?.includes('GitHub.createRelease') &&
-  //         !!error.cause
-  //       );
-  //     });
-  //   });
-  // });
+      const promise = github.createRelease({
+        tag: new TagName(Version.parse('1.2.3')),
+        sha: 'abc123',
+        notes: 'Some release notes',
+      });
+      await assert.rejects(promise, error => {
+        return (
+          error instanceof GitHubAPIError &&
+          // ensure stack contains calling method
+          error.stack?.includes('GitHub.createRelease') &&
+          !!error.cause
+        );
+      });
+    });
+  });
 
   // describe('commentOnIssue', () => {
   //   it('can create a comment', async () => {
