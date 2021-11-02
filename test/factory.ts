@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import {describe, it, beforeEach} from 'mocha';
-import {buildStrategy} from '../src/factory';
+import {buildStrategy, getReleaserTypes} from '../src/factory';
 import {GitHub} from '../src/github';
 import {expect} from 'chai';
 import {Simple} from '../src/strategies/simple';
@@ -72,6 +72,17 @@ describe('factory', () => {
       });
       expect(strategy).instanceof(Simple);
       expect(strategy.versioningStrategy).instanceof(AlwaysBumpPatch);
+    });
+    it('should build with a service pack versioning strategy', async () => {
+      const strategy = await buildStrategy({
+        github,
+        releaseType: 'simple',
+        versioning: 'service-pack',
+      });
+      expect(strategy).instanceof(Simple);
+      expect(strategy.versioningStrategy).instanceof(
+        ServicePackVersioningStrategy
+      );
     });
     it('should build a ruby strategy', async () => {
       const strategy = await buildStrategy({
@@ -156,5 +167,11 @@ describe('factory', () => {
       expect(innerVersioningStrategy.bumpMinorPreMajor).to.be.true;
       expect(innerVersioningStrategy.bumpPatchForMinorPreMajor).to.be.true;
     });
+    for (const releaseType of getReleaserTypes()) {
+      it(`shoudl build a default ${releaseType}`, async () => {
+        const strategy = await buildStrategy({github, releaseType});
+        expect(strategy).to.not.be.undefined;
+      });
+    }
   });
 });

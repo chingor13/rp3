@@ -39,27 +39,29 @@ import {DependencyManifest} from './versioning-strategies/dependency-manifest';
 // and GitHub Releases:
 // add any new releasers you create to this type as well as the `releasers`
 // object below.
-export type ReleaseType =
-  | 'dart'
-  | 'elixir'
-  | 'go'
-  | 'go-yoshi'
-  | 'helm'
-  | 'java-backport'
-  | 'java-bom'
-  | 'java-lts'
-  | 'java-yoshi'
-  | 'krm-blueprint'
-  | 'node'
-  | 'ocaml'
-  | 'php'
-  | 'php-yoshi'
-  | 'python'
-  | 'ruby'
-  | 'ruby-yoshi'
-  | 'rust'
-  | 'simple'
-  | 'terraform-module';
+const allReleaseTypes = [
+  'dart',
+  'elixir',
+  'go',
+  'go-yoshi',
+  'helm',
+  'java-backport',
+  'java-bom',
+  'java-lts',
+  'java-yoshi',
+  'krm-blueprint',
+  'node',
+  'ocaml',
+  'php',
+  'php-yoshi',
+  'python',
+  'ruby',
+  'ruby-yoshi',
+  'rust',
+  'simple',
+  'terraform-module',
+] as const;
+export type ReleaseType = typeof allReleaseTypes[number];
 type Releasers = Record<string, typeof Strategy>;
 const releasers: Releasers = {
   go: Go,
@@ -79,11 +81,7 @@ const releasers: Releasers = {
 };
 
 export function getReleaserTypes(): readonly ReleaseType[] {
-  const names: ReleaseType[] = [];
-  for (const releaseType of Object.keys(releasers)) {
-    names.push(releaseType as ReleaseType);
-  }
-  return names;
+  return allReleaseTypes;
 }
 
 export interface StrategyFactoryOptions extends ReleaserConfig {
