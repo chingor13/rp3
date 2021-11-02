@@ -46,8 +46,8 @@ export class JavaYoshi extends Strategy {
 
   constructor(options: JavaStrategyOptions) {
     super({
-      ...options,
       changelogSections: CHANGELOG_SECTIONS,
+      ...options,
     });
     // wrap the configured versioning strategy with snapshotting
     this.versioningStrategy = new JavaSnapshot(this.versioningStrategy);

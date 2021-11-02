@@ -37,8 +37,8 @@ const CHANGELOG_SECTIONS = [
 export class PHP extends Strategy {
   constructor(options: StrategyOptions) {
     super({
-      ...options,
       changelogSections: CHANGELOG_SECTIONS,
+      ...options,
     });
   }
 

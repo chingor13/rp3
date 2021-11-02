@@ -43,7 +43,7 @@ describe('JavaYoshi', () => {
   beforeEach(async () => {
     github = await GitHub.create({
       owner: 'googleapis',
-      repo: 'py-test-repo',
+      repo: 'java-yoshi-test-repo',
       defaultBranch: 'main',
     });
   });

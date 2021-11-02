@@ -98,6 +98,10 @@ export abstract class Strategy {
     return commits;
   }
 
+  protected postProcessReleaseNotes(releaseNotes: string): string {
+    return releaseNotes;
+  }
+
   async buildReleasePullRequest(
     commits: Commit[],
     latestRelease?: Release
@@ -140,15 +144,14 @@ export abstract class Strategy {
     const releaseNotes = new ReleaseNotes({
       changelogSections: this.changelogSections,
     });
-    const releaseNotesBody = await releaseNotes.buildNotes(
-      conventionalCommits,
-      {
+    const releaseNotesBody = this.postProcessReleaseNotes(
+      await releaseNotes.buildNotes(conventionalCommits, {
         owner: this.repository.owner,
         repository: this.repository.repo,
         version: newVersion.toString(),
         previousTag: latestRelease?.tag?.toString(),
         currentTag: newVersionTag.toString(),
-      }
+      })
     );
     const updates = await this.buildUpdates({
       changelogEntry: releaseNotesBody,
