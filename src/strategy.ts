@@ -50,6 +50,9 @@ export interface StrategyOptions {
   targetBranch: string;
   changelogPath?: string;
   changelogSections?: ChangelogSection[];
+  commitPartial?: string;
+  headerPartial?: string;
+  mainTemplate?: string;
 }
 export abstract class Strategy {
   path: string | undefined;
@@ -60,7 +63,12 @@ export abstract class Strategy {
   targetBranch: string;
   repository: Repository;
   changelogPath: string;
+
+  // CHANGELOG configuration
   changelogSections?: ChangelogSection[];
+  commitPartial?: string;
+  headerPartial?: string;
+  mainTemplate?: string;
 
   constructor(options: StrategyOptions) {
     this.path = options.path;
@@ -73,6 +81,9 @@ export abstract class Strategy {
     this.repository = options.github.repository;
     this.changelogPath = options.changelogPath || DEFAULT_CHANGELOG_PATH;
     this.changelogSections = options.changelogSections;
+    this.commitPartial = options.commitPartial;
+    this.headerPartial = options.headerPartial;
+    this.mainTemplate = options.mainTemplate;
   }
 
   protected abstract async buildUpdates(
@@ -98,7 +109,11 @@ export abstract class Strategy {
     return commits;
   }
 
-  protected postProcessReleaseNotes(releaseNotes: string): string {
+  protected postProcessReleaseNotes(
+    releaseNotes: string,
+    _conventionalCommits: ConventionalCommit[],
+    _latestRelease?: Release
+  ): string {
     return releaseNotes;
   }
 
@@ -143,6 +158,9 @@ export abstract class Strategy {
       : BranchName.ofTargetBranch(this.targetBranch);
     const releaseNotes = new ReleaseNotes({
       changelogSections: this.changelogSections,
+      commitPartial: this.commitPartial,
+      headerPartial: this.headerPartial,
+      mainTemplate: this.mainTemplate,
     });
     const releaseNotesBody = this.postProcessReleaseNotes(
       await releaseNotes.buildNotes(conventionalCommits, {
@@ -151,7 +169,9 @@ export abstract class Strategy {
         version: newVersion.toString(),
         previousTag: latestRelease?.tag?.toString(),
         currentTag: newVersionTag.toString(),
-      })
+      }),
+      conventionalCommits,
+      latestRelease
     );
     const updates = await this.buildUpdates({
       changelogEntry: releaseNotesBody,

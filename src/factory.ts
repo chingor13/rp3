@@ -21,6 +21,7 @@ import {OCaml} from './strategies/ocaml';
 import {PHP} from './strategies/php';
 import {Python} from './strategies/python';
 import {Ruby} from './strategies/ruby';
+import {RubyYoshi} from './strategies/ruby-yoshi';
 import {Rust} from './strategies/rust';
 import {Simple} from './strategies/simple';
 import {TerraformModule} from './strategies/terraform-module';
@@ -115,6 +116,12 @@ export async function buildStrategy(
   switch (options.releaseType) {
     case 'ruby': {
       return new Ruby({
+        ...strategyOptions,
+        versionFile: options.versionFile,
+      });
+    }
+    case 'ruby-yoshi': {
+      return new RubyYoshi({
         ...strategyOptions,
         versionFile: options.versionFile,
       });
