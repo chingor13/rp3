@@ -13,7 +13,6 @@
 // limitations under the License.
 
 import {ConventionalCommit} from './commit';
-import {MissingReleaseNotesError} from './errors';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const conventionalChangelogWriter = require('conventional-changelog-writer');

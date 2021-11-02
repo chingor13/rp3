@@ -256,6 +256,15 @@ function toConventionalChangelogFormat(
         // Any footers that carry semantic meaning, e.g., Release-As, should
         // be added to the footer field, for the benefits of post-processing:
         if (semanticFooter) {
+          let releaseAs = '';
+          visit(parent, ['text'], (node: parser.Text) => {
+            releaseAs = node.value;
+          });
+          // record Release-As footer as a note
+          headerCommit.notes.push({
+            title: 'RELEASE AS',
+            text: releaseAs,
+          });
           if (!headerCommit.footer) headerCommit.footer = '';
           headerCommit.footer += `\n${footerText.toLowerCase()}`.trimStart();
         }
@@ -340,6 +349,9 @@ export function parseConventionalCommits(
   for (const commit of commits) {
     try {
       for (const parsedCommit of parseCommits(commit.message)) {
+        const breaking =
+          parsedCommit.notes.filter(note => note.title === 'BREAKING CHANGE')
+            .length > 0;
         conventionalCommits.push({
           sha: commit.sha,
           message: parsedCommit.header,
@@ -350,7 +362,7 @@ export function parseConventionalCommits(
           bareMessage: parsedCommit.subject,
           notes: parsedCommit.notes,
           references: parsedCommit.references,
-          breaking: parsedCommit.notes.length > 0,
+          breaking,
         });
       }
     } catch (_err) {
