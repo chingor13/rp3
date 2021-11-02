@@ -14,6 +14,7 @@
 
 import {Strategy, StrategyOptions} from './strategy';
 import {Go} from './strategies/go';
+import {GoYoshi} from './strategies/go-yoshi';
 import {JavaYoshi} from './strategies/java-yoshi';
 import {KRMBlueprint} from './strategies/krm-blueprint';
 import {OCaml} from './strategies/ocaml';
@@ -66,6 +67,7 @@ type ReleaseBuilder = (options: StrategyOptions) => Strategy;
 type Releasers = Record<string, ReleaseBuilder>;
 const releasers: Releasers = {
   go: options => new Go(options),
+  'go-yoshi': options => new GoYoshi(options),
   'krm-blueprint': options => new KRMBlueprint(options),
   node: options => new Node(options),
   ocaml: options => new OCaml(options),
