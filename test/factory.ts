@@ -168,7 +168,7 @@ describe('factory', () => {
       expect(innerVersioningStrategy.bumpPatchForMinorPreMajor).to.be.true;
     });
     for (const releaseType of getReleaserTypes()) {
-      it(`shoudl build a default ${releaseType}`, async () => {
+      it(`should build a default ${releaseType}`, async () => {
         const strategy = await buildStrategy({github, releaseType});
         expect(strategy).to.not.be.undefined;
       });

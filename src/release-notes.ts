@@ -95,25 +95,3 @@ export class ReleaseNotes {
       .trim();
   }
 }
-
-/**
- * Parse release notes for a specific release from the CHANGELOG contents
- *
- * @param {string} changelogContents The entire CHANGELOG contents
- * @param {string} version The release version to extract notes from
- */
-export function extractReleaseNotes(
-  changelogContents: string,
-  version: string
-): string {
-  version = version.replace(/^v/, '');
-  const latestRe = new RegExp(
-    `## v?\\[?${version}[^\\n]*\\n(.*?)(\\n##\\s|\\n### \\[?[0-9]+\\.|($(?![\r\n])))`,
-    'ms'
-  );
-  const match = changelogContents.match(latestRe);
-  if (!match) {
-    throw new MissingReleaseNotesError(changelogContents, version);
-  }
-  return match[1];
-}
