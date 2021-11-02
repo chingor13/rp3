@@ -225,3 +225,19 @@ export function assertNoHasUpdate(updates: Update[], path: string) {
   });
   expect(found).to.be.undefined;
 }
+
+export function loadCommitFixtures(name: string): Commit[] {
+  const content = readFileSync(
+    resolve('./test/fixtures/commits', `${name}.json`),
+    'utf8'
+  );
+  return JSON.parse(content);
+}
+
+export function buildCommitFromFixture(name: string): Commit {
+  const message = readFileSync(
+    resolve('./test/fixtures/commit-messages', `${name}.txt`),
+    'utf8'
+  );
+  return buildMockCommit(message);
+}

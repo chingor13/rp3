@@ -16,17 +16,14 @@ import {describe, it} from 'mocha';
 
 import {expect} from 'chai';
 import {parseConventionalCommits} from '../src/commit';
+import {buildCommitFromFixture, buildMockCommit} from './helpers';
 
 describe('parseConventionalCommits', () => {
   it('can parse plain commit messages', async () => {
     const commits = [
-      {sha: 'sha1', message: 'feat: some feature', files: ['path1/file1.txt']},
-      {sha: 'sha2', message: 'fix: some bugfix', files: ['path1/file1.rb']},
-      {
-        sha: 'sha3',
-        message: 'docs: some documentation',
-        files: ['path1/file1.java'],
-      },
+      buildMockCommit('feat: some feature'),
+      buildMockCommit('fix: some bugfix'),
+      buildMockCommit('docs: some documentation'),
     ];
     const conventionalCommits = parseConventionalCommits(commits);
     expect(conventionalCommits).lengthOf(3);
@@ -39,13 +36,7 @@ describe('parseConventionalCommits', () => {
   });
 
   it('can parse a breaking change', async () => {
-    const commits = [
-      {
-        sha: 'sha1',
-        message: 'fix!: some breaking fix',
-        files: ['path1/file1.txt'],
-      },
-    ];
+    const commits = [buildMockCommit('fix!: some breaking fix')];
     const conventionalCommits = parseConventionalCommits(commits);
     expect(conventionalCommits).lengthOf(1);
     expect(conventionalCommits[0].type).to.equal('fix');
@@ -57,13 +48,7 @@ describe('parseConventionalCommits', () => {
   });
 
   it('can parse multiple commit messages from a single commit', async () => {
-    const commits = [
-      {
-        sha: 'sha1',
-        message: 'feat: some feature\n\nfix: some bugfix',
-        files: ['path1/file1.txt'],
-      },
-    ];
+    const commits = [buildCommitFromFixture('multiple-messages')];
     const conventionalCommits = parseConventionalCommits(commits);
     expect(conventionalCommits).lengthOf(2);
     expect(conventionalCommits[0].type).to.equal('fix');
@@ -73,14 +58,7 @@ describe('parseConventionalCommits', () => {
   });
 
   it('handles BREAKING CHANGE body', async () => {
-    const commits = [
-      {
-        sha: 'sha1',
-        message:
-          'feat: some feature\n\nextended body\n\nBREAKING CHANGE: this is actually a breaking change',
-        files: [],
-      },
-    ];
+    const commits = [buildCommitFromFixture('breaking-body')];
     const conventionalCommits = parseConventionalCommits(commits);
     expect(conventionalCommits).lengthOf(1);
     expect(conventionalCommits[0].type).to.eql('feat');
@@ -93,13 +71,7 @@ describe('parseConventionalCommits', () => {
   });
 
   it('links bugs', async () => {
-    const commits = [
-      {
-        sha: 'sha1',
-        message: 'fix: some fix\n\nFixes #123',
-        files: [],
-      },
-    ];
+    const commits = [buildCommitFromFixture('bug-link')];
     const conventionalCommits = parseConventionalCommits(commits);
     expect(conventionalCommits).lengthOf(1);
     expect(conventionalCommits[0].type).to.eql('fix');
@@ -111,18 +83,7 @@ describe('parseConventionalCommits', () => {
   });
 
   it('captures git trailers', async () => {
-    const commits = [
-      {
-        sha: 'sha1',
-        message: `fix: some fix
-
-some body
-PiperOrigin-RevId: 12345
-Source-Link: https://github.com/googleapis/googleapis/commit/abc123
-BREAKING CHANGE: this is actually a breaking change`,
-        files: [],
-      },
-    ];
+    const commits = [buildCommitFromFixture('git-trailers-with-breaking')];
     const conventionalCommits = parseConventionalCommits(commits);
     // the parser detects git trailers as extra semantic commits
     // expect(conventionalCommits).lengthOf(1);
@@ -140,29 +101,7 @@ BREAKING CHANGE: this is actually a breaking change`,
   });
 
   it('parses meta commits', async () => {
-    const commits = [
-      {
-        sha: 'sha1',
-        message: `meta: multiple commits.
-
-Details.
-
-Some clarifying facts.
-
-fix: fixes bug #733
-feat(recaptchaenterprise): migrate microgenerator
-  Committer: @miraleung
-  PiperOrigin-RevId: 345559154
-  BREAKING-CHANGE: for some reason this migration is breaking.
-  Source-Link: googleapis/googleapis@5e0dcb2
-
-fix(securitycenter): fixes security center.
-  Committer: @miraleung
-  PiperOrigin-RevId: 345559182
-  Source-Link: googleapis/googleapis@e5eef86`,
-        files: [],
-      },
-    ];
+    const commits = [buildCommitFromFixture('meta')];
     const conventionalCommits = parseConventionalCommits(commits);
     const fixCommit1 = conventionalCommits.find(
       conventionalCommit => conventionalCommit.bareMessage === 'fixes bug #733'
@@ -188,14 +127,7 @@ fix(securitycenter): fixes security center.
   });
 
   it('includes multi-line breaking changes', async () => {
-    const commits = [
-      {
-        message:
-          'chore: upgrade to Node 7\n\nBREAKING CHANGE: we were on Node 6\nsecond line\nthird line',
-        sha: 'abc345',
-        files: [],
-      },
-    ];
+    const commits = [buildCommitFromFixture('multi-line-breaking-body')];
     const conventionalCommits = parseConventionalCommits(commits);
     expect(conventionalCommits).lengthOf(1);
     expect(conventionalCommits[0].breaking).to.be.true;
@@ -205,14 +137,7 @@ fix(securitycenter): fixes security center.
   });
 
   it('supports additional markdown for breaking change, if prefixed with list', async () => {
-    const commits = [
-      {
-        message:
-          'chore: upgrade to Node 7\n\nBREAKING CHANGE: we were on Node 6\n- deleted API foo\n- deleted API bar',
-        sha: 'abc345',
-        files: [],
-      },
-    ];
+    const commits = [buildCommitFromFixture('multi-line-breaking-body-list')];
     const conventionalCommits = parseConventionalCommits(commits);
     expect(conventionalCommits).lengthOf(1);
     expect(conventionalCommits[0].breaking).to.be.true;
@@ -222,14 +147,7 @@ fix(securitycenter): fixes security center.
   });
 
   it('does not include content two newlines after BREAKING CHANGE', async () => {
-    const commits = [
-      {
-        message:
-          'chore: upgrade to Node 7\n\nBREAKING CHANGE: we were on Node 6\n\nI should be removed',
-        sha: 'abc345',
-        files: [],
-      },
-    ];
+    const commits = [buildCommitFromFixture('breaking-body-content-after')];
     const conventionalCommits = parseConventionalCommits(commits);
     expect(conventionalCommits).lengthOf(1);
     expect(conventionalCommits[0].breaking).to.be.true;
@@ -237,13 +155,7 @@ fix(securitycenter): fixes security center.
   });
 
   it('handles Release-As footers', async () => {
-    const commits = [
-      {
-        message: 'meta: correct release\n\nRelease-As: v3.0.0',
-        sha: 'abc345',
-        files: [],
-      },
-    ];
+    const commits = [buildCommitFromFixture('release-as')];
     const conventionalCommits = parseConventionalCommits(commits);
     const metaCommit = conventionalCommits.find(
       conventionalCommit => conventionalCommit.bareMessage === 'correct release'
