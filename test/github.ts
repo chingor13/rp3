@@ -413,9 +413,9 @@ describe('GitHub', () => {
       const targetBranch = 'main';
       const commitsSinceSha = await github.commitsSince(
         targetBranch,
-        (commit, pullRequest) => {
+        commit => {
           // PR #6 was rebase/merged so it has 4 associated commits
-          return pullRequest?.number === 6;
+          return commit.pullRequest?.number === 6;
         }
       );
       expect(commitsSinceSha.length).to.eql(3);

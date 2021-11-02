@@ -65,8 +65,7 @@ export interface GitHubFileContents {
   parsedContent: string;
 }
 
-type CommitFilter = (commit: Commit, pullRequest?: PullRequest) => boolean;
-type MergedPullRequestFilter = (filter: PullRequest) => boolean;
+type CommitFilter = (commit: Commit) => boolean;
 
 interface GraphQLCommit {
   sha: string;
@@ -214,7 +213,7 @@ export class GitHub {
     const commits: Commit[] = [];
     const generator = this.mergeCommitIterator(targetBranch, maxResults);
     for await (const commit of generator) {
-      if (filter(commit, commit.pullRequest)) {
+      if (filter(commit)) {
         break;
       }
       commits.push(commit);
@@ -498,34 +497,6 @@ export class GitHub {
           };
         }),
     };
-  }
-
-  /**
-   * Helper to find the first merged pull request that matches the
-   * given criteria. The helper will paginate over all pull requests
-   * merged into the specified target branch.
-   *
-   * @param {string} targetBranch - Base branch of the pull request
-   * @param {MergedPullRequestFilter} filter - Callback function that
-   *   returns whether a pull request matches certain criteria
-   * @param {number} maxResults - Limit the number of results searched.
-   *   Defaults to unlimited.
-   * @returns {MergedGitHubPR | undefined} - Returns the first matching
-   *   pull request, or `undefined` if no matching pull request found.
-   * @throws {GitHubAPIError} on an API error
-   */
-  async findMergedPullRequest(
-    targetBranch: string,
-    filter: MergedPullRequestFilter,
-    maxResults: number = Number.MAX_SAFE_INTEGER
-  ): Promise<PullRequest | undefined> {
-    const generator = this.mergedPullRequestIterator(targetBranch, maxResults);
-    for await (const mergedPullRequest of generator) {
-      if (filter(mergedPullRequest)) {
-        return mergedPullRequest;
-      }
-    }
-    return undefined;
   }
 
   /**
@@ -971,6 +942,14 @@ export class GitHub {
     );
   }
 
+  /**
+   * Create a GitHub release
+   *
+   * @param {Release} release Release parameters
+   * @param {boolean} draft Whether or not to create the release as a draft
+   * @throws {DuplicateReleaseError} if the release tag already exists
+   * @throws {GitHubAPIError} on other API errors
+   */
   createRelease = wrapAsync(
     async (release: Release): Promise<GitHubRelease> => {
       const resp = await this.octokit.repos.createRelease({
