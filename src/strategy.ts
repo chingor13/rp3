@@ -51,7 +51,7 @@ export interface StrategyOptions {
   changelogPath?: string;
   changelogSections?: ChangelogSection[];
 }
-export class Strategy {
+export abstract class Strategy {
   path: string | undefined;
   labels: string[];
   github: GitHub;
@@ -75,11 +75,9 @@ export class Strategy {
     this.changelogSections = options.changelogSections;
   }
 
-  protected async buildUpdates(
-    _options: BuildUpdatesOptions
-  ): Promise<Update[]> {
-    return [];
-  }
+  protected abstract async buildUpdates(
+    options: BuildUpdatesOptions
+  ): Promise<Update[]>;
 
   async getDefaultComponent(): Promise<string | undefined> {
     return '';
@@ -104,7 +102,9 @@ export class Strategy {
     commits: Commit[],
     latestRelease?: Release
   ): Promise<ReleasePullRequest> {
-    const conventionalCommits = parseConventionalCommits(commits);
+    const conventionalCommits = this.postProcessCommits(
+      parseConventionalCommits(commits)
+    );
 
     const newVersion = latestRelease
       ? await this.versioningStrategy.bump(

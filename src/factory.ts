@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Strategy} from './strategy';
+import {Strategy, StrategyOptions} from './strategy';
 import {Go} from './strategies/go';
 import {JavaYoshi} from './strategies/java-yoshi';
 import {KRMBlueprint} from './strategies/krm-blueprint';
@@ -62,22 +62,21 @@ const allReleaseTypes = [
   'terraform-module',
 ] as const;
 export type ReleaseType = typeof allReleaseTypes[number];
-type Releasers = Record<string, typeof Strategy>;
+type ReleaseBuilder = (options: StrategyOptions) => Strategy;
+type Releasers = Record<string, ReleaseBuilder>;
 const releasers: Releasers = {
-  go: Go,
-  'java-yoshi': JavaYoshi,
-  'krm-blueprint': KRMBlueprint,
-  node: Node,
-  ocaml: OCaml,
-  php: PHP,
-  python: Python,
-  ruby: Ruby,
-  rust: Rust,
-  simple: Simple,
-  'terraform-module': TerraformModule,
-  helm: Helm,
-  elixir: Elixir,
-  dart: Dart,
+  go: options => new Go(options),
+  'krm-blueprint': options => new KRMBlueprint(options),
+  node: options => new Node(options),
+  ocaml: options => new OCaml(options),
+  php: options => new PHP(options),
+  python: options => new Python(options),
+  rust: options => new Rust(options),
+  simple: options => new Simple(options),
+  'terraform-module': options => new TerraformModule(options),
+  helm: options => new Helm(options),
+  elixir: options => new Elixir(options),
+  dart: options => new Dart(options),
 };
 
 export function getReleaserTypes(): readonly ReleaseType[] {
@@ -149,9 +148,9 @@ export async function buildStrategy(
       });
     }
     default: {
-      const clazz = releasers[options.releaseType];
-      if (clazz) {
-        return new clazz(strategyOptions);
+      const builder = releasers[options.releaseType];
+      if (builder) {
+        return builder(strategyOptions);
       }
       throw new Error(`Unknown release type: ${options.releaseType}`);
     }
