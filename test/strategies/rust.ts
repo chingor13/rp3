@@ -17,13 +17,14 @@ import {expect} from 'chai';
 import {GitHub} from '../../src/github';
 import {Rust} from '../../src/strategies/rust';
 import * as sinon from 'sinon';
-import {buildGitHubFileContent, assertHasUpdate} from '../helpers';
+import {buildGitHubFileContent, assertHasUpdate, dateSafe} from '../helpers';
 import {buildMockCommit} from '../helpers';
 import {TagName} from '../../src/util/tag-name';
 import {Version} from '../../src/version';
 import {Changelog} from '../../src/updaters/changelog';
 import {CargoLock} from '../../src/updaters/rust/cargo-lock';
 import {CargoToml} from '../../src/updaters/rust/cargo-toml';
+import snapshot = require('snap-shot-it');
 
 const sandbox = sinon.createSandbox();
 const fixturesPath = './test/fixtures/strategies/rust';
@@ -82,6 +83,32 @@ describe('Rust', () => {
         latestRelease
       );
       expect(release.version?.toString()).to.eql(expectedVersion);
+    });
+
+    it('detects a default component', async () => {
+      const expectedVersion = '0.123.5';
+      const strategy = new Rust({
+        targetBranch: 'main',
+        github,
+      });
+      const latestRelease = {
+        tag: new TagName(Version.parse('0.123.4'), 'rust-test-repo'),
+        sha: 'abc123',
+        notes: 'some notes',
+      };
+      const getFileContentsStub = sandbox.stub(
+        github,
+        'getFileContentsOnBranch'
+      );
+      getFileContentsStub
+        .withArgs('Cargo.toml', 'main')
+        .resolves(buildGitHubFileContent(fixturesPath, 'Cargo-crate1.toml'));
+      const pullRequest = await strategy.buildReleasePullRequest(
+        COMMITS,
+        latestRelease
+      );
+      expect(pullRequest.version?.toString()).to.eql(expectedVersion);
+      snapshot(dateSafe(pullRequest.body.toString()));
     });
   });
   describe('buildUpdates', () => {
