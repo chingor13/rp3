@@ -80,9 +80,10 @@ export class CommitSplit {
     }
   }
 
-  split(commits: Commit[]): {[key: string]: Commit[]} {
-    const splitCommits: {[key: string]: Commit[]} = {};
-    commits.forEach((commit: Commit) => {
+  // split(commits: Commit[]): Record<string, Commit[]>
+  split<T extends Commit>(commits: T[]): Record<string, T[]> {
+    const splitCommits: Record<string, T[]> = {};
+    commits.forEach(commit => {
       const dedupe: Set<string> = new Set();
       for (let i = 0; i < commit.files.length; i++) {
         const file: string = commit.files[i];

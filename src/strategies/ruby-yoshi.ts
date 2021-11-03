@@ -25,6 +25,8 @@ import {Update} from '../update';
 import {readFileSync} from 'fs';
 import {resolve} from 'path';
 import {Release} from '../release';
+import {Version} from '../version';
+import {TagName} from '../util/tag-name';
 
 const CHANGELOG_SECTIONS = [
   {type: 'feat', section: 'Features'},
@@ -107,11 +109,18 @@ export class RubyYoshi extends Strategy {
     return commits;
   }
 
-  protected postProcessReleaseNotes(
-    releaseNotes: string,
+  protected async buildReleaseNotes(
     conventionalCommits: ConventionalCommit[],
+    newVersion: Version,
+    newVersionTag: TagName,
     latestRelease?: Release
-  ): string {
+  ): Promise<string> {
+    const releaseNotes = await super.buildReleaseNotes(
+      conventionalCommits,
+      newVersion,
+      newVersionTag,
+      latestRelease
+    );
     if (!latestRelease) {
       return releaseNotes;
     }

@@ -109,12 +109,25 @@ export abstract class Strategy {
     return commits;
   }
 
-  protected postProcessReleaseNotes(
-    releaseNotes: string,
-    _conventionalCommits: ConventionalCommit[],
-    _latestRelease?: Release
-  ): string {
-    return releaseNotes;
+  protected async buildReleaseNotes(
+    conventionalCommits: ConventionalCommit[],
+    newVersion: Version,
+    newVersionTag: TagName,
+    latestRelease?: Release
+  ): Promise<string> {
+    const releaseNotes = new ReleaseNotes({
+      changelogSections: this.changelogSections,
+      commitPartial: this.commitPartial,
+      headerPartial: this.headerPartial,
+      mainTemplate: this.mainTemplate,
+    });
+    return await releaseNotes.buildNotes(conventionalCommits, {
+      owner: this.repository.owner,
+      repository: this.repository.repo,
+      version: newVersion.toString(),
+      previousTag: latestRelease?.tag?.toString(),
+      currentTag: newVersionTag.toString(),
+    });
   }
 
   async buildReleasePullRequest(
@@ -131,7 +144,7 @@ export abstract class Strategy {
           conventionalCommits
         )
       : this.initialReleaseVersion();
-    const versionsMap = await this.buildVersionsMap();
+    const versionsMap = await this.buildVersionsMap(conventionalCommits);
     for (const versionKey of versionsMap.keys()) {
       const version = versionsMap.get(versionKey);
       if (!version) {
@@ -156,21 +169,10 @@ export abstract class Strategy {
     const branchName = component
       ? BranchName.ofComponentTargetBranch(component, this.targetBranch)
       : BranchName.ofTargetBranch(this.targetBranch);
-    const releaseNotes = new ReleaseNotes({
-      changelogSections: this.changelogSections,
-      commitPartial: this.commitPartial,
-      headerPartial: this.headerPartial,
-      mainTemplate: this.mainTemplate,
-    });
-    const releaseNotesBody = this.postProcessReleaseNotes(
-      await releaseNotes.buildNotes(conventionalCommits, {
-        owner: this.repository.owner,
-        repository: this.repository.repo,
-        version: newVersion.toString(),
-        previousTag: latestRelease?.tag?.toString(),
-        currentTag: newVersionTag.toString(),
-      }),
+    const releaseNotesBody = await this.buildReleaseNotes(
       conventionalCommits,
+      newVersion,
+      newVersionTag,
       latestRelease
     );
     const updates = await this.buildUpdates({
@@ -197,7 +199,9 @@ export abstract class Strategy {
     };
   }
 
-  protected async buildVersionsMap(): Promise<VersionsMap> {
+  protected async buildVersionsMap(
+    _conventionalCommits: ConventionalCommit[]
+  ): Promise<VersionsMap> {
     return new Map();
   }
 

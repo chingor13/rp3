@@ -19,6 +19,7 @@ import {JavaYoshi} from './strategies/java-yoshi';
 import {KRMBlueprint} from './strategies/krm-blueprint';
 import {OCaml} from './strategies/ocaml';
 import {PHP} from './strategies/php';
+import {PHPYoshi} from './strategies/php-yoshi';
 import {Python} from './strategies/python';
 import {Ruby} from './strategies/ruby';
 import {RubyYoshi} from './strategies/ruby-yoshi';
@@ -73,6 +74,7 @@ const releasers: Releasers = {
   node: options => new Node(options),
   ocaml: options => new OCaml(options),
   php: options => new PHP(options),
+  'php-yoshi': options => new PHPYoshi(options),
   python: options => new Python(options),
   rust: options => new Rust(options),
   simple: options => new Simple(options),

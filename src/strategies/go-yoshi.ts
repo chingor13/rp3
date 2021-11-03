@@ -17,6 +17,8 @@ import {Update} from '../update';
 import {Changelog} from '../updaters/changelog';
 import {ConventionalCommit} from '../commit';
 import {Version} from '../version';
+import {TagName} from '../util/tag-name';
+import {Release} from '../release';
 
 // Commits containing a scope prefixed with an item in this array will be
 // ignored when generating a release PR for the parent module.
@@ -108,7 +110,18 @@ export class GoYoshi extends Strategy {
 
   // "closes" is a little presumptuous, let's just indicate that the
   // PR references these other commits:
-  protected postProcessReleaseNotes(releaseNotes: string): string {
+  protected async buildReleaseNotes(
+    conventionalCommits: ConventionalCommit[],
+    newVersion: Version,
+    newVersionTag: TagName,
+    latestRelease?: Release
+  ): Promise<string> {
+    const releaseNotes = await super.buildReleaseNotes(
+      conventionalCommits,
+      newVersion,
+      newVersionTag,
+      latestRelease
+    );
     return releaseNotes.replace(/, closes /g, ', refs ');
   }
 
