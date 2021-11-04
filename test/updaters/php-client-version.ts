@@ -16,23 +16,31 @@ import {readFileSync} from 'fs';
 import {resolve} from 'path';
 import * as snapshot from 'snap-shot-it';
 import {describe, it} from 'mocha';
-import {PHPManifest} from '../../src/updaters/php/php-manifest';
+import {PHPClientVersion} from '../../src/updaters/php/php-client-version';
 import {Version} from '../../src/version';
 
 const fixturesPath = './test/updaters/fixtures/php';
 
 describe('PHPManifest', () => {
   describe('updateContent', () => {
-    it('update version in docs manifest', async () => {
-      const versions = new Map<string, Version>();
-      versions.set('google/access-context-manager', Version.parse('0.2.0'));
+    it('update version in Version.php files', async () => {
       const oldContent = readFileSync(
-        resolve(fixturesPath, './manifest.json'),
+        resolve(fixturesPath, './Version.php'),
         'utf8'
       ).replace(/\r\n/g, '\n');
-      const composer = new PHPManifest({
+      const composer = new PHPClientVersion({
         version: Version.parse('0.8.0'),
-        versionsMap: versions,
+      });
+      const newContent = composer.updateContent(oldContent);
+      snapshot(newContent);
+    });
+    it('update version in ServiceBuilder.php files', async () => {
+      const oldContent = readFileSync(
+        resolve(fixturesPath, './Version.php'),
+        'utf8'
+      ).replace(/\r\n/g, '\n');
+      const composer = new PHPClientVersion({
+        version: Version.parse('0.8.0'),
       });
       const newContent = composer.updateContent(oldContent);
       snapshot(newContent);

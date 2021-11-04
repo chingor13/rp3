@@ -1,4 +1,4 @@
-exports['PHPManifest updateContent update version in root composer file 1'] = `
+exports['PHPManifest updateContent update version in docs manifest 1'] = `
 {
     "lang": "php",
     "friendlyLang": "PHP",
