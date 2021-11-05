@@ -208,7 +208,11 @@ export function getFilesInDirWithPrefix(directory: string, prefix: string) {
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export function assertHasUpdate(updates: Update[], path: string, clazz: any) {
+export function assertHasUpdate(
+  updates: Update[],
+  path: string,
+  clazz: any
+): Update {
   const found = updates.find(update => {
     return update.path === path;
   });
@@ -217,6 +221,7 @@ export function assertHasUpdate(updates: Update[], path: string, clazz: any) {
     clazz,
     `expected update to be of class ${clazz}`
   );
+  return found!;
 }
 
 export function assertNoHasUpdate(updates: Update[], path: string) {

@@ -27,9 +27,9 @@ import {ReleasePullRequest} from './release-pull-request';
 import {buildStrategy, ReleaseType, VersioningStrategyType} from './factory';
 import {Release} from './release';
 import {Strategy} from './strategy';
-import {Update} from './update';
-import {CompositeUpdater} from './updaters/composite';
-import {PullRequestBody, ReleaseData} from './util/pull-request-body';
+import {PullRequestBody} from './util/pull-request-body';
+import {ManifestPlugin} from './plugin';
+import {NodeWorkspace} from './plugins/node-workspace';
 
 export interface ReleaserConfig {
   releaseType: ReleaseType;
@@ -47,6 +47,12 @@ export interface ReleaserConfig {
   versionFile?: string;
   // Java-only
   extraFiles?: string[];
+}
+
+export interface CandidateReleasePullRequest {
+  path: string;
+  pullRequest: ReleasePullRequest;
+  config: ReleaserConfig;
 }
 
 interface ReleaserConfigJson {
@@ -277,7 +283,7 @@ export class Manifest {
     });
     const commitsPerPath = cs.split(commits);
 
-    const newReleasePullRequests: ReleasePullRequest[] = [];
+    let newReleasePullRequests: CandidateReleasePullRequest[] = [];
     for (const path in this.repositoryConfig) {
       const config = this.repositoryConfig[path];
       logger.info(`Building candidate release pull request for path: ${path}`);
@@ -302,16 +308,25 @@ export class Manifest {
         latestRelease
       );
       if (releasePullRequest) {
-        newReleasePullRequests.push(releasePullRequest);
+        newReleasePullRequests.push({
+          path,
+          config,
+          pullRequest: releasePullRequest,
+        });
       }
     }
 
-    // TODO: apply plugins
-    if (this.separatePullRequests || newReleasePullRequests.length === 1) {
-      return newReleasePullRequests;
-    }
+    const plugins: ManifestPlugin[] =
+      // this.separatePullRequests || newReleasePullRequests.length === 1
+      //   ? []
+      [new NodeWorkspace(this.github, this.targetBranch)];
 
-    return [mergePullRequests(newReleasePullRequests, this.targetBranch)];
+    for (const plugin of plugins) {
+      newReleasePullRequests = await plugin.run(newReleasePullRequests);
+    }
+    return newReleasePullRequests.map(
+      pullRequestWithConfig => pullRequestWithConfig.pullRequest
+    );
   }
 
   async buildReleases(): Promise<Release[]> {
@@ -536,45 +551,4 @@ async function latestReleaseVersion(
     return version;
   }
   return;
-}
-
-function mergePullRequests(
-  pullRequests: ReleasePullRequest[],
-  targetBranch: string
-): ReleasePullRequest {
-  const updatesByPath: Record<string, Update[]> = {};
-  const releaseData: ReleaseData[] = [];
-  const labels = new Set<string>();
-  for (const pullRequest of pullRequests) {
-    for (const update of pullRequest.updates) {
-      if (updatesByPath[update.path]) {
-        updatesByPath[update.path].push(update);
-      } else {
-        updatesByPath[update.path] = [update];
-      }
-    }
-    releaseData.concat(pullRequest.body.releaseData);
-  }
-
-  const updates: Update[] = [];
-  for (const path in updatesByPath) {
-    const update = updatesByPath[path];
-    const updaters = update.map(u => u.updater);
-    updates.push({
-      path,
-      createIfMissing: update[0].createIfMissing,
-      updater: new CompositeUpdater(...updaters),
-    });
-  }
-
-  return {
-    title: PullRequestTitle.ofTargetBranch(
-      targetBranch,
-      MANIFEST_PULL_REQUEST_TITLE_PATTERN
-    ),
-    body: new PullRequestBody(releaseData),
-    updates,
-    labels: Array.from(labels),
-    headRefName: BranchName.ofTargetBranch(targetBranch).toString(),
-  };
 }
