@@ -30,6 +30,7 @@ import {
   assertHasUpdate,
   stubFilesFromFixtures,
   dateSafe,
+  assertNoHasUpdate,
 } from '../helpers';
 import {RawContent} from '../../src/updaters/raw-content';
 import snapshot = require('snap-shot-it');
@@ -42,7 +43,8 @@ function buildMockCandidatePullRequest(
   releaseType: ReleaseType,
   versionString: string,
   component?: string,
-  updates: Update[] = []
+  updates: Update[] = [],
+  notes?: string
 ): CandidateReleasePullRequest {
   const version = Version.parse(versionString);
   return {
@@ -53,7 +55,9 @@ function buildMockCandidatePullRequest(
         {
           component,
           version,
-          notes: `Release notes for path: ${path}, releaseType: ${releaseType}`,
+          notes:
+            notes ??
+            `Release notes for path: ${path}, releaseType: ${releaseType}`,
         },
       ]),
       updates,
@@ -190,6 +194,64 @@ describe('NodeWorkspace plugin', () => {
       assertHasUpdate(updates, 'node2/package.json', RawContent);
       assertHasUpdate(updates, 'node3/package.json', RawContent);
       assertHasUpdate(updates, 'node4/package.json', RawContent);
+      snapshot(dateSafe(nodeCandidate!.pullRequest.body.toString()));
+    });
+    it('appends dependency notes to an updated module', async () => {
+      const existingNotes =
+        '### Dependencies\n\n* update dependency foo/bar to 1.2.3';
+      const candidates: CandidateReleasePullRequest[] = [
+        buildMockCandidatePullRequest('node1', 'node', '3.3.4', '@here/pkgA', [
+          buildMockPackageUpdate('node1/package.json', 'node1/package.json'),
+        ]),
+        buildMockCandidatePullRequest(
+          'node2',
+          'node',
+          '2.2.3',
+          '@here/pkgB',
+          [buildMockPackageUpdate('node2/package.json', 'node2/package.json')],
+          existingNotes
+        ),
+      ];
+      stubFilesFromFixtures({
+        sandbox,
+        github,
+        fixturePath: fixturesPath,
+        files: [
+          'node1/package.json',
+          'node2/package.json',
+          'node3/package.json',
+          'node4/package.json',
+        ],
+        flatten: false,
+        targetBranch: 'main',
+      });
+      const plugin = new NodeWorkspace(github, 'main', {
+        repositoryConfig: {
+          node1: {
+            releaseType: 'node',
+          },
+          node2: {
+            releaseType: 'node',
+          },
+          node3: {
+            releaseType: 'node',
+          },
+          node4: {
+            releaseType: 'node',
+          },
+        },
+      });
+      const newCandidates = await plugin.run(candidates);
+      expect(newCandidates).lengthOf(1);
+      const nodeCandidate = newCandidates.find(
+        candidate => candidate.config.releaseType === 'node'
+      );
+      expect(nodeCandidate).to.not.be.undefined;
+      const updates = nodeCandidate!.pullRequest.updates;
+      assertHasUpdate(updates, 'node1/package.json', RawContent);
+      assertHasUpdate(updates, 'node2/package.json', RawContent);
+      assertHasUpdate(updates, 'node3/package.json', RawContent);
+      assertNoHasUpdate(updates, 'node4/package.json');
       snapshot(dateSafe(nodeCandidate!.pullRequest.body.toString()));
     });
   });

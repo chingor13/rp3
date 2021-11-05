@@ -29,6 +29,7 @@ import {PullRequestBody} from '../util/pull-request-body';
 import {ReleasePullRequest} from '../release-pull-request';
 import {BranchName} from '../util/branch-name';
 import {jsonStringify} from '../util/json-stringify';
+import {Changelog} from '../updaters/changelog';
 
 class Package extends LernaPackage {
   constructor(
@@ -254,6 +255,13 @@ export class NodeWorkspace extends ManifestPlugin {
               update.updater = new RawContent(
                 jsonStringify(updated.toJSON(), updated.rawContent)
               );
+            } else if (update.updater instanceof Changelog) {
+              // TODO: update changelog entry
+              update.updater.changelogEntry =
+                appendDependenciesSectionToChangelog(
+                  update.updater.changelogEntry,
+                  dependencyNotes
+                );
             }
             return update;
           });
@@ -261,12 +269,16 @@ export class NodeWorkspace extends ManifestPlugin {
         // append dependency notes
         if (dependencyNotes) {
           if (existingCandidate.pullRequest.body.releaseData.length > 0) {
-            existingCandidate.pullRequest.body.releaseData[0].notes += `\n\n${dependencyNotes}`;
+            existingCandidate.pullRequest.body.releaseData[0].notes =
+              appendDependenciesSectionToChangelog(
+                existingCandidate.pullRequest.body.releaseData[0].notes,
+                dependencyNotes
+              );
           } else {
             existingCandidate.pullRequest.body.releaseData.push({
               component: updated.name,
               version: existingCandidate.pullRequest.version,
-              notes: dependencyNotes,
+              notes: appendDependenciesSectionToChangelog('', dependencyNotes),
             });
           }
         }
@@ -280,7 +292,7 @@ export class NodeWorkspace extends ManifestPlugin {
             {
               component: updated.name,
               version,
-              notes: dependencyNotes,
+              notes: appendDependenciesSectionToChangelog('', dependencyNotes),
             },
           ]),
           updates: [
@@ -290,6 +302,14 @@ export class NodeWorkspace extends ManifestPlugin {
               updater: new RawContent(
                 jsonStringify(packageJson, updated.rawContent)
               ),
+            },
+            {
+              path: `${updated.location}/CHANGELOG.md`,
+              createIfMissing: false,
+              updater: new Changelog({
+                version,
+                changelogEntry: dependencyNotes,
+              }),
             },
           ],
           labels: [],
@@ -356,5 +376,25 @@ function getChangelogDepsNotes(
       depUpdateNotes += note;
     }
   }
-  return depUpdateNotes;
+  if (depUpdateNotes) {
+    return `* The following workspace dependencies were updated${depUpdateNotes}`;
+  }
+  return '';
+}
+
+function appendDependenciesSectionToChangelog(
+  changelog: string,
+  notes: string
+): string {
+  if (!changelog) {
+    return `### Dependencies\n\n${notes}`;
+  }
+
+  const match = changelog.match(new RegExp('### Dependencies'));
+  if (match) {
+    // TODO: find dependencies section and append entry
+    logger.warn('TODO: find dependency section and append entry');
+  }
+
+  return `${changelog}\n\n\n### Dependencies\n\n${notes}`;
 }
