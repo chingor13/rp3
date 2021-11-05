@@ -29,8 +29,10 @@ import {
   buildGitHubFileContent,
   assertHasUpdate,
   stubFilesFromFixtures,
+  dateSafe,
 } from '../helpers';
 import {RawContent} from '../../src/updaters/raw-content';
+import snapshot = require('snap-shot-it');
 
 const sandbox = sinon.createSandbox();
 const fixturesPath = './test/fixtures/plugins/node-workspace';
@@ -115,7 +117,8 @@ describe('NodeWorkspace plugin', () => {
       );
       expect(nodeCandidate).to.not.be.undefined;
       const updates = nodeCandidate!.pullRequest.updates;
-      assertHasUpdate(updates, 'node1/package.json', RawContent);
+      assertHasUpdate(updates, 'node1/package.json', PackageJson);
+      snapshot(dateSafe(nodeCandidate!.pullRequest.body.toString()));
     });
     it('combines node packages', async () => {
       const candidates: CandidateReleasePullRequest[] = [
@@ -134,9 +137,9 @@ describe('NodeWorkspace plugin', () => {
       );
       expect(nodeCandidate).to.not.be.undefined;
       const updates = nodeCandidate!.pullRequest.updates;
-      assertHasUpdate(updates, 'node1/package.json', RawContent);
-      assertHasUpdate(updates, 'node4/package.json', RawContent);
-      console.log(nodeCandidate?.pullRequest.body.toString());
+      assertHasUpdate(updates, 'node1/package.json', PackageJson);
+      assertHasUpdate(updates, 'node4/package.json', PackageJson);
+      snapshot(dateSafe(nodeCandidate!.pullRequest.body.toString()));
     });
     it('walks dependency tree and updates previously untouched packages', async () => {
       const candidates: CandidateReleasePullRequest[] = [
@@ -183,15 +186,11 @@ describe('NodeWorkspace plugin', () => {
       );
       expect(nodeCandidate).to.not.be.undefined;
       const updates = nodeCandidate!.pullRequest.updates;
-      let update = assertHasUpdate(updates, 'node1/package.json', RawContent);
-      console.log(update.updater.updateContent(undefined));
-      update = assertHasUpdate(updates, 'node2/package.json', RawContent);
-      console.log(update.updater.updateContent(undefined));
-      update = assertHasUpdate(updates, 'node3/package.json', RawContent);
-      console.log(update.updater.updateContent(undefined));
-      update = assertHasUpdate(updates, 'node4/package.json', RawContent);
-      console.log(update.updater.updateContent(undefined));
-      console.log(nodeCandidate?.pullRequest.body.toString());
+      assertHasUpdate(updates, 'node1/package.json', RawContent);
+      assertHasUpdate(updates, 'node2/package.json', RawContent);
+      assertHasUpdate(updates, 'node3/package.json', RawContent);
+      assertHasUpdate(updates, 'node4/package.json', RawContent);
+      snapshot(dateSafe(nodeCandidate!.pullRequest.body.toString()));
     });
   });
 });
