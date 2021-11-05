@@ -61,7 +61,7 @@ describe('GoYoshi', () => {
         COMMITS,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release?.version?.toString()).to.eql(expectedVersion);
     });
     it('returns release PR changes with semver patch bump', async () => {
       const expectedVersion = '0.123.5';
@@ -79,7 +79,7 @@ describe('GoYoshi', () => {
         COMMITS,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release?.version?.toString()).to.eql(expectedVersion);
     });
   });
   describe('buildUpdates', () => {
@@ -94,7 +94,7 @@ describe('GoYoshi', () => {
         COMMITS,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       assertHasUpdate(updates, 'CHANGES.md', Changelog);
     });
   });
@@ -111,7 +111,7 @@ describe('GoYoshi', () => {
         buildMockCommit('feat: some generic feature'),
       ];
       const pullRequest = await strategy.buildReleasePullRequest(commits);
-      const pullRequestBody = pullRequest.body.toString();
+      const pullRequestBody = pullRequest!.body.toString();
       expect(pullRequestBody).to.not.include('logging');
       snapshot(dateSafe(pullRequestBody));
     });
@@ -133,7 +133,7 @@ describe('GoYoshi', () => {
         buildMockCommit('feat(all): auto-regenerate discovery clients (#1278)'),
       ];
       const pullRequest = await strategy.buildReleasePullRequest(commits);
-      const pullRequestBody = pullRequest.body.toString();
+      const pullRequestBody = pullRequest!.body.toString();
       snapshot(dateSafe(pullRequestBody));
     });
   });

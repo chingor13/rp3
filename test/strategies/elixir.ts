@@ -58,7 +58,7 @@ describe('Elixir', () => {
         commits,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release?.version?.toString()).to.eql(expectedVersion);
     });
     it('builds a release pull request', async () => {
       const expectedVersion = '0.123.5';
@@ -76,7 +76,7 @@ describe('Elixir', () => {
         commits,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release?.version?.toString()).to.eql(expectedVersion);
     });
   });
   describe('buildUpdates', () => {
@@ -91,7 +91,7 @@ describe('Elixir', () => {
         commits,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       assertHasUpdate(updates, 'CHANGELOG.md', Changelog);
       assertHasUpdate(updates, 'mix.exs', ElixirMixExs);
     });

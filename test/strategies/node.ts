@@ -64,7 +64,7 @@ describe('Node', () => {
         commits,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release!.version?.toString()).to.eql(expectedVersion);
     });
     it('builds a release pull request', async () => {
       const expectedVersion = '0.123.5';
@@ -82,7 +82,7 @@ describe('Node', () => {
         commits,
         latestRelease
       );
-      expect(pullRequest.version?.toString()).to.eql(expectedVersion);
+      expect(pullRequest!.version?.toString()).to.eql(expectedVersion);
     });
     it('detects a default component', async () => {
       const expectedVersion = '0.123.5';
@@ -111,7 +111,7 @@ describe('Node', () => {
         commits,
         latestRelease
       );
-      expect(pullRequest.version?.toString()).to.eql(expectedVersion);
+      expect(pullRequest!.version?.toString()).to.eql(expectedVersion);
     });
   });
   describe('buildUpdates', () => {
@@ -127,7 +127,7 @@ describe('Node', () => {
         commits,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       assertHasUpdate(updates, 'CHANGELOG.md', Changelog);
       assertHasUpdate(updates, 'package-lock.json', PackageLockJson);
       assertHasUpdate(updates, 'npm-shrinkwrap.json', PackageLockJson);

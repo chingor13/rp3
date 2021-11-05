@@ -63,7 +63,7 @@ describe('Dart', () => {
         commits,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release?.version?.toString()).to.eql(expectedVersion);
     });
     it('builds a release pull request', async () => {
       const expectedVersion = '0.123.5';
@@ -81,7 +81,7 @@ describe('Dart', () => {
         commits,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release?.version?.toString()).to.eql(expectedVersion);
     });
     it('detects a default component', async () => {
       const expectedVersion = '0.123.5';
@@ -110,7 +110,7 @@ describe('Dart', () => {
         commits,
         latestRelease
       );
-      expect(pullRequest.version?.toString()).to.eql(expectedVersion);
+      expect(pullRequest?.version?.toString()).to.eql(expectedVersion);
     });
   });
   describe('buildUpdates', () => {
@@ -134,7 +134,7 @@ describe('Dart', () => {
         commits,
         latestRelease
       );
-      const updates = pullRequest.updates;
+      const updates = pullRequest!.updates;
       expect(updates).lengthOf(2);
       assertHasUpdate(updates, 'CHANGELOG.md', Changelog);
       assertHasUpdate(updates, 'pubspec.yaml', PubspecYaml);

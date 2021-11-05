@@ -65,7 +65,7 @@ describe('Python', () => {
         COMMITS,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release!.version?.toString()).to.eql(expectedVersion);
     });
     it('returns release PR changes with semver patch bump', async () => {
       const expectedVersion = '0.123.5';
@@ -84,7 +84,7 @@ describe('Python', () => {
         COMMITS,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release!.version?.toString()).to.eql(expectedVersion);
     });
   });
   describe('buildUpdates', () => {
@@ -100,7 +100,7 @@ describe('Python', () => {
         COMMITS,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       assertHasUpdate(updates, 'CHANGELOG.md', Changelog);
       assertHasUpdate(updates, 'setup.cfg', SetupCfg);
       assertHasUpdate(updates, 'setup.py', SetupPy);
@@ -133,7 +133,7 @@ describe('Python', () => {
         COMMITS,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       assertHasUpdate(updates, 'pyproject.toml', PyProjectToml);
     });
 
@@ -149,7 +149,7 @@ describe('Python', () => {
         COMMITS,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       assertHasUpdate(updates, 'src/version.py', PythonFileWithVersion);
     });
   });

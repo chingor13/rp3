@@ -69,7 +69,7 @@ describe('OCaml', () => {
         COMMITS,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release!.version?.toString()).to.eql(expectedVersion);
     });
     it('returns release PR changes with semver patch bump', async () => {
       const expectedVersion = '0.123.5';
@@ -88,7 +88,7 @@ describe('OCaml', () => {
         COMMITS,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release!.version?.toString()).to.eql(expectedVersion);
     });
   });
   describe('buildUpdates', () => {
@@ -104,7 +104,7 @@ describe('OCaml', () => {
         COMMITS,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       expect(updates).lengthOf(2);
       assertHasUpdate(updates, 'CHANGELOG.md', Changelog);
       assertHasUpdate(updates, 'dune-project', DuneProject);
@@ -133,7 +133,7 @@ describe('OCaml', () => {
         COMMITS,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       expect(updates).lengthOf(4);
       assertHasUpdate(updates, 'esy.json', EsyJson);
       assertNoHasUpdate(updates, 'other.json');

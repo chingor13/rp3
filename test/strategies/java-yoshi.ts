@@ -71,7 +71,7 @@ describe('JavaYoshi', () => {
         COMMITS,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release!.version?.toString()).to.eql(expectedVersion);
     });
     it('returns release PR changes with semver patch bump', async () => {
       const expectedVersion = '0.123.5';
@@ -100,7 +100,7 @@ describe('JavaYoshi', () => {
         COMMITS,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release!.version?.toString()).to.eql(expectedVersion);
     });
   });
   describe('buildUpdates', () => {
@@ -123,7 +123,7 @@ describe('JavaYoshi', () => {
         COMMITS,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       assertHasUpdate(updates, 'CHANGELOG.md', Changelog);
       assertHasUpdate(updates, 'versions.txt', VersionsManifest);
     });
@@ -156,7 +156,7 @@ describe('JavaYoshi', () => {
         COMMITS,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       assertHasUpdate(updates, 'CHANGELOG.md', Changelog);
       assertHasUpdate(updates, 'path1/pom.xml', JavaUpdate);
       assertHasUpdate(updates, 'path2/pom.xml', JavaUpdate);
@@ -186,7 +186,7 @@ describe('JavaYoshi', () => {
         COMMITS,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       assertHasUpdate(updates, 'CHANGELOG.md', Changelog);
       assertHasUpdate(updates, 'foo/bar.java', JavaUpdate);
       assertHasUpdate(updates, 'src/version.java', JavaUpdate);

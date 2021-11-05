@@ -64,7 +64,7 @@ describe('Rust', () => {
         COMMITS,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release!.version?.toString()).to.eql(expectedVersion);
     });
     it('returns release PR changes with semver patch bump', async () => {
       const expectedVersion = '0.123.5';
@@ -82,7 +82,7 @@ describe('Rust', () => {
         COMMITS,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release!.version?.toString()).to.eql(expectedVersion);
     });
 
     it('detects a default component', async () => {
@@ -107,8 +107,8 @@ describe('Rust', () => {
         COMMITS,
         latestRelease
       );
-      expect(pullRequest.version?.toString()).to.eql(expectedVersion);
-      snapshot(dateSafe(pullRequest.body.toString()));
+      expect(pullRequest!.version?.toString()).to.eql(expectedVersion);
+      snapshot(dateSafe(pullRequest!.body.toString()));
     });
   });
   describe('buildUpdates', () => {
@@ -123,7 +123,7 @@ describe('Rust', () => {
         COMMITS,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       assertHasUpdate(updates, 'CHANGELOG.md', Changelog);
       assertHasUpdate(updates, 'Cargo.toml', CargoToml);
       assertHasUpdate(updates, 'Cargo.lock', CargoLock);
@@ -144,7 +144,7 @@ describe('Rust', () => {
         COMMITS,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       assertHasUpdate(updates, 'crates/crate1/Cargo.toml', CargoToml);
       assertHasUpdate(updates, 'crates/crate2/Cargo.toml', CargoToml);
       assertHasUpdate(updates, 'Cargo.lock', CargoLock);

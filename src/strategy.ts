@@ -133,7 +133,7 @@ export abstract class Strategy {
   async buildReleasePullRequest(
     commits: Commit[],
     latestRelease?: Release
-  ): Promise<ReleasePullRequest> {
+  ): Promise<ReleasePullRequest | undefined> {
     const conventionalCommits = this.postProcessCommits(
       parseConventionalCommits(commits)
     );

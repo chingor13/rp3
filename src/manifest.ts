@@ -297,9 +297,13 @@ export class Manifest {
 
       const strategy = strategiesByPath[path];
       const latestRelease = releasesByPath[path];
-      newReleasePullRequests.push(
-        await strategy.buildReleasePullRequest(commits, latestRelease)
+      const releasePullRequest = await strategy.buildReleasePullRequest(
+        commits,
+        latestRelease
       );
+      if (releasePullRequest) {
+        newReleasePullRequests.push(releasePullRequest);
+      }
     }
 
     // TODO: apply plugins

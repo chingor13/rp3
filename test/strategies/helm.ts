@@ -62,7 +62,7 @@ describe('Helm', () => {
         commits,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release!.version?.toString()).to.eql(expectedVersion);
     });
     it('builds a release pull request', async () => {
       const expectedVersion = '0.123.5';
@@ -80,7 +80,7 @@ describe('Helm', () => {
         commits,
         latestRelease
       );
-      expect(pullRequest.version?.toString()).to.eql(expectedVersion);
+      expect(pullRequest!.version?.toString()).to.eql(expectedVersion);
     });
     it('detects a default component', async () => {
       const expectedVersion = '0.123.5';
@@ -104,7 +104,7 @@ describe('Helm', () => {
         commits,
         latestRelease
       );
-      expect(pullRequest.version?.toString()).to.eql(expectedVersion);
+      expect(pullRequest!.version?.toString()).to.eql(expectedVersion);
     });
   });
   describe('buildUpdates', () => {
@@ -119,7 +119,7 @@ describe('Helm', () => {
         commits,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       expect(updates).lengthOf(2);
       assertHasUpdate(updates, 'CHANGELOG.md', Changelog);
       assertHasUpdate(updates, 'Chart.yaml', ChartYaml);

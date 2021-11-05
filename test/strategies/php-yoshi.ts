@@ -89,8 +89,8 @@ describe('PHPYoshi', () => {
         commits,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
-      snapshot(dateSafe(release.body.toString()));
+      expect(release!.version?.toString()).to.eql(expectedVersion);
+      snapshot(dateSafe(release!.body.toString()));
     });
     it('returns release PR changes with semver patch bump', async () => {
       const expectedVersion = '0.123.5';
@@ -107,8 +107,8 @@ describe('PHPYoshi', () => {
         commits,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
-      snapshot(dateSafe(release.body.toString()));
+      expect(release!.version?.toString()).to.eql(expectedVersion);
+      snapshot(dateSafe(release!.body.toString()));
     });
   });
   describe('buildUpdates', () => {
@@ -122,7 +122,7 @@ describe('PHPYoshi', () => {
         commits,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       assertHasUpdate(updates, 'CHANGELOG.md', Changelog);
       assertHasUpdate(updates, 'composer.json', RootComposerUpdatePackages);
       assertHasUpdate(updates, 'docs/manifest.json', PHPManifest);
@@ -139,7 +139,7 @@ describe('PHPYoshi', () => {
         commits,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       assertHasUpdate(updates, 'Client1/VERSION', DefaultUpdater);
       assertHasUpdate(updates, 'Client2/VERSION', DefaultUpdater);
       assertHasUpdate(updates, 'Client3/VERSION', DefaultUpdater);

@@ -62,7 +62,7 @@ describe('TerraformModule', () => {
         COMMITS,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release!.version?.toString()).to.eql(expectedVersion);
     });
     it('returns release PR changes with semver patch bump', async () => {
       const expectedVersion = '0.123.5';
@@ -81,7 +81,7 @@ describe('TerraformModule', () => {
         COMMITS,
         latestRelease
       );
-      expect(release.version?.toString()).to.eql(expectedVersion);
+      expect(release!.version?.toString()).to.eql(expectedVersion);
     });
   });
   describe('buildUpdates', () => {
@@ -97,7 +97,7 @@ describe('TerraformModule', () => {
         COMMITS,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       assertHasUpdate(updates, 'CHANGELOG.md', Changelog);
     });
 
@@ -122,7 +122,7 @@ describe('TerraformModule', () => {
         COMMITS,
         latestRelease
       );
-      const updates = release.updates;
+      const updates = release!.updates;
       assertHasUpdate(updates, 'path1/readme.md', ReadMe);
       assertHasUpdate(updates, 'path2/readme.md', ReadMe);
       assertHasUpdate(updates, 'path1/versions.tf', ModuleVersion);
