@@ -175,6 +175,14 @@ export abstract class Strategy {
       newVersionTag,
       latestRelease
     );
+    if (this.changelogEmpty(releaseNotesBody)) {
+      logger.warn(
+        `no user facing commits found since ${
+          latestRelease ? latestRelease.sha : 'beginning of time'
+        }`
+      );
+      return undefined;
+    }
     const updates = await this.buildUpdates({
       changelogEntry: releaseNotesBody,
       newVersion,
@@ -197,6 +205,10 @@ export abstract class Strategy {
       headRefName: branchName.toString(),
       version: newVersion,
     };
+  }
+
+  protected changelogEmpty(changelogEntry: string): boolean {
+    return changelogEntry.split('\n').length <= 1;
   }
 
   protected async buildVersionsMap(
