@@ -15,14 +15,10 @@
 import {describe, it, afterEach, beforeEach} from 'mocha';
 import * as sinon from 'sinon';
 import {GitHub} from '../../src/github';
-import {PullRequestTitle} from '../../src/util/pull-request-title';
-import {PullRequestBody} from '../../src/util/pull-request-body';
-import {BranchName} from '../../src/util/branch-name';
 import {NodeWorkspace} from '../../src/plugins/node-workspace';
 import {CandidateReleasePullRequest} from '../../src/manifest';
 import {expect} from 'chai';
 import {Version} from '../../src/version';
-import {ReleaseType} from '../../src/factory';
 import {Update} from '../../src/update';
 import {PackageJson} from '../../src/updaters/node/package-json';
 import {
@@ -31,6 +27,7 @@ import {
   stubFilesFromFixtures,
   dateSafe,
   assertNoHasUpdate,
+  buildMockCandidatePullRequest,
 } from '../helpers';
 import {RawContent} from '../../src/updaters/raw-content';
 import snapshot = require('snap-shot-it');
@@ -38,40 +35,10 @@ import snapshot = require('snap-shot-it');
 const sandbox = sinon.createSandbox();
 const fixturesPath = './test/fixtures/plugins/node-workspace';
 
-function buildMockCandidatePullRequest(
+export function buildMockPackageUpdate(
   path: string,
-  releaseType: ReleaseType,
-  versionString: string,
-  component?: string,
-  updates: Update[] = [],
-  notes?: string
-): CandidateReleasePullRequest {
-  const version = Version.parse(versionString);
-  return {
-    path,
-    pullRequest: {
-      title: PullRequestTitle.ofTargetBranch('main'),
-      body: new PullRequestBody([
-        {
-          component,
-          version,
-          notes:
-            notes ??
-            `Release notes for path: ${path}, releaseType: ${releaseType}`,
-        },
-      ]),
-      updates,
-      labels: [],
-      headRefName: BranchName.ofTargetBranch('main').toString(),
-      version,
-    },
-    config: {
-      releaseType,
-    },
-  };
-}
-
-function buildMockPackageUpdate(path: string, fixtureName: string): Update {
+  fixtureName: string
+): Update {
   const cachedFileContents = buildGitHubFileContent(fixturesPath, fixtureName);
   return {
     path,

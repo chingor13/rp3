@@ -24,6 +24,12 @@ import {Commit} from '../src/commit';
 import {GitHubFileContents, GitHub} from '../src/github';
 import {Update} from '../src/update';
 import {expect} from 'chai';
+import {CandidateReleasePullRequest} from '../src/manifest';
+import {Version} from '../src/version';
+import {PullRequestTitle} from '../src/util/pull-request-title';
+import {PullRequestBody} from '../src/util/pull-request-body';
+import {BranchName} from '../src/util/branch-name';
+import {ReleaseType} from '../src/factory';
 
 export function stubSuggesterWithSnapshot(
   sandbox: sinon.SinonSandbox,
@@ -245,4 +251,37 @@ export function buildCommitFromFixture(name: string): Commit {
     'utf8'
   );
   return buildMockCommit(message);
+}
+
+export function buildMockCandidatePullRequest(
+  path: string,
+  releaseType: ReleaseType,
+  versionString: string,
+  component?: string,
+  updates: Update[] = [],
+  notes?: string
+): CandidateReleasePullRequest {
+  const version = Version.parse(versionString);
+  return {
+    path,
+    pullRequest: {
+      title: PullRequestTitle.ofTargetBranch('main'),
+      body: new PullRequestBody([
+        {
+          component,
+          version,
+          notes:
+            notes ??
+            `Release notes for path: ${path}, releaseType: ${releaseType}`,
+        },
+      ]),
+      updates,
+      labels: [],
+      headRefName: BranchName.ofTargetBranch('main').toString(),
+      version,
+    },
+    config: {
+      releaseType,
+    },
+  };
 }
