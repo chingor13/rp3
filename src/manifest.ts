@@ -24,12 +24,16 @@ import {Repository} from './repository';
 import {BranchName} from './util/branch-name';
 import {PullRequestTitle} from './util/pull-request-title';
 import {ReleasePullRequest} from './release-pull-request';
-import {buildStrategy, ReleaseType, VersioningStrategyType} from './factory';
+import {
+  buildStrategy,
+  ReleaseType,
+  VersioningStrategyType,
+  buildPlugin,
+} from './factory';
 import {Release} from './release';
 import {Strategy} from './strategy';
 import {PullRequestBody} from './util/pull-request-body';
-import {ManifestPlugin} from './plugin';
-import {NodeWorkspace} from './plugins/node-workspace';
+import {Merge} from './plugins/merge';
 
 export interface ReleaserConfig {
   releaseType: ReleaseType;
@@ -113,6 +117,7 @@ export class Manifest {
   releasedVersions: ReleasedVersions;
   targetBranch: string;
   separatePullRequests: boolean;
+  private plugins: PluginType[];
   private _strategiesByPath?: Record<string, Strategy>;
   private _pathsByComponent?: Record<string, string>;
 
@@ -129,6 +134,7 @@ export class Manifest {
     this.repositoryConfig = repositoryConfig;
     this.releasedVersions = releasedVersions;
     this.separatePullRequests = manifestOptions?.separatePullRequests || false;
+    this.plugins = manifestOptions?.plugins || [];
   }
 
   static async fromManifest(
@@ -316,14 +322,25 @@ export class Manifest {
       }
     }
 
-    const plugins: ManifestPlugin[] =
-      // this.separatePullRequests || newReleasePullRequests.length === 1
-      //   ? []
-      [new NodeWorkspace(this.github, this.targetBranch)];
+    // Build plugins
+    const plugins = this.plugins.map(pluginType =>
+      buildPlugin({
+        type: pluginType,
+        github: this.github,
+        targetBranch: this.targetBranch,
+      })
+    );
+
+    // Combine pull requests into 1 unless configured for separate
+    // pull requests
+    if (!this.separatePullRequests) {
+      plugins.push(new Merge(this.github, this.targetBranch));
+    }
 
     for (const plugin of plugins) {
       newReleasePullRequests = await plugin.run(newReleasePullRequests);
     }
+
     return newReleasePullRequests.map(
       pullRequestWithConfig => pullRequestWithConfig.pullRequest
     );

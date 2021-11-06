@@ -28,8 +28,8 @@ export class Merge extends ManifestPlugin {
   async run(
     candidates: CandidateReleasePullRequest[]
   ): Promise<CandidateReleasePullRequest[]> {
-    if (candidates.length === 0) {
-      return [];
+    if (candidates.length < 2) {
+      return candidates;
     }
 
     const updatesByPath: Record<string, Update[]> = {};

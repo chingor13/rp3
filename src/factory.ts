@@ -31,12 +31,14 @@ import {Elixir} from './strategies/elixir';
 import {Dart} from './strategies/dart';
 import {Node} from './strategies/node';
 import {GitHub} from './github';
-import {ReleaserConfig} from './manifest';
+import {ReleaserConfig, PluginType} from './manifest';
 import {DefaultVersioningStrategy} from './versioning-strategies/default';
 import {VersioningStrategy} from './versioning-strategy';
 import {AlwaysBumpPatch} from './versioning-strategies/always-bump-patch';
 import {ServicePackVersioningStrategy} from './versioning-strategies/service-pack';
 import {DependencyManifest} from './versioning-strategies/dependency-manifest';
+import {ManifestPlugin} from './plugin';
+import {NodeWorkspace} from './plugins/node-workspace';
 
 // Factory shared by GitHub Action and CLI for creating Release PRs
 // and GitHub Releases:
@@ -187,5 +189,21 @@ function buildVersioningStrategy(
       return new ServicePackVersioningStrategy(options);
     default:
       return new DefaultVersioningStrategy(options);
+  }
+}
+
+interface PluginFactoryOptions {
+  type: PluginType;
+  github: GitHub;
+  targetBranch: string;
+}
+export function buildPlugin(options: PluginFactoryOptions): ManifestPlugin {
+  switch (options.type) {
+    case 'cargo-workspace':
+      return new NodeWorkspace(options.github, options.targetBranch);
+    case 'node-workspace':
+      return new NodeWorkspace(options.github, options.targetBranch);
+    default:
+      throw new Error(`Unknown plugin type: ${options.type}`);
   }
 }
