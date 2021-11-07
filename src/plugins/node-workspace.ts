@@ -382,6 +382,7 @@ function getChangelogDepsNotes(
   return '';
 }
 
+const DEPENDENCY_HEADER = new RegExp('### Dependencies');
 function appendDependenciesSectionToChangelog(
   changelog: string,
   notes: string
@@ -390,10 +391,33 @@ function appendDependenciesSectionToChangelog(
     return `### Dependencies\n\n${notes}`;
   }
 
-  const match = changelog.match(new RegExp('### Dependencies'));
-  if (match) {
-    // TODO: find dependencies section and append entry
-    logger.warn('TODO: find dependency section and append entry');
+  const newLines: string[] = [];
+  let seenDependenciesSection = false;
+  let seenDependencySectionSpacer = false;
+  let injected = false;
+  for (const line of changelog.split('\n')) {
+    console.log('line: ', line);
+    if (seenDependenciesSection) {
+      const trimmedLine = line.trim();
+      if (seenDependencySectionSpacer && !injected && !trimmedLine.startsWith('*')) {
+        newLines.push(changelog);
+        injected = true;
+      }
+      if (trimmedLine === '') {
+        seenDependencySectionSpacer = true;
+      }
+    }
+    if (line.match(DEPENDENCY_HEADER)) {
+      seenDependenciesSection = true;
+    }
+    newLines.push(line);
+  }
+
+  if (injected) {
+    return newLines.join('\n');
+  }
+  if (seenDependenciesSection) {
+    return `${changelog}\n${notes}`;
   }
 
   return `${changelog}\n\n\n### Dependencies\n\n${notes}`;
