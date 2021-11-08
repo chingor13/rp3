@@ -204,7 +204,6 @@ describe('ReleaseNotes', () => {
       });
       it('should not include content two newlines after BREAKING CHANGE', async () => {
         const commits = [buildCommitFromFixture('breaking-body-content-after')];
-        console.log(parseConventionalCommits(commits));
         const releaseNotes = new ReleaseNotes();
         const notes = await releaseNotes.buildNotes(
           parseConventionalCommits(commits),

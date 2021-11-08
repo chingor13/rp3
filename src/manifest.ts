@@ -328,13 +328,16 @@ export class Manifest {
         type: pluginType,
         github: this.github,
         targetBranch: this.targetBranch,
+        repositoryConfig: this.repositoryConfig,
       })
     );
 
     // Combine pull requests into 1 unless configured for separate
     // pull requests
     if (!this.separatePullRequests) {
-      plugins.push(new Merge(this.github, this.targetBranch));
+      plugins.push(
+        new Merge(this.github, this.targetBranch, this.repositoryConfig)
+      );
     }
 
     for (const plugin of plugins) {

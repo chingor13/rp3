@@ -217,16 +217,18 @@ export function getFilesInDirWithPrefix(directory: string, prefix: string) {
 export function assertHasUpdate(
   updates: Update[],
   path: string,
-  clazz: any
+  clazz?: any
 ): Update {
   const found = updates.find(update => {
     return update.path === path;
   });
   expect(found).to.not.be.undefined;
-  expect(found?.updater).instanceof(
-    clazz,
-    `expected update to be of class ${clazz}`
-  );
+  if (clazz) {
+    expect(found?.updater).instanceof(
+      clazz,
+      `expected update to be of class ${clazz}`
+    );
+  }
   return found!;
 }
 

@@ -318,7 +318,6 @@ describe('Manifest', () => {
       );
       const pullRequests = await manifest.buildPullRequests();
       expect(pullRequests).lengthOf(1);
-      console.log(pullRequests);
     });
 
     it('should allow creating multiple pull requests', async () => {
@@ -449,7 +448,6 @@ describe('Manifest', () => {
       expect(releases[0].notes)
         .to.be.a('string')
         .and.satisfy((msg: string) => msg.startsWith('### Bug Fixes'));
-      console.log(releases);
     });
     it('should handle a multiple manifest release', async () => {
       mockPullRequests(github, [

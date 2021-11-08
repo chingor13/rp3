@@ -43,7 +43,7 @@ describe('Merge plugin', () => {
   describe('run', () => {
     it('ignores no pull requests', async () => {
       const candidates: CandidateReleasePullRequest[] = [];
-      const plugin = new Merge(github, 'main');
+      const plugin = new Merge(github, 'main', {});
       const newCandidates = await plugin.run(candidates);
       expect(newCandidates).lengthOf(0);
     });
@@ -52,7 +52,7 @@ describe('Merge plugin', () => {
       const candidates: CandidateReleasePullRequest[] = [
         buildMockCandidatePullRequest('python', 'python', '1.0.0'),
       ];
-      const plugin = new Merge(github, 'main');
+      const plugin = new Merge(github, 'main', {});
       const newCandidates = await plugin.run(candidates);
       expect(newCandidates).to.eql(candidates);
     });
@@ -85,7 +85,7 @@ describe('Merge plugin', () => {
           },
         ]),
       ];
-      const plugin = new Merge(github, 'main');
+      const plugin = new Merge(github, 'main', {});
       const newCandidates = await plugin.run(candidates);
       expect(newCandidates).lengthOf(1);
       const candidate = newCandidates[0];

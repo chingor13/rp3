@@ -13,14 +13,20 @@
 // limitations under the License.
 
 import {GitHub} from './github';
-import {CandidateReleasePullRequest} from './manifest';
+import {CandidateReleasePullRequest, RepositoryConfig} from './manifest';
 
 export abstract class ManifestPlugin {
   github: GitHub;
   targetBranch: string;
-  constructor(github: GitHub, targetBranch: string) {
+  repositoryConfig: RepositoryConfig;
+  constructor(
+    github: GitHub,
+    targetBranch: string,
+    repositoryConfig: RepositoryConfig
+  ) {
     this.github = github;
     this.targetBranch = targetBranch;
+    this.repositoryConfig = repositoryConfig;
   }
 
   abstract run(

@@ -31,6 +31,7 @@ import {
 } from '../helpers';
 import {RawContent} from '../../src/updaters/raw-content';
 import snapshot = require('snap-shot-it');
+import {ManifestPlugin} from '../../src/plugin';
 
 const sandbox = sinon.createSandbox();
 const fixturesPath = './test/fixtures/plugins/node-workspace';
@@ -54,11 +55,26 @@ export function buildMockPackageUpdate(
 
 describe('NodeWorkspace plugin', () => {
   let github: GitHub;
+  let plugin: ManifestPlugin;
   beforeEach(async () => {
     github = await GitHub.create({
       owner: 'googleapis',
       repo: 'node-test-repo',
       defaultBranch: 'main',
+    });
+    plugin = new NodeWorkspace(github, 'main', {
+      node1: {
+        releaseType: 'node',
+      },
+      node2: {
+        releaseType: 'node',
+      },
+      node3: {
+        releaseType: 'node',
+      },
+      node4: {
+        releaseType: 'node',
+      },
     });
   });
   afterEach(() => {
@@ -69,18 +85,24 @@ describe('NodeWorkspace plugin', () => {
       const candidates: CandidateReleasePullRequest[] = [
         buildMockCandidatePullRequest('python', 'python', '1.0.0'),
       ];
-      const plugin = new NodeWorkspace(github, 'main');
       const newCandidates = await plugin.run(candidates);
       expect(newCandidates).to.eql(candidates);
     });
     it('handles a single node package', async () => {
       const candidates: CandidateReleasePullRequest[] = [
         buildMockCandidatePullRequest('python', 'python', '1.0.0'),
-        buildMockCandidatePullRequest('node', 'node', '3.3.4', '@here/pkgA', [
+        buildMockCandidatePullRequest('node1', 'node', '3.3.4', '@here/pkgA', [
           buildMockPackageUpdate('node1/package.json', 'node1/package.json'),
         ]),
       ];
-      const plugin = new NodeWorkspace(github, 'main');
+      plugin = new NodeWorkspace(github, 'main', {
+        python: {
+          releaseType: 'python',
+        },
+        node1: {
+          releaseType: 'node',
+        },
+      });
       const newCandidates = await plugin.run(candidates);
       expect(newCandidates).lengthOf(2);
       const nodeCandidate = newCandidates.find(
@@ -88,7 +110,7 @@ describe('NodeWorkspace plugin', () => {
       );
       expect(nodeCandidate).to.not.be.undefined;
       const updates = nodeCandidate!.pullRequest.updates;
-      assertHasUpdate(updates, 'node1/package.json', PackageJson);
+      assertHasUpdate(updates, 'node1/package.json');
       snapshot(dateSafe(nodeCandidate!.pullRequest.body.toString()));
     });
     it('combines node packages', async () => {
@@ -100,7 +122,14 @@ describe('NodeWorkspace plugin', () => {
           buildMockPackageUpdate('node4/package.json', 'node4/package.json'),
         ]),
       ];
-      const plugin = new NodeWorkspace(github, 'main');
+      plugin = new NodeWorkspace(github, 'main', {
+        node1: {
+          releaseType: 'node',
+        },
+        node4: {
+          releaseType: 'node',
+        },
+      });
       const newCandidates = await plugin.run(candidates);
       expect(newCandidates).lengthOf(1);
       const nodeCandidate = newCandidates.find(
@@ -108,8 +137,8 @@ describe('NodeWorkspace plugin', () => {
       );
       expect(nodeCandidate).to.not.be.undefined;
       const updates = nodeCandidate!.pullRequest.updates;
-      assertHasUpdate(updates, 'node1/package.json', PackageJson);
-      assertHasUpdate(updates, 'node4/package.json', PackageJson);
+      assertHasUpdate(updates, 'node1/package.json');
+      assertHasUpdate(updates, 'node4/package.json');
       snapshot(dateSafe(nodeCandidate!.pullRequest.body.toString()));
     });
     it('walks dependency tree and updates previously untouched packages', async () => {
@@ -133,22 +162,6 @@ describe('NodeWorkspace plugin', () => {
         ],
         flatten: false,
         targetBranch: 'main',
-      });
-      const plugin = new NodeWorkspace(github, 'main', {
-        repositoryConfig: {
-          node1: {
-            releaseType: 'node',
-          },
-          node2: {
-            releaseType: 'node',
-          },
-          node3: {
-            releaseType: 'node',
-          },
-          node4: {
-            releaseType: 'node',
-          },
-        },
       });
       const newCandidates = await plugin.run(candidates);
       expect(newCandidates).lengthOf(1);
@@ -191,22 +204,6 @@ describe('NodeWorkspace plugin', () => {
         ],
         flatten: false,
         targetBranch: 'main',
-      });
-      const plugin = new NodeWorkspace(github, 'main', {
-        repositoryConfig: {
-          node1: {
-            releaseType: 'node',
-          },
-          node2: {
-            releaseType: 'node',
-          },
-          node3: {
-            releaseType: 'node',
-          },
-          node4: {
-            releaseType: 'node',
-          },
-        },
       });
       const newCandidates = await plugin.run(candidates);
       expect(newCandidates).lengthOf(1);
