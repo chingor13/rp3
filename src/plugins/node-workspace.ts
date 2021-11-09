@@ -164,7 +164,6 @@ export class NodeWorkspace extends WorkspacePlugin<Package> {
     logger.info('notes', dependencyNotes);
     existingCandidate.pullRequest.updates =
       existingCandidate.pullRequest.updates.map(update => {
-        logger.debug(update);
         if (update.path === `${existingCandidate.path}/package.json`) {
           update.updater = new RawContent(
             jsonStringify(updatedPackage.toJSON(), updatedPackage.rawContent)

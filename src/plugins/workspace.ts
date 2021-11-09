@@ -61,13 +61,12 @@ export abstract class WorkspacePlugin<T> extends ManifestPlugin {
       [[], []] as CandidateReleasePullRequest[][]
     );
 
-    logger.debug(`found ${inScopeCandidates.length} in-scope releases.`);
+    logger.info(`found ${inScopeCandidates.length} in-scope releases.`);
     if (inScopeCandidates.length === 0) {
       return outOfScopeCandidates;
     }
 
-    logger.debug(inScopeCandidates);
-    logger.debug('building list of all packages');
+    logger.info('building list of all packages');
     const {allPackages, candidatesByPackage} = await this.buildAllPackages(
       inScopeCandidates
     );
@@ -78,7 +77,6 @@ export abstract class WorkspacePlugin<T> extends ManifestPlugin {
       : Object.keys(candidatesByPackage);
     const orderedPackages = this.buildGraphOrder(graph, packageNamesToUpdate);
 
-    logger.info('order of packages');
     const updatedVersions: VersionsMap = new Map();
     for (const pkg of orderedPackages) {
       const packageName = this.packageNameFromPackage(pkg);

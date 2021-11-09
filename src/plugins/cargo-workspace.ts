@@ -103,7 +103,6 @@ export class CargoWorkspace extends WorkspacePlugin<CrateInfo> {
       );
       return {allPackages: [], candidatesByPackage: {}};
     }
-    logger.debug('workspace', cargoManifest);
 
     const allCrates: CrateInfo[] = [];
     const candidatesByPackage: Record<string, CandidateReleasePullRequest> = {};
@@ -178,10 +177,9 @@ export class CargoWorkspace extends WorkspacePlugin<CrateInfo> {
       originalManifest,
       updatedManifest
     );
-    logger.info('notes', dependencyNotes);
+
     existingCandidate.pullRequest.updates =
       existingCandidate.pullRequest.updates.map(update => {
-        logger.debug(update);
         if (update.path === `${existingCandidate.path}/Cargo.toml`) {
           update.updater = new RawContent(updatedContent);
         } else if (update.updater instanceof Changelog) {

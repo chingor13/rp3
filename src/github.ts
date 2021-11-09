@@ -263,7 +263,7 @@ export class GitHub {
     targetBranch: string,
     cursor?: string
   ): Promise<CommitHistory | null> {
-    logger.debug(`Fetching merge commits on branch ${targetBranch}`);
+    logger.info(`Fetching merge commits on branch ${targetBranch}`);
     const response = await this.graphqlRequest({
       query: `query pullRequestsSince($owner: String!, $repo: String!, $num: Int!, $maxFilesChanged: Int, $targetBranch: String!, $cursor: String) {
         repository(owner: $owner, name: $repo) {
@@ -432,7 +432,7 @@ export class GitHub {
     targetBranch: string,
     cursor?: string
   ): Promise<PullRequestHistory | null> {
-    logger.debug(`Fetching merged pull requests on branch ${targetBranch}`);
+    logger.info(`Fetching merged pull requests on branch ${targetBranch}`);
     const response = await this.graphqlRequest({
       query: `query mergedPullRequests($owner: String!, $repo: String!, $num: Int!, $maxFilesChanged: Int, $targetBranch: String!, $cursor: String) {
           repository(owner: $owner, name: $repo) {
@@ -535,7 +535,7 @@ export class GitHub {
    */
   private listReleases = wrapAsync(
     async (page = 1, perPage = 100): Promise<GitHubRelease[]> => {
-      logger.debug(`Fetching releases page ${page}`);
+      logger.info(`Fetching releases page ${page}`);
       const releases = await this.octokit.repos.listReleases({
         owner: this.repository.owner,
         repo: this.repository.repo,
@@ -655,7 +655,7 @@ export class GitHub {
     path: string,
     branch: string
   ): Promise<GitHubFileContents> {
-    logger.debug(`Fetching ${path} from branch ${branch}`);
+    logger.info(`Fetching ${path} from branch ${branch}`);
     try {
       return await this.getFileContentsWithSimpleAPI(path, branch);
     } catch (err) {

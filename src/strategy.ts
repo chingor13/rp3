@@ -170,7 +170,7 @@ export abstract class Strategy {
       versionsMap.set(versionKey, newVersion);
     }
     const component = this.component || (await this.getDefaultComponent());
-    logger.debug('component:', component);
+    logger.info('component:', component);
 
     const newVersionTag = new TagName(newVersion, component);
     const pullRequestTitle = PullRequestTitle.ofComponentTargetBranchVersion(
@@ -251,7 +251,7 @@ export abstract class Strategy {
       throw new Error('could not parse pull request body as a release PR');
     }
     const component = this.component || (await this.getDefaultComponent());
-    logger.debug('component:', component);
+    logger.info('component:', component);
     const releaseData = pullRequestBody.releaseData.find(releaseData => {
       return (
         this.normalizeComponent(releaseData.component) ===

@@ -295,8 +295,8 @@ export class Manifest {
     for (const path in this.repositoryConfig) {
       const config = this.repositoryConfig[path];
       logger.info(`Building candidate release pull request for path: ${path}`);
-      logger.debug(`type: ${config.releaseType}`);
-      logger.debug(`targetBranch: ${this.targetBranch}`);
+      logger.info(`type: ${config.releaseType}`);
+      logger.info(`targetBranch: ${this.targetBranch}`);
       const pathCommits =
         path === ROOT_PROJECT_PATH ? commits : commitsPerPath[path];
       if (!pathCommits || pathCommits.length === 0) {
@@ -389,8 +389,8 @@ export class Manifest {
       for (const path in this.repositoryConfig) {
         const config = this.repositoryConfig[path];
         logger.info(`Building release for path: ${path}`);
-        logger.debug(`type: ${config.releaseType}`);
-        logger.debug(`targetBranch: ${this.targetBranch}`);
+        logger.info(`type: ${config.releaseType}`);
+        logger.info(`targetBranch: ${this.targetBranch}`);
         const pathCommits =
           path === ROOT_PROJECT_PATH ? commits : commitsPerPath[path];
         if (!pathCommits || pathCommits.length === 0) {
