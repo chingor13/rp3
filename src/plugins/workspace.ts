@@ -127,18 +127,18 @@ export abstract class WorkspacePlugin<T> extends ManifestPlugin {
     return [...outOfScopeCandidates, ...newCandidates];
   }
 
-  abstract bumpVersion(pkg: T): Version;
-  abstract updateCandidate(
+  protected abstract bumpVersion(pkg: T): Version;
+  protected abstract updateCandidate(
     existingCandidate: CandidateReleasePullRequest,
     pkg: T,
     updatedVersions: VersionsMap
   ): CandidateReleasePullRequest;
-  abstract newCandidate(
+  protected abstract newCandidate(
     pkg: T,
     updatedVersions: VersionsMap
   ): CandidateReleasePullRequest;
 
-  abstract buildAllPackages(
+  protected abstract buildAllPackages(
     candidates: CandidateReleasePullRequest[]
   ): Promise<{
     allPackages: T[];
@@ -148,11 +148,11 @@ export abstract class WorkspacePlugin<T> extends ManifestPlugin {
   /**
    * Builds a graph of dependencies that have been touched
    */
-  abstract buildGraph(allPackages: T[]): Promise<DependencyGraph<T>>;
+  protected abstract buildGraph(allPackages: T[]): Promise<DependencyGraph<T>>;
 
-  abstract inScope(candidate: CandidateReleasePullRequest): boolean;
+  protected abstract inScope(candidate: CandidateReleasePullRequest): boolean;
 
-  abstract packageNameFromPackage(pkg: T): string;
+  protected abstract packageNameFromPackage(pkg: T): string;
 
   private invertGraph(graph: DependencyGraph<T>): DependencyGraph<T> {
     const dependentGraph: DependencyGraph<T> = new Map();
@@ -174,7 +174,7 @@ export abstract class WorkspacePlugin<T> extends ManifestPlugin {
     return dependentGraph;
   }
 
-  buildGraphOrder(
+  protected buildGraphOrder(
     graph: DependencyGraph<T>,
     packageNamesToUpdate: string[]
   ): T[] {

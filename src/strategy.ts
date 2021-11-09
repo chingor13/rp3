@@ -57,6 +57,11 @@ export interface StrategyOptions {
   headerPartial?: string;
   mainTemplate?: string;
 }
+
+/**
+ * A strategy is responsible for determining which files are
+ * necessary to update in a release pull request.
+ */
 export abstract class Strategy {
   path: string;
   labels: string[];

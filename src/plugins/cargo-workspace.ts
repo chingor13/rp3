@@ -84,7 +84,7 @@ export class CargoWorkspace extends WorkspacePlugin<CrateInfo> {
       updateAllPackages: true,
     });
   }
-  async buildAllPackages(candidates: CandidateReleasePullRequest[]): Promise<{
+  protected async buildAllPackages(candidates: CandidateReleasePullRequest[]): Promise<{
     allPackages: CrateInfo[];
     candidatesByPackage: Record<string, CandidateReleasePullRequest>;
   }> {
@@ -150,13 +150,13 @@ export class CargoWorkspace extends WorkspacePlugin<CrateInfo> {
     };
   }
 
-  bumpVersion(pkg: CrateInfo): Version {
+  protected bumpVersion(pkg: CrateInfo): Version {
     const version = Version.parse(pkg.version);
     version.patch += 1;
     return version;
   }
 
-  updateCandidate(
+  protected updateCandidate(
     existingCandidate: CandidateReleasePullRequest,
     pkg: CrateInfo,
     updatedVersions: VersionsMap
@@ -209,7 +209,8 @@ export class CargoWorkspace extends WorkspacePlugin<CrateInfo> {
     }
     return existingCandidate;
   }
-  newCandidate(
+
+  protected newCandidate(
     pkg: CrateInfo,
     updatedVersions: VersionsMap
   ): CandidateReleasePullRequest {
@@ -265,7 +266,7 @@ export class CargoWorkspace extends WorkspacePlugin<CrateInfo> {
     };
   }
 
-  async buildGraph(
+  protected async buildGraph(
     allPackages: CrateInfo[]
   ): Promise<DependencyGraph<CrateInfo>> {
     const workspaceCrateNames = new Set(
@@ -287,14 +288,14 @@ export class CargoWorkspace extends WorkspacePlugin<CrateInfo> {
     return graph;
   }
 
-  inScope(candidate: CandidateReleasePullRequest): boolean {
+  protected inScope(candidate: CandidateReleasePullRequest): boolean {
     return (
       candidate.config.releaseType === 'rust' &&
       candidate.path !== ROOT_PROJECT_PATH
     );
   }
 
-  packageNameFromPackage(pkg: CrateInfo): string {
+  protected packageNameFromPackage(pkg: CrateInfo): string {
     return pkg.name;
   }
 }
@@ -376,8 +377,6 @@ function appendDependenciesSectionToChangelog(
   if (!changelog) {
     return `### Dependencies\n\n${notes}`;
   }
-
-  logger.debug('>>>> appending dependencies section');
 
   const newLines: string[] = [];
   let seenDependenciesSection = false;

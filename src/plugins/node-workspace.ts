@@ -67,7 +67,7 @@ export class NodeWorkspace extends WorkspacePlugin<Package> {
     super(github, targetBranch, repositoryConfig, options);
     this.alwaysLinkLocal = options.alwaysLinkLocal === false ? false : true;
   }
-  async buildAllPackages(candidates: CandidateReleasePullRequest[]): Promise<{
+  protected async buildAllPackages(candidates: CandidateReleasePullRequest[]): Promise<{
     allPackages: Package[];
     candidatesByPackage: Record<string, CandidateReleasePullRequest>;
   }> {
@@ -129,13 +129,13 @@ export class NodeWorkspace extends WorkspacePlugin<Package> {
     };
   }
 
-  bumpVersion(pkg: Package): Version {
+  protected bumpVersion(pkg: Package): Version {
     const version = Version.parse(pkg.version);
     version.patch += 1;
     return version;
   }
 
-  updateCandidate(
+  protected updateCandidate(
     existingCandidate: CandidateReleasePullRequest,
     pkg: Package,
     updatedVersions: VersionsMap
@@ -194,7 +194,7 @@ export class NodeWorkspace extends WorkspacePlugin<Package> {
     }
     return existingCandidate;
   }
-  newCandidate(
+  protected newCandidate(
     pkg: Package,
     updatedVersions: VersionsMap
   ): CandidateReleasePullRequest {
@@ -258,7 +258,7 @@ export class NodeWorkspace extends WorkspacePlugin<Package> {
     };
   }
 
-  async buildGraph(allPackages: Package[]): Promise<DependencyGraph<Package>> {
+  protected async buildGraph(allPackages: Package[]): Promise<DependencyGraph<Package>> {
     const graph = new Map<string, DependencyNode<Package>>();
     const workspacePackageNames = new Set(
       allPackages.map(packageJson => packageJson.name)
@@ -282,14 +282,14 @@ export class NodeWorkspace extends WorkspacePlugin<Package> {
     return graph;
   }
 
-  inScope(candidate: CandidateReleasePullRequest): boolean {
+  protected inScope(candidate: CandidateReleasePullRequest): boolean {
     return (
       candidate.config.releaseType === 'node' &&
       candidate.path !== ROOT_PROJECT_PATH
     );
   }
 
-  packageNameFromPackage(pkg: Package): string {
+  protected packageNameFromPackage(pkg: Package): string {
     return pkg.name;
   }
 }
