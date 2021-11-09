@@ -145,7 +145,8 @@ export abstract class Strategy {
 
   async buildReleasePullRequest(
     commits: Commit[],
-    latestRelease?: Release
+    latestRelease?: Release,
+    draft?: boolean,
   ): Promise<ReleasePullRequest | undefined> {
     const conventionalCommits = this.postProcessCommits(
       parseConventionalCommits(commits)
@@ -217,6 +218,7 @@ export abstract class Strategy {
       labels: this.labels,
       headRefName: branchName.toString(),
       version: newVersion,
+      draft: draft ?? false,
     };
   }
 

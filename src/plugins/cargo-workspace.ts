@@ -256,6 +256,7 @@ export class CargoWorkspace extends WorkspacePlugin<CrateInfo> {
       labels: [],
       headRefName: BranchName.ofTargetBranch(this.targetBranch).toString(),
       version,
+      draft: false,
     };
     return {
       path: pkg.path,

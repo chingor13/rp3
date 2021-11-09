@@ -23,4 +23,5 @@ force: true
 fork: true
 message: chore(main): release
 logger: [object Object]
+draft: false
 `

@@ -70,6 +70,7 @@ export class Merge extends ManifestPlugin {
       updates,
       labels: Array.from(labels),
       headRefName: BranchName.ofTargetBranch(this.targetBranch).toString(),
+      draft: false,
     };
 
     const releaseTypes = new Set(

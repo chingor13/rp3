@@ -281,6 +281,7 @@ export function buildMockCandidatePullRequest(
       labels: [],
       headRefName: BranchName.ofTargetBranch('main').toString(),
       version,
+      draft: false,
     },
     config: {
       releaseType,

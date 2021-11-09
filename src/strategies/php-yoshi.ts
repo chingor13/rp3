@@ -61,7 +61,8 @@ interface ComponentInfo {
 export class PHPYoshi extends Strategy {
   async buildReleasePullRequest(
     commits: Commit[],
-    latestRelease?: Release
+    latestRelease?: Release,
+    draft?: boolean
   ): Promise<ReleasePullRequest> {
     const conventionalCommits = this.postProcessCommits(
       parseConventionalCommits(commits)
@@ -188,6 +189,7 @@ export class PHPYoshi extends Strategy {
       labels: this.labels,
       headRefName: branchName.toString(),
       version: newVersion,
+      draft: draft ?? false,
     };
   }
 

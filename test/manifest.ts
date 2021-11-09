@@ -442,6 +442,55 @@ describe('Manifest', () => {
       expect(pullRequests).lengthOf(2);
     });
 
+    it('should create a draft pull request', async () => {
+      mockReleases(github, [
+        {
+          sha: 'abc123',
+          tagName: 'v1.0.0',
+          url: 'https://github.com/fake-owner/fake-repo/releases/tag/v1.0.0',
+        },
+      ]);
+      mockCommits(github, [
+        {
+          sha: 'def456',
+          message: 'fix: some bugfix',
+          files: [],
+        },
+        {
+          sha: 'abc123',
+          message: 'chore: release 1.0.0',
+          files: [],
+          pullRequest: {
+            headBranchName: 'release-please/branches/main',
+            baseBranchName: 'main',
+            number: 123,
+            title: 'chore: release 1.0.0',
+            body: '',
+            labels: [],
+            files: [],
+            sha: 'abc123',
+          },
+        },
+      ]);
+      const manifest = new Manifest(
+        github,
+        'main',
+        {
+          '.': {
+            releaseType: 'simple',
+            draft: true,
+          },
+        },
+        {
+          '.': Version.parse('1.0.0'),
+        }
+      );
+      const pullRequests = await manifest.buildPullRequests();
+      expect(pullRequests).lengthOf(1);
+      const pullRequest = pullRequests[0];
+      expect(pullRequest.draft).to.be.true;
+    });
+
     describe('with plugins', () => {
       beforeEach(() => {
         mockReleases(github, [
@@ -654,6 +703,7 @@ describe('Manifest', () => {
           ],
           labels: [],
           headRefName: 'release-please/branches/main',
+          draft: false,
         },
       ]);
       const pullRequestNumbers = await manifest.createPullRequests();
@@ -718,6 +768,7 @@ describe('Manifest', () => {
           ],
           labels: [],
           headRefName: 'release-please/branches/main',
+          draft: false,
         },
         {
           title: PullRequestTitle.ofTargetBranch('main'),
@@ -735,6 +786,7 @@ describe('Manifest', () => {
           ],
           labels: [],
           headRefName: 'release-please/branches/main2',
+          draft: false,
         },
       ]);
       const pullRequestNumbers = await manifest.createPullRequests();

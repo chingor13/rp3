@@ -794,6 +794,7 @@ export class GitHub {
         fork: true, // FIXME
         message: releasePullRequest.title.toString(),
         logger: logger,
+        draft: releasePullRequest.draft,
       });
 
       // If a release PR was already open, update the title and body:

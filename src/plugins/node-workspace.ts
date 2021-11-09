@@ -249,6 +249,7 @@ export class NodeWorkspace extends WorkspacePlugin<Package> {
       labels: [],
       headRefName: BranchName.ofTargetBranch(this.targetBranch).toString(),
       version,
+      draft: false,
     };
     return {
       path: updatedPackage.location,

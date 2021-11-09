@@ -313,7 +313,8 @@ export class Manifest {
       const latestRelease = releasesByPath[path];
       const releasePullRequest = await strategy.buildReleasePullRequest(
         commits,
-        latestRelease
+        latestRelease,
+        config.draft,
       );
       if (releasePullRequest) {
         newReleasePullRequests.push({
