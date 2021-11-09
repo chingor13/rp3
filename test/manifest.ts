@@ -17,12 +17,22 @@ import {Manifest} from '../src/manifest';
 import {GitHub, GitHubRelease} from '../src/github';
 import * as sinon from 'sinon';
 import {Commit} from '../src/commit';
-import {buildGitHubFileContent, buildGitHubFileRaw} from './helpers';
+import {
+  buildGitHubFileContent,
+  buildGitHubFileRaw,
+  stubSuggesterWithSnapshot,
+} from './helpers';
 import {expect} from 'chai';
 import {Version} from '../src/version';
 import {PullRequest} from '../src/pull-request';
 import {readFileSync} from 'fs';
 import {resolve} from 'path';
+import * as factory from '../src/factory';
+import {NodeWorkspace} from '../src/plugins/node-workspace';
+import {CargoWorkspace} from '../src/plugins/cargo-workspace';
+import {PullRequestTitle} from '../src/util/pull-request-title';
+import {PullRequestBody} from '../src/util/pull-request-body';
+import {RawContent} from '../src/updaters/raw-content';
 
 const sandbox = sinon.createSandbox();
 const fixturesPath = './test/fixtures';
@@ -408,6 +418,305 @@ describe('Manifest', () => {
       const pullRequests = await manifest.buildPullRequests();
       expect(pullRequests).lengthOf(2);
     });
+
+    describe('with plugins', () => {
+      beforeEach(() => {
+        mockReleases(github, [
+          {
+            sha: 'abc123',
+            tagName: 'pkg1-v1.0.0',
+            url: 'https://github.com/fake-owner/fake-repo/releases/tag/pkg1-v1.0.0',
+          },
+          {
+            sha: 'def234',
+            tagName: 'pkg2-v0.2.3',
+            url: 'https://github.com/fake-owner/fake-repo/releases/tag/pkg2-v1.0.0',
+          },
+        ]);
+        mockCommits(github, [
+          {
+            sha: 'aaaaaa',
+            message: 'fix: some bugfix',
+            files: ['path/a/foo'],
+          },
+          {
+            sha: 'abc123',
+            message: 'chore: release 1.0.0',
+            files: [],
+            pullRequest: {
+              headBranchName: 'release-please/branches/main/components/pkg1',
+              baseBranchName: 'main',
+              number: 123,
+              title: 'chore: release 1.0.0',
+              body: '',
+              labels: [],
+              files: [],
+              sha: 'abc123',
+            },
+          },
+          {
+            sha: 'bbbbbb',
+            message: 'fix: some bugfix',
+            files: ['path/b/foo'],
+          },
+          {
+            sha: 'cccccc',
+            message: 'fix: some bugfix',
+            files: ['path/a/foo'],
+          },
+          {
+            sha: 'def234',
+            message: 'chore: release 0.2.3',
+            files: [],
+            pullRequest: {
+              headBranchName: 'release-please/branches/main/components/pkg2',
+              baseBranchName: 'main',
+              number: 123,
+              title: 'chore: release 0.2.3',
+              body: '',
+              labels: [],
+              files: [],
+              sha: 'def234',
+            },
+          },
+        ]);
+      });
+
+      it('should load and run a single plugins', async () => {
+        const manifest = new Manifest(
+          github,
+          'main',
+          {
+            'path/a': {
+              releaseType: 'node',
+              component: 'pkg1',
+            },
+            'path/b': {
+              releaseType: 'node',
+              component: 'pkg2',
+            },
+          },
+          {
+            'path/a': Version.parse('1.0.0'),
+            'path/b': Version.parse('0.2.3'),
+          },
+          {
+            separatePullRequests: true,
+            plugins: ['node-workspace'],
+          }
+        );
+        const mockPlugin = sandbox.createStubInstance(NodeWorkspace);
+        mockPlugin.run.returnsArg(0);
+        sandbox
+          .stub(factory, 'buildPlugin')
+          .withArgs(sinon.match.has('type', 'node-workspace'))
+          .returns(mockPlugin);
+        const pullRequests = await manifest.buildPullRequests();
+        expect(pullRequests).not.empty;
+        sinon.assert.calledOnce(mockPlugin.run);
+      });
+
+      it('should load and run multiple plugins', async () => {
+        const manifest = new Manifest(
+          github,
+          'main',
+          {
+            'path/a': {
+              releaseType: 'node',
+              component: 'pkg1',
+            },
+            'path/b': {
+              releaseType: 'node',
+              component: 'pkg2',
+            },
+          },
+          {
+            'path/a': Version.parse('1.0.0'),
+            'path/b': Version.parse('0.2.3'),
+          },
+          {
+            separatePullRequests: true,
+            plugins: ['node-workspace', 'cargo-workspace'],
+          }
+        );
+        const mockPlugin = sandbox.createStubInstance(NodeWorkspace);
+        mockPlugin.run.returnsArg(0);
+        const mockPlugin2 = sandbox.createStubInstance(CargoWorkspace);
+        mockPlugin2.run.returnsArg(0);
+        sandbox
+          .stub(factory, 'buildPlugin')
+          .withArgs(sinon.match.has('type', 'node-workspace'))
+          .returns(mockPlugin)
+          .withArgs(sinon.match.has('type', 'cargo-workspace'))
+          .returns(mockPlugin2);
+        const pullRequests = await manifest.buildPullRequests();
+        expect(pullRequests).not.empty;
+        sinon.assert.calledOnce(mockPlugin.run);
+        sinon.assert.calledOnce(mockPlugin2.run);
+      });
+    });
+  });
+
+  describe('createPullRequests', () => {
+    it('handles no pull requests', async () => {
+      const manifest = new Manifest(
+        github,
+        'main',
+        {
+          'path/a': {
+            releaseType: 'node',
+            component: 'pkg1',
+          },
+          'path/b': {
+            releaseType: 'node',
+            component: 'pkg2',
+          },
+        },
+        {
+          'path/a': Version.parse('1.0.0'),
+          'path/b': Version.parse('0.2.3'),
+        },
+        {
+          separatePullRequests: true,
+          plugins: ['node-workspace'],
+        }
+      );
+      sandbox.stub(manifest, 'buildPullRequests').resolves([]);
+      const pullRequestNumbers = await manifest.createPullRequests();
+      expect(pullRequestNumbers).to.be.empty;
+    });
+
+    it('handles a single pull request', async function () {
+      sandbox
+        .stub(github, 'getFileContentsOnBranch')
+        .withArgs('README.md', 'main')
+        .resolves(buildGitHubFileRaw('some-content'));
+      stubSuggesterWithSnapshot(sandbox, this.test!.fullTitle());
+      const manifest = new Manifest(
+        github,
+        'main',
+        {
+          'path/a': {
+            releaseType: 'node',
+            component: 'pkg1',
+          },
+          'path/b': {
+            releaseType: 'node',
+            component: 'pkg2',
+          },
+        },
+        {
+          'path/a': Version.parse('1.0.0'),
+          'path/b': Version.parse('0.2.3'),
+        },
+        {
+          separatePullRequests: true,
+          plugins: ['node-workspace'],
+        }
+      );
+      sandbox.stub(manifest, 'buildPullRequests').resolves([
+        {
+          title: PullRequestTitle.ofTargetBranch('main'),
+          body: new PullRequestBody([
+            {
+              notes: 'Some release notes',
+            },
+          ]),
+          updates: [
+            {
+              path: 'README.md',
+              createIfMissing: false,
+              updater: new RawContent('some raw content'),
+            },
+          ],
+          labels: [],
+          headRefName: 'release-please/branches/main',
+        },
+      ]);
+      const pullRequestNumbers = await manifest.createPullRequests();
+      expect(pullRequestNumbers).lengthOf(1);
+    });
+
+    it('handles a multiple pull requests', async () => {
+      sandbox
+        .stub(github, 'getFileContentsOnBranch')
+        .withArgs('README.md', 'main')
+        .resolves(buildGitHubFileRaw('some-content'))
+        .withArgs('pkg2/README.md', 'main')
+        .resolves(buildGitHubFileRaw('some-content-2'));
+      sandbox
+        .stub(github, 'openPR')
+        .withArgs(
+          sinon.match.has('headRefName', 'release-please/branches/main'),
+          'main'
+        )
+        .resolves(123)
+        .withArgs(
+          sinon.match.has('headRefName', 'release-please/branches/main2'),
+          'main'
+        )
+        .resolves(124);
+      const manifest = new Manifest(
+        github,
+        'main',
+        {
+          'path/a': {
+            releaseType: 'node',
+            component: 'pkg1',
+          },
+          'path/b': {
+            releaseType: 'node',
+            component: 'pkg2',
+          },
+        },
+        {
+          'path/a': Version.parse('1.0.0'),
+          'path/b': Version.parse('0.2.3'),
+        },
+        {
+          separatePullRequests: true,
+          plugins: ['node-workspace'],
+        }
+      );
+      sandbox.stub(manifest, 'buildPullRequests').resolves([
+        {
+          title: PullRequestTitle.ofTargetBranch('main'),
+          body: new PullRequestBody([
+            {
+              notes: 'Some release notes',
+            },
+          ]),
+          updates: [
+            {
+              path: 'README.md',
+              createIfMissing: false,
+              updater: new RawContent('some raw content'),
+            },
+          ],
+          labels: [],
+          headRefName: 'release-please/branches/main',
+        },
+        {
+          title: PullRequestTitle.ofTargetBranch('main'),
+          body: new PullRequestBody([
+            {
+              notes: 'Some release notes 2',
+            },
+          ]),
+          updates: [
+            {
+              path: 'pkg2/README.md',
+              createIfMissing: false,
+              updater: new RawContent('some raw content 2'),
+            },
+          ],
+          labels: [],
+          headRefName: 'release-please/branches/main2',
+        },
+      ]);
+      const pullRequestNumbers = await manifest.createPullRequests();
+      expect(pullRequestNumbers).to.eql([123, 124]);
+    });
   });
 
   describe('buildReleases', () => {
@@ -583,4 +892,6 @@ describe('Manifest', () => {
         .and.satisfy((msg: string) => msg.startsWith('### [3.2.7]'));
     });
   });
+
+  describe('createReleases', () => {});
 });
