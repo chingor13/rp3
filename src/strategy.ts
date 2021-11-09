@@ -109,9 +109,10 @@ export abstract class Strategy {
     return '';
   }
 
-  protected normalizeComponent(
-    component: string | undefined
-  ): string | undefined {
+  protected normalizeComponent(component: string | undefined): string {
+    if (!component) {
+      return '';
+    }
     return component;
   }
 

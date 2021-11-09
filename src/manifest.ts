@@ -46,6 +46,7 @@ export interface ReleaserConfig {
   skipGithubRelease?: boolean;
   draft?: boolean;
   component?: string;
+  packageName?: string;
 
   // Ruby-only
   versionFile?: string;
@@ -87,7 +88,6 @@ interface ManifestOptions {
 }
 
 interface ReleaserPackageConfig extends ReleaserConfigJson {
-  // deprecated in favor of component
   'package-name'?: string;
   component?: string;
   'changelog-path'?: string;
@@ -488,7 +488,8 @@ function extractReleaserConfig(config: ReleaserPackageConfig): ReleaserConfig {
     releaseAs: config['release-as'],
     skipGithubRelease: config['skip-github-release'],
     draft: config.draft,
-    component: config['component'] || config['package-name'],
+    component: config['component'],
+    packageName: config['package-name'],
     versionFile: config['version-file'],
     extraFiles: config['extra-files'],
   };

@@ -78,11 +78,9 @@ export class Node extends Strategy {
     return pkg.name;
   }
 
-  protected normalizeComponent(
-    component: string | undefined
-  ): string | undefined {
+  protected normalizeComponent(component: string | undefined): string {
     if (!component) {
-      return undefined;
+      return '';
     }
     return component.match(/^@[\w-]+\//) ? component.split('/')[1] : component;
   }

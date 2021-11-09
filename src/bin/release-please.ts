@@ -59,6 +59,7 @@ interface VersioningArgs {
   // only for Ruby: TODO replace with generic bootstrap option
   // deprecated in favor of latestTagVersion
   lastPackageVersion?: string;
+
   latestTagVersion?: string;
   latestTagSha?: string;
   latestTagName?: string;
@@ -269,6 +270,10 @@ function manifestConfigOptions(
     })
     .option('component', {
       describe: 'name of component release is being minted for',
+      type: 'string',
+    })
+    .option('package-name', {
+      describe: 'name of package release is being minted for',
       type: 'string',
     })
     .option('release-type', {
