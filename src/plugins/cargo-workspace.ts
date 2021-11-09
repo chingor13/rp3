@@ -12,7 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {CandidateReleasePullRequest, RepositoryConfig} from '../manifest';
+import {
+  CandidateReleasePullRequest,
+  RepositoryConfig,
+  ROOT_PROJECT_PATH,
+} from '../manifest';
 import {logger} from '../util/logger';
 import {
   WorkspacePlugin,
@@ -284,7 +288,10 @@ export class CargoWorkspace extends WorkspacePlugin<CrateInfo> {
   }
 
   inScope(candidate: CandidateReleasePullRequest): boolean {
-    return candidate.config.releaseType === 'rust' && candidate.path !== '.';
+    return (
+      candidate.config.releaseType === 'rust' &&
+      candidate.path !== ROOT_PROJECT_PATH
+    );
   }
 
   packageNameFromPackage(pkg: CrateInfo): string {

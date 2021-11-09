@@ -114,7 +114,7 @@ describe('KRMBlueprint', () => {
       });
       sandbox
         .stub(github, 'findFilesByExtension')
-        .withArgs('yaml', undefined)
+        .withArgs('yaml', '.')
         .resolves(['project.yaml', 'no-attrib-bucket.yaml']);
       stubFilesFromFixtures({
         github,

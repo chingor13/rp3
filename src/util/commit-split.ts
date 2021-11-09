@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import {Commit} from '../commit';
+import {ROOT_PROJECT_PATH} from '../manifest';
 
 export interface CommitSplitOptions {
   // Include empty git commits: each empty commit is included
@@ -51,7 +52,7 @@ export class CommitSplit {
       for (let newPath of opts.packagePaths) {
         // The special "." path, representing the root of the module, should be
         // ignored by commit-split as it is assigned all commits in manifest.ts
-        if (newPath === '.') {
+        if (newPath === ROOT_PROJECT_PATH) {
           continue;
         }
         // normalize so that all paths have leading and trailing slashes for

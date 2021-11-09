@@ -136,13 +136,13 @@ describe('JavaYoshi', () => {
       });
       const findFilesStub = sandbox.stub(github, 'findFilesByFilename');
       findFilesStub
-        .withArgs('pom.xml', undefined)
+        .withArgs('pom.xml', '.')
         .resolves(['path1/pom.xml', 'path2/pom.xml']);
       findFilesStub
-        .withArgs('build.gradle', undefined)
+        .withArgs('build.gradle', '.')
         .resolves(['path1/build.gradle', 'path2/build.gradle']);
       findFilesStub
-        .withArgs('dependencies.properties', undefined)
+        .withArgs('dependencies.properties', '.')
         .resolves(['dependencies.properties']);
       const getFileContentsStub = sandbox.stub(
         github,

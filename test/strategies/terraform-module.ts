@@ -109,13 +109,13 @@ describe('TerraformModule', () => {
       });
       const findFilesStub = sandbox.stub(github, 'findFilesByFilename');
       findFilesStub
-        .withArgs('readme.md', undefined)
+        .withArgs('readme.md', '.')
         .resolves(['path1/readme.md', 'path2/readme.md']);
       findFilesStub
-        .withArgs('versions.tf', undefined)
+        .withArgs('versions.tf', '.')
         .resolves(['path1/versions.tf', 'path2/versions.tf']);
       findFilesStub
-        .withArgs('versions.tf.tmpl', undefined)
+        .withArgs('versions.tf.tmpl', '.')
         .resolves(['path1/versions.tf.tmpl', 'path2/versions.tf.tmpl']);
       const latestRelease = undefined;
       const release = await strategy.buildReleasePullRequest(

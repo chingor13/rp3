@@ -27,7 +27,10 @@ import {PullRequest} from './pull-request';
 import {BranchName} from './util/branch-name';
 import {TagName} from './util/tag-name';
 import {logger} from './util/logger';
-import {MANIFEST_PULL_REQUEST_TITLE_PATTERN} from './manifest';
+import {
+  MANIFEST_PULL_REQUEST_TITLE_PATTERN,
+  ROOT_PROJECT_PATH,
+} from './manifest';
 import {PullRequestBody} from './util/pull-request-body';
 
 const DEFAULT_LABELS = ['autorelease: pending', 'type: release'];
@@ -55,7 +58,7 @@ export interface StrategyOptions {
   mainTemplate?: string;
 }
 export abstract class Strategy {
-  path: string | undefined;
+  path: string;
   labels: string[];
   github: GitHub;
   component: string | undefined;
@@ -71,7 +74,7 @@ export abstract class Strategy {
   mainTemplate?: string;
 
   constructor(options: StrategyOptions) {
-    this.path = options.path;
+    this.path = options.path || ROOT_PROJECT_PATH;
     this.labels = options.labels || DEFAULT_LABELS;
     this.github = options.github;
     this.component = options.component;
@@ -267,7 +270,7 @@ export abstract class Strategy {
   }
 
   protected addPath(file: string) {
-    if (this.path === '.') {
+    if (this.path === ROOT_PROJECT_PATH) {
       return file;
     }
     file = file.replace(/^[/\\]/, '');

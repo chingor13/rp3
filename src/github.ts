@@ -32,6 +32,7 @@ import {Repository} from './repository';
 import {ReleasePullRequest} from './release-pull-request';
 import {Update} from './update';
 import {Release} from './release';
+import {ROOT_PROJECT_PATH} from './manifest';
 
 // Extract some types from the `request` package.
 type RequestBuilderType = typeof request;
@@ -1027,7 +1028,7 @@ function fullyQualifyBranchRef(refName: string): string {
  */
 function normalizePrefix(prefix: string) {
   const normalized = prefix.replace(/^[/\\]/, '').replace(/[/\\]$/, '');
-  if (normalized === '.') {
+  if (normalized === ROOT_PROJECT_PATH) {
     return '';
   }
   return normalized;

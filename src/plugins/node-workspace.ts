@@ -16,7 +16,11 @@ import {PackageGraph} from '@lerna/package-graph';
 import {Package as LernaPackage, PackageJson} from '@lerna/package';
 import {GitHub} from '../github';
 import {logger} from '../util/logger';
-import {CandidateReleasePullRequest, RepositoryConfig} from '../manifest';
+import {
+  CandidateReleasePullRequest,
+  RepositoryConfig,
+  ROOT_PROJECT_PATH,
+} from '../manifest';
 import {Version, VersionsMap} from '../version';
 import {RawContent} from '../updaters/raw-content';
 import {PullRequestTitle} from '../util/pull-request-title';
@@ -279,7 +283,10 @@ export class NodeWorkspace extends WorkspacePlugin<Package> {
   }
 
   inScope(candidate: CandidateReleasePullRequest): boolean {
-    return candidate.config.releaseType === 'node' && candidate.path !== '.';
+    return (
+      candidate.config.releaseType === 'node' &&
+      candidate.path !== ROOT_PROJECT_PATH
+    );
   }
 
   packageNameFromPackage(pkg: Package): string {

@@ -27,6 +27,7 @@ import {resolve} from 'path';
 import {Release} from '../release';
 import {Version} from '../version';
 import {TagName} from '../util/tag-name';
+import {ROOT_PROJECT_PATH} from '../manifest';
 
 const CHANGELOG_SECTIONS = [
   {type: 'feat', section: 'Features'},
@@ -138,7 +139,7 @@ export class RubyYoshi extends Strategy {
           .join('\n')}</code></pre>\n`;
       }
       commit.files.forEach(file => {
-        if (file.startsWith(this.normalizeComponent(this.path) || '')) {
+        if (this.path === ROOT_PROJECT_PATH || file.startsWith(this.path)) {
           updatedFiles[file] = true;
         }
       });

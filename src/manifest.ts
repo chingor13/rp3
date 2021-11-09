@@ -109,7 +109,7 @@ export type RepositoryConfig = Record<string, ReleaserConfig>;
 
 const RELEASE_PLEASE_CONFIG = 'release-please-config.json';
 const RELEASE_PLEASE_MANIFEST = '.release-please-manifest.json';
-const ROOT_PROJECT_PATH = '.';
+export const ROOT_PROJECT_PATH = '.';
 const DEFAULT_COMPONENT_NAME = '';
 
 export const MANIFEST_PULL_REQUEST_TITLE_PATTERN = 'chore: release ${branch}';

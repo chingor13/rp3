@@ -47,7 +47,7 @@ describe('factory', () => {
         strategy.versioningStrategy as DefaultVersioningStrategy;
       expect(versioningStrategy.bumpMinorPreMajor).to.be.false;
       expect(versioningStrategy.bumpPatchForMinorPreMajor).to.be.false;
-      expect(strategy.path).to.be.undefined;
+      expect(strategy.path).to.eql('.');
       expect(strategy.component).to.be.undefined;
     });
     it('should build a with configuration', async () => {

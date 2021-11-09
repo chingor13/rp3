@@ -16,6 +16,7 @@ import {ManifestPlugin} from '../plugin';
 import {
   CandidateReleasePullRequest,
   MANIFEST_PULL_REQUEST_TITLE_PATTERN,
+  ROOT_PROJECT_PATH,
 } from '../manifest';
 import {PullRequestTitle} from '../util/pull-request-title';
 import {PullRequestBody, ReleaseData} from '../util/pull-request-body';
@@ -78,7 +79,7 @@ export class Merge extends ManifestPlugin {
       releaseTypes.size === 1 ? releaseTypes.values().next().value : 'simple';
     return [
       {
-        path: '.',
+        path: ROOT_PROJECT_PATH,
         pullRequest,
         config: {
           releaseType,

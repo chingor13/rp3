@@ -117,10 +117,8 @@ describe('OCaml', () => {
         component: 'google-cloud-automl',
       });
       const findFilesStub = sandbox.stub(github, 'findFilesByExtension');
-      findFilesStub
-        .withArgs('json', undefined)
-        .resolves(['esy.json', 'other.json']);
-      findFilesStub.withArgs('opam', undefined).resolves(['sample.opam']);
+      findFilesStub.withArgs('json', '.').resolves(['esy.json', 'other.json']);
+      findFilesStub.withArgs('opam', '.').resolves(['sample.opam']);
       stubFilesFromFixtures({
         sandbox,
         github,
