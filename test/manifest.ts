@@ -33,6 +33,7 @@ import {CargoWorkspace} from '../src/plugins/cargo-workspace';
 import {PullRequestTitle} from '../src/util/pull-request-title';
 import {PullRequestBody} from '../src/util/pull-request-body';
 import {RawContent} from '../src/updaters/raw-content';
+import {TagName} from '../src/util/tag-name';
 
 const sandbox = sinon.createSandbox();
 const fixturesPath = './test/fixtures';
@@ -62,6 +63,28 @@ function mockPullRequests(github: GitHub, pullRequests: PullRequest[]) {
     }
   }
   sandbox.stub(github, 'mergedPullRequestIterator').returns(fakeGenerator());
+}
+
+function mockCreateRelease(
+  github: GitHub,
+  releases: {sha: string; tagName: string}[]
+) {
+  const releaseStub = sandbox.stub(github, 'createRelease');
+  for (const {sha, tagName} of releases) {
+    releaseStub
+      .withArgs(
+        sinon.match.has(
+          'tag',
+          sinon.match((tag: TagName) => tag.toString() === tagName)
+        )
+      )
+      .resolves({
+        tagName,
+        sha,
+        url: 'https://path/to/release',
+        notes: 'some release notes',
+      });
+  }
 }
 
 function pullRequestBody(path: string): string {
@@ -893,5 +916,182 @@ describe('Manifest', () => {
     });
   });
 
-  describe('createReleases', () => {});
+  describe('createReleases', () => {
+    it('should handle a single manifest release', async () => {
+      mockPullRequests(github, [
+        {
+          headBranchName: 'release-please/branches/main',
+          baseBranchName: 'main',
+          number: 1234,
+          title: 'chore: release main',
+          body: pullRequestBody('release-notes/single-manifest.txt'),
+          labels: [],
+          files: [],
+          sha: 'abc123',
+        },
+      ]);
+      const getFileContentsStub = sandbox.stub(
+        github,
+        'getFileContentsOnBranch'
+      );
+      getFileContentsStub
+        .withArgs('package.json', 'main')
+        .resolves(
+          buildGitHubFileRaw(
+            JSON.stringify({name: '@google-cloud/release-brancher'})
+          )
+        );
+      mockCreateRelease(github, [
+        {sha: 'abc123', tagName: 'release-brancher-v1.3.1'},
+      ]);
+      const commentStub = sandbox.stub(github, 'commentOnIssue').resolves();
+      const manifest = new Manifest(
+        github,
+        'main',
+        {
+          '.': {
+            releaseType: 'node',
+          },
+        },
+        {
+          '.': Version.parse('1.3.1'),
+        }
+      );
+      const releases = await manifest.createReleases();
+      expect(releases).lengthOf(1);
+      expect(releases[0]!.tagName).to.eql('release-brancher-v1.3.1');
+      expect(releases[0]!.sha).to.eql('abc123');
+      expect(releases[0]!.notes).to.eql('some release notes');
+      sinon.assert.calledOnce(commentStub);
+    });
+    it('should handle a multiple manifest release', async () => {
+      mockPullRequests(github, [
+        {
+          headBranchName: 'release-please/branches/main',
+          baseBranchName: 'main',
+          number: 1234,
+          title: 'chore: release main',
+          body: pullRequestBody('release-notes/multiple.txt'),
+          labels: [],
+          files: [
+            'packages/bot-config-utils/package.json',
+            'packages/label-utils/package.json',
+            'packages/object-selector/package.json',
+            'packages/datastore-lock/package.json',
+          ],
+          sha: 'abc123',
+        },
+      ]);
+      const getFileContentsStub = sandbox.stub(
+        github,
+        'getFileContentsOnBranch'
+      );
+      getFileContentsStub
+        .withArgs('packages/bot-config-utils/package.json', 'main')
+        .resolves(
+          buildGitHubFileRaw(
+            JSON.stringify({name: '@google-automations/bot-config-utils'})
+          )
+        )
+        .withArgs('packages/label-utils/package.json', 'main')
+        .resolves(
+          buildGitHubFileRaw(
+            JSON.stringify({name: '@google-automations/label-utils'})
+          )
+        )
+        .withArgs('packages/object-selector/package.json', 'main')
+        .resolves(
+          buildGitHubFileRaw(
+            JSON.stringify({name: '@google-automations/object-selector'})
+          )
+        )
+        .withArgs('packages/datastore-lock/package.json', 'main')
+        .resolves(
+          buildGitHubFileRaw(
+            JSON.stringify({name: '@google-automations/datastore-lock'})
+          )
+        );
+
+      mockCreateRelease(github, [
+        {sha: 'abc123', tagName: 'bot-config-utils-v3.2.0'},
+        {sha: 'abc123', tagName: 'label-utils-v1.1.0'},
+        {sha: 'abc123', tagName: 'object-selector-v1.1.0'},
+        {sha: 'abc123', tagName: 'datastore-lock-v2.1.0'},
+      ]);
+      const commentStub = sandbox.stub(github, 'commentOnIssue').resolves();
+      const manifest = new Manifest(
+        github,
+        'main',
+        {
+          'packages/bot-config-utils': {
+            releaseType: 'node',
+          },
+          'packages/label-utils': {
+            releaseType: 'node',
+          },
+          'packages/object-selector': {
+            releaseType: 'node',
+          },
+          'packages/datastore-lock': {
+            releaseType: 'node',
+          },
+        },
+        {
+          'packages/bot-config-utils': Version.parse('3.1.4'),
+          'packages/label-utils': Version.parse('1.0.1'),
+          'packages/object-selector': Version.parse('1.0.2'),
+          'packages/datastore-lock': Version.parse('2.0.0'),
+        }
+      );
+      const releases = await manifest.createReleases();
+      expect(releases).lengthOf(4);
+      expect(releases[0]!.tagName).to.eql('bot-config-utils-v3.2.0');
+      expect(releases[0]!.sha).to.eql('abc123');
+      expect(releases[0]!.notes).to.be.string;
+      expect(releases[1]!.tagName).to.eql('label-utils-v1.1.0');
+      expect(releases[1]!.sha).to.eql('abc123');
+      expect(releases[1]!.notes).to.be.string;
+      expect(releases[2]!.tagName).to.eql('object-selector-v1.1.0');
+      expect(releases[2]!.sha).to.eql('abc123');
+      expect(releases[2]!.notes).to.be.string;
+      expect(releases[3]!.tagName).to.eql('datastore-lock-v2.1.0');
+      expect(releases[3]!.sha).to.eql('abc123');
+      expect(releases[3]!.notes).to.be.string;
+      sinon.assert.callCount(commentStub, 4);
+    });
+    it('should handle a single standalone release', async () => {
+      mockPullRequests(github, [
+        {
+          headBranchName: 'release-please/branches/main',
+          baseBranchName: 'main',
+          number: 1234,
+          title: 'chore(main): release 3.2.7',
+          body: pullRequestBody('release-notes/single.txt'),
+          labels: [],
+          files: [],
+          sha: 'abc123',
+        },
+      ]);
+      const manifest = new Manifest(
+        github,
+        'main',
+        {
+          '.': {
+            releaseType: 'simple',
+          },
+        },
+        {
+          '.': Version.parse('3.2.6'),
+        }
+      );
+      mockCreateRelease(github, [{sha: 'abc123', tagName: 'v3.2.7'}]);
+      const commentStub = sandbox.stub(github, 'commentOnIssue').resolves();
+      const releases = await manifest.createReleases();
+      expect(releases).lengthOf(1);
+      expect(releases[0]!.tagName).to.eql('v3.2.7');
+      expect(releases[0]!.sha).to.eql('abc123');
+      expect(releases[0]!.notes).to.be.string;
+      sinon.assert.calledOnce(commentStub);
+    });
+  });
 });
