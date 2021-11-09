@@ -12,11 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {VersioningStrategy} from '../versioning-strategy';
+import {
+  VersioningStrategy,
+  MinorVersionUpdate,
+  VersionUpdater,
+  MajorVersionUpdate,
+  PatchVersionUpdate,
+  CustomVersionUpdate,
+} from '../versioning-strategy';
 import {ConventionalCommit} from '../commit';
 import {Version} from '../version';
-import {logger} from '../util/logger';
-import {ReleaseType} from 'semver';
 
 interface DefaultVersioningStrategyOptions {
   bumpMinorPreMajor?: boolean;
@@ -34,67 +39,44 @@ export class DefaultVersioningStrategy implements VersioningStrategy {
   determineReleaseType(
     version: Version,
     commits: ConventionalCommit[]
-  ): ReleaseType {
+  ): VersionUpdater {
     // iterate through list of commits and find biggest commit type
     let breaking = 0;
     let features = 0;
+    let customVersion: Version | undefined;
     for (const commit of commits) {
+      const releaseAs = commit.notes.find(note => note.title === 'RELEASE AS');
+      if (releaseAs) {
+        customVersion = Version.parse(releaseAs.text);
+      }
       if (commit.breaking) {
         breaking++;
       } else if (commit.type === 'feat' || commit.type === 'feature') {
         features++;
       }
     }
-    let releaseType: ReleaseType = 'patch';
-    if (breaking > 0) {
-      releaseType = 'major';
-    } else if (features > 0) {
-      releaseType = 'minor';
+
+    if (customVersion) {
+      return new CustomVersionUpdate(customVersion.toString());
     }
 
-    if (version.major < 1) {
-      if (this.bumpMinorPreMajor && releaseType === 'major') {
-        releaseType = 'minor';
-      } else if (this.bumpPatchForMinorPreMajor && releaseType === 'minor') {
-        releaseType = 'patch';
+    if (breaking > 0) {
+      if (version.major < 1 && this.bumpMinorPreMajor) {
+        return new MinorVersionUpdate();
+      } else {
+        return new MajorVersionUpdate();
+      }
+    } else if (features > 0) {
+      if (version.major < 1 && this.bumpPatchForMinorPreMajor) {
+        return new PatchVersionUpdate();
+      } else {
+        return new MinorVersionUpdate();
       }
     }
-    return releaseType;
-  }
-
-  doBump(version: Version, releaseType: ReleaseType): Version {
-    switch (releaseType) {
-      case 'major':
-        return new Version(
-          version.major + 1,
-          0,
-          0,
-          version.preRelease,
-          version.build
-        );
-      case 'minor':
-        return new Version(
-          version.major,
-          version.minor + 1,
-          0,
-          version.preRelease,
-          version.build
-        );
-      case 'patch':
-        return new Version(
-          version.major,
-          version.minor,
-          version.patch + 1,
-          version.preRelease,
-          version.build
-        );
-      default:
-        logger.warn(`Unhandled bump type: ${releaseType}`);
-    }
-    return version;
+    return new PatchVersionUpdate();
   }
 
   bump(version: Version, commits: ConventionalCommit[]): Version {
-    return this.doBump(version, this.determineReleaseType(version, commits));
+    return this.determineReleaseType(version, commits).bump(version);
   }
 }

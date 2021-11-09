@@ -14,13 +14,66 @@
 
 import {Version} from './version';
 import {ConventionalCommit} from './commit';
-import {ReleaseType} from 'semver';
+
+export interface VersionUpdater {
+  bump(version: Version): Version;
+  name: string;
+}
+
+export class MajorVersionUpdate implements VersionUpdater {
+  name = 'major';
+  bump(version: Version): Version {
+    return new Version(
+      version.major + 1,
+      0,
+      0,
+      version.preRelease,
+      version.build
+    );
+  }
+}
+
+export class MinorVersionUpdate implements VersionUpdater {
+  name = 'major';
+  bump(version: Version): Version {
+    return new Version(
+      version.major,
+      version.minor + 1,
+      0,
+      version.preRelease,
+      version.build
+    );
+  }
+}
+
+export class PatchVersionUpdate implements VersionUpdater {
+  name = 'major';
+  bump(version: Version): Version {
+    return new Version(
+      version.major,
+      version.minor,
+      version.patch + 1,
+      version.preRelease,
+      version.build
+    );
+  }
+}
+
+export class CustomVersionUpdate implements VersionUpdater {
+  name = 'custom';
+  private versionString: string;
+  constructor(versionString: string) {
+    this.versionString = versionString;
+  }
+  bump(_version: Version): Version {
+    return Version.parse(this.versionString);
+  }
+}
 
 export interface VersioningStrategy {
   bump(version: Version, commits: ConventionalCommit[]): Version;
-  doBump(version: Version, releaseType: ReleaseType): Version;
   determineReleaseType(
     version: Version,
     commits: ConventionalCommit[]
-  ): ReleaseType;
+  ): VersionUpdater;
 }

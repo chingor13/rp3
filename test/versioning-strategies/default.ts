@@ -56,14 +56,14 @@ describe('DefaultVersioningStrategy', () => {
       },
     ];
     it('can bump a major', async () => {
-      const strategy = new DefaultVersioningStrategy({});
+      const strategy = new DefaultVersioningStrategy();
       const oldVersion = Version.parse('1.2.3');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('2.0.0');
     });
 
     it('can bump a major on pre major for breaking change', async () => {
-      const strategy = new DefaultVersioningStrategy({});
+      const strategy = new DefaultVersioningStrategy();
       const oldVersion = Version.parse('0.1.2');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('1.0.0');
@@ -114,13 +114,13 @@ describe('DefaultVersioningStrategy', () => {
       },
     ];
     it('can bump a minor', async () => {
-      const strategy = new DefaultVersioningStrategy({});
+      const strategy = new DefaultVersioningStrategy();
       const oldVersion = Version.parse('1.2.3');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('1.3.0');
     });
     it('can bump a minor pre-major', async () => {
-      const strategy = new DefaultVersioningStrategy({});
+      const strategy = new DefaultVersioningStrategy();
       const oldVersion = Version.parse('0.1.2');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('0.2.0');
@@ -134,6 +134,7 @@ describe('DefaultVersioningStrategy', () => {
       expect(newVersion.toString()).to.equal('0.1.3');
     });
   });
+
   describe('with a fix', () => {
     const commits = [
       {
@@ -160,10 +161,54 @@ describe('DefaultVersioningStrategy', () => {
       },
     ];
     it('can bump a patch', async () => {
-      const strategy = new DefaultVersioningStrategy({});
+      const strategy = new DefaultVersioningStrategy();
       const oldVersion = Version.parse('1.2.3');
       const newVersion = await strategy.bump(oldVersion, commits);
       expect(newVersion.toString()).to.equal('1.2.4');
+    });
+  });
+
+  describe('with release-as', () => {
+    const commits = [
+      {
+        sha: 'sha1',
+        message: 'feat: some feature',
+        files: ['path1/file1.txt'],
+        type: 'feat',
+        scope: null,
+        bareMessage: 'some feature',
+        notes: [],
+        references: [],
+        breaking: false,
+      },
+      {
+        sha: 'sha2',
+        message: 'fix!: some bugfix',
+        files: ['path1/file1.rb'],
+        type: 'fix',
+        scope: null,
+        bareMessage: 'some bugfix',
+        notes: [{title: 'RELEASE AS', text: '3.1.2'}],
+        references: [],
+        breaking: true,
+      },
+      {
+        sha: 'sha3',
+        message: 'docs: some documentation',
+        files: ['path1/file1.java'],
+        type: 'docs',
+        scope: null,
+        bareMessage: 'some documentation',
+        notes: [],
+        references: [],
+        breaking: false,
+      },
+    ];
+    it('sets the version', async () => {
+      const strategy = new DefaultVersioningStrategy();
+      const oldVersion = Version.parse('1.2.3');
+      const newVersion = await strategy.bump(oldVersion, commits);
+      expect(newVersion.toString()).to.equal('3.1.2');
     });
   });
 });

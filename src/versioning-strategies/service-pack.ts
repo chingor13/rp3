@@ -13,21 +13,15 @@
 // limitations under the License.
 
 import {Version} from '../version';
-import {ReleaseType} from 'semver';
 import {DefaultVersioningStrategy} from './default';
 import {ConventionalCommit} from '../commit';
+import {VersionUpdater} from '../versioning-strategy';
 
 const SERVICE_PACK_PATTERN = /sp\.(\d+)/;
 
-export class ServicePackVersioningStrategy extends DefaultVersioningStrategy {
-  determineReleaseType(
-    _version: Version,
-    _commits: ConventionalCommit[]
-  ): ReleaseType {
-    return 'patch';
-  }
-
-  doBump(version: Version, _releaseType: ReleaseType): Version {
+class ServicePackVersionUpdate implements VersionUpdater {
+  name = 'service-pack';
+  bump(version: Version): Version {
     const match = version.preRelease?.match(SERVICE_PACK_PATTERN);
     if (match) {
       const spNumber = Number(match[1]);
@@ -46,5 +40,14 @@ export class ServicePackVersioningStrategy extends DefaultVersioningStrategy {
       'sp.1',
       version.build
     );
+  }
+}
+
+export class ServicePackVersioningStrategy extends DefaultVersioningStrategy {
+  determineReleaseType(
+    _version: Version,
+    _commits: ConventionalCommit[]
+  ): VersionUpdater {
+    return new ServicePackVersionUpdate();
   }
 }

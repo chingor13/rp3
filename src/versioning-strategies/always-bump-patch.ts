@@ -13,23 +13,15 @@
 // limitations under the License.
 
 import {Version} from '../version';
-import {ReleaseType} from 'semver';
 import {ConventionalCommit} from '../commit';
 import {DefaultVersioningStrategy} from './default';
+import {VersionUpdater, PatchVersionUpdate} from '../versioning-strategy';
 
 export class AlwaysBumpPatch extends DefaultVersioningStrategy {
   determineReleaseType(
     _version: Version,
     _commits: ConventionalCommit[]
-  ): ReleaseType {
-    return 'patch';
-  }
-
-  doBump(version: Version, _bumpType: ReleaseType): Version {
-    return super.doBump(version, 'patch');
-  }
-
-  bump(version: Version, _commits: ConventionalCommit[]): Version {
-    return this.doBump(version, 'patch');
+  ): VersionUpdater {
+    return new PatchVersionUpdate();
   }
 }

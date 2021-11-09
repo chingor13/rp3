@@ -12,25 +12,61 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {VersioningStrategy} from '../versioning-strategy';
+import {VersioningStrategy, VersionUpdater} from '../versioning-strategy';
 import {Version} from '../version';
 import {ConventionalCommit} from '../commit';
-import {ReleaseType} from 'semver';
 
 function isSnapshot(version: Version): boolean {
   return !!version.preRelease?.includes('SNAPSHOT');
 }
 
-function removeSnapshot(version: Version): Version {
-  return new Version(
-    version.major,
-    version.minor,
-    version.patch,
-    version.preRelease
-      ? version.preRelease.replace(/-?SNAPSHOT/, '')
-      : undefined,
-    version.build
-  );
+const fakeCommit: ConventionalCommit = {
+  message: 'fix: fake fix',
+  type: 'fix',
+  scope: null,
+  notes: [],
+  references: [],
+  bareMessage: 'fake fix',
+  breaking: false,
+  sha: 'abc123',
+  files: [],
+};
+
+class AddSnapshotVersionUpdate implements VersionUpdater {
+  strategy: VersioningStrategy;
+  name = 'java-snapshot';
+  constructor(strategy: VersioningStrategy) {
+    this.strategy = strategy;
+  }
+  bump(version: Version): Version {
+    const nextPatch = this.strategy.bump(version, [fakeCommit]);
+    nextPatch.preRelease = nextPatch.preRelease
+      ? `${nextPatch.preRelease}-SNAPSHOT`
+      : 'SNAPSHOT';
+    return nextPatch;
+  }
+}
+
+class RemoveSnapshotVersionUpdate implements VersionUpdater {
+  name = 'remove-snapshot';
+  parent?: VersionUpdater;
+  constructor(parent?: VersionUpdater) {
+    this.parent = parent;
+  }
+  bump(version: Version): Version {
+    if (this.parent) {
+      version = this.parent.bump(version);
+    }
+    return new Version(
+      version.major,
+      version.minor,
+      version.patch,
+      version.preRelease
+        ? version.preRelease.replace(/-?SNAPSHOT/, '')
+        : undefined,
+      version.build
+    );
+  }
 }
 
 export class JavaSnapshot implements VersioningStrategy {
@@ -42,29 +78,21 @@ export class JavaSnapshot implements VersioningStrategy {
   determineReleaseType(
     version: Version,
     commits: ConventionalCommit[]
-  ): ReleaseType {
-    return this.strategy.determineReleaseType(version, commits);
+  ): VersionUpdater {
+    if (!isSnapshot(version)) {
+      return new AddSnapshotVersionUpdate(this.strategy);
+    }
+    const parentBump = this.strategy.bump(version, commits);
+    const patchBump = this.strategy.bump(version, [fakeCommit]);
+    if (parentBump.toString() === patchBump.toString()) {
+      return new RemoveSnapshotVersionUpdate();
+    }
+    return new RemoveSnapshotVersionUpdate(
+      this.strategy.determineReleaseType(version, commits)
+    );
   }
 
   bump(version: Version, commits: ConventionalCommit[]): Version {
-    // If the previous version was not a snapshot, bump with a snapshot
-    if (!isSnapshot(version)) {
-      const nextPatch = this.strategy.doBump(version, 'patch');
-      nextPatch.preRelease = nextPatch.preRelease
-        ? `${nextPatch.preRelease}-SNAPSHOT`
-        : 'SNAPSHOT';
-      return nextPatch;
-    }
-
-    const releaseType = this.determineReleaseType(version, commits);
-    if (releaseType !== 'patch') {
-      version = this.doBump(version, releaseType);
-    }
-
-    return removeSnapshot(version);
-  }
-
-  doBump(version: Version, releaseType: ReleaseType): Version {
-    return this.strategy.doBump(version, releaseType);
+    return this.determineReleaseType(version, commits).bump(version);
   }
 }

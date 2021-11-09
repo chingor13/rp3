@@ -13,9 +13,15 @@
 // limitations under the License.
 
 import {Version} from '../version';
-import {ReleaseType} from 'semver';
+import * as semver from 'semver';
 import {ConventionalCommit} from '../commit';
 import {DefaultVersioningStrategy} from './default';
+import {
+  VersionUpdater,
+  MajorVersionUpdate,
+  MinorVersionUpdate,
+  PatchVersionUpdate,
+} from '../versioning-strategy';
 
 const DEPENDENCY_UPDATE_REGEX =
   /^deps: update dependency (.*) to (v.*)(\s\(#\d+\))?$/m;
@@ -25,29 +31,50 @@ export class DependencyManifest extends DefaultVersioningStrategy {
   determineReleaseType(
     version: Version,
     commits: ConventionalCommit[]
-  ): ReleaseType {
+  ): VersionUpdater {
+    const regularBump = super.determineReleaseType(version, commits);
+
     const dependencyUpdates = buildDependencyUpdates(commits);
-    const releaseTypes: ReleaseType[] = Object.values(dependencyUpdates).map(
-      version => {
-        if (version.patch === 0) {
-          if (version.minor === 0) {
-            return 'major';
-          }
-          return 'minor';
+    let breaking = 0;
+    let features = 0;
+    for (const dep in dependencyUpdates) {
+      const version = dependencyUpdates[dep];
+      if (version.patch === 0) {
+        if (version.minor === 0) {
+          breaking++;
+        } else {
+          features++;
         }
-        return 'patch';
-      }
-    );
-    releaseTypes.push(super.determineReleaseType(version, commits));
-    let releaseType = maxBumpType(releaseTypes);
-    if (version.major < 1) {
-      if (this.bumpMinorPreMajor && releaseType === 'major') {
-        releaseType = 'minor';
-      } else if (this.bumpPatchForMinorPreMajor && releaseType === 'minor') {
-        releaseType = 'patch';
       }
     }
-    return releaseType;
+
+    let dependencyBump: VersionUpdater;
+    if (breaking > 0) {
+      if (version.major < 1 && this.bumpMinorPreMajor) {
+        dependencyBump = new MinorVersionUpdate();
+      } else {
+        dependencyBump = new MajorVersionUpdate();
+      }
+    } else if (features > 0) {
+      if (version.major < 1 && this.bumpPatchForMinorPreMajor) {
+        dependencyBump = new PatchVersionUpdate();
+      } else {
+        dependencyBump = new MinorVersionUpdate();
+      }
+    } else {
+      dependencyBump = new PatchVersionUpdate();
+    }
+
+    if (
+      semver.lte(
+        dependencyBump.bump(version).toString(),
+        regularBump.bump(version).toString()
+      )
+    ) {
+      return regularBump;
+    } else {
+      return dependencyBump;
+    }
   }
 }
 
@@ -74,14 +101,4 @@ function buildDependencyUpdates(
     versionsMap[match[1]] = version;
   }
   return versionsMap;
-}
-
-function maxBumpType(bumpTypes: ReleaseType[]): ReleaseType {
-  if (bumpTypes.some(bumpType => bumpType === 'major')) {
-    return 'major';
-  }
-  if (bumpTypes.some(bumpType => bumpType === 'minor')) {
-    return 'minor';
-  }
-  return 'patch';
 }
