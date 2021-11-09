@@ -39,6 +39,7 @@ import {ServicePackVersioningStrategy} from './versioning-strategies/service-pac
 import {DependencyManifest} from './versioning-strategies/dependency-manifest';
 import {ManifestPlugin} from './plugin';
 import {NodeWorkspace} from './plugins/node-workspace';
+import {CargoWorkspace} from './plugins/cargo-workspace';
 
 // Factory shared by GitHub Action and CLI for creating Release PRs
 // and GitHub Releases:
@@ -197,20 +198,29 @@ interface PluginFactoryOptions {
   github: GitHub;
   targetBranch: string;
   repositoryConfig: RepositoryConfig;
+
+  // node options
+  alwaysLinkLocal?: boolean;
+
+  // workspace options
+  updateAllPackages?: boolean;
 }
+
 export function buildPlugin(options: PluginFactoryOptions): ManifestPlugin {
   switch (options.type) {
     case 'cargo-workspace':
-      return new NodeWorkspace(
+      return new CargoWorkspace(
         options.github,
         options.targetBranch,
-        options.repositoryConfig
+        options.repositoryConfig,
+        options
       );
     case 'node-workspace':
       return new NodeWorkspace(
         options.github,
         options.targetBranch,
-        options.repositoryConfig
+        options.repositoryConfig,
+        options
       );
     default:
       throw new Error(`Unknown plugin type: ${options.type}`);
