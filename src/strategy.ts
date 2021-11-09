@@ -49,6 +49,7 @@ export interface StrategyOptions {
   bumpPatchForMinorPreMajor?: boolean;
   github: GitHub;
   component?: string;
+  packageName?: string;
   versioningStrategy?: VersioningStrategy;
   targetBranch: string;
   changelogPath?: string;
@@ -66,7 +67,8 @@ export abstract class Strategy {
   path: string;
   labels: string[];
   github: GitHub;
-  component: string | undefined;
+  component?: string;
+  packageName?: string;
   versioningStrategy: VersioningStrategy;
   targetBranch: string;
   repository: Repository;
@@ -83,6 +85,7 @@ export abstract class Strategy {
     this.labels = options.labels || DEFAULT_LABELS;
     this.github = options.github;
     this.component = options.component;
+    this.packageName = options.packageName;
     this.versioningStrategy =
       options.versioningStrategy || new DefaultVersioningStrategy({});
     this.targetBranch = options.targetBranch;
@@ -99,15 +102,16 @@ export abstract class Strategy {
   ): Promise<Update[]>;
 
   async getDefaultComponent(): Promise<string | undefined> {
+    return this.normalizeComponent(await this.getDefaultPackageName());
+  }
+
+  async getDefaultPackageName(): Promise<string | undefined> {
     return '';
   }
 
   protected normalizeComponent(
     component: string | undefined
   ): string | undefined {
-    if (!component) {
-      return undefined;
-    }
     return component;
   }
 
@@ -166,7 +170,7 @@ export abstract class Strategy {
       versionsMap.set(versionKey, newVersion);
     }
     const component = this.component || (await this.getDefaultComponent());
-    logger.debug(`component: ${component}`);
+    logger.debug('component:', component);
 
     const newVersionTag = new TagName(newVersion, component);
     const pullRequestTitle = PullRequestTitle.ofComponentTargetBranchVersion(

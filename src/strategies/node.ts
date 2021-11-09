@@ -72,11 +72,10 @@ export class Node extends Strategy {
     return updates;
   }
 
-  async getDefaultComponent(): Promise<string | undefined> {
+  async getDefaultPackageName(): Promise<string | undefined> {
     const pkgJsonContents = await this.getPkgJsonContents();
     const pkg = JSON.parse(pkgJsonContents.parsedContent);
-    const name = pkg.name;
-    return this.normalizeComponent(name);
+    return pkg.name;
   }
 
   protected normalizeComponent(

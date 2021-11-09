@@ -84,7 +84,9 @@ export class CargoWorkspace extends WorkspacePlugin<CrateInfo> {
       updateAllPackages: true,
     });
   }
-  protected async buildAllPackages(candidates: CandidateReleasePullRequest[]): Promise<{
+  protected async buildAllPackages(
+    candidates: CandidateReleasePullRequest[]
+  ): Promise<{
     allPackages: CrateInfo[];
     candidatesByPackage: Record<string, CandidateReleasePullRequest>;
   }> {

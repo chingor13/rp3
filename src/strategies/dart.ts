@@ -52,7 +52,7 @@ export class Dart extends Strategy {
     return updates;
   }
 
-  async getDefaultComponent(): Promise<string | undefined> {
+  async getDefaultPackageName(): Promise<string | undefined> {
     const pubspecYmlContents = await this.getPubspecYmlContents();
     const pubspec = yaml.load(pubspecYmlContents.parsedContent, {json: true});
     if (typeof pubspec === 'object') {

@@ -51,7 +51,7 @@ export class Helm extends Strategy {
     return updates;
   }
 
-  async getDefaultComponent(): Promise<string | undefined> {
+  async getDefaultPackageName(): Promise<string | undefined> {
     const chartYmlContents = await this.getChartYmlContents();
     const chart = yaml.load(chartYmlContents.parsedContent, {json: true});
     if (typeof chart === 'object') {

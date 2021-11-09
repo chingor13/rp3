@@ -98,7 +98,7 @@ export class Rust extends Strategy {
     return Version.parse('0.1.0');
   }
 
-  async getDefaultComponent(): Promise<string | undefined> {
+  async getDefaultPackageName(): Promise<string | undefined> {
     const packageManifest = await this.getPackageManifest();
     if (packageManifest) {
       return packageManifest.package?.name;

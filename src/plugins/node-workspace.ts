@@ -67,7 +67,9 @@ export class NodeWorkspace extends WorkspacePlugin<Package> {
     super(github, targetBranch, repositoryConfig, options);
     this.alwaysLinkLocal = options.alwaysLinkLocal === false ? false : true;
   }
-  protected async buildAllPackages(candidates: CandidateReleasePullRequest[]): Promise<{
+  protected async buildAllPackages(
+    candidates: CandidateReleasePullRequest[]
+  ): Promise<{
     allPackages: Package[];
     candidatesByPackage: Record<string, CandidateReleasePullRequest>;
   }> {
@@ -258,7 +260,9 @@ export class NodeWorkspace extends WorkspacePlugin<Package> {
     };
   }
 
-  protected async buildGraph(allPackages: Package[]): Promise<DependencyGraph<Package>> {
+  protected async buildGraph(
+    allPackages: Package[]
+  ): Promise<DependencyGraph<Package>> {
     const graph = new Map<string, DependencyNode<Package>>();
     const workspacePackageNames = new Set(
       allPackages.map(packageJson => packageJson.name)

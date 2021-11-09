@@ -218,9 +218,7 @@ export class Manifest {
       const path = pathsByComponent[component];
       const expectedVersion = this.releasedVersions[path];
       if (!expectedVersion) {
-        logger.warn(
-          `Unable to find package '${tagName.component}' in manifest`
-        );
+        logger.warn(`Unable to find component '${component}' in manifest`);
         continue;
       }
       if (expectedVersion.toString() === tagName.version.toString()) {
