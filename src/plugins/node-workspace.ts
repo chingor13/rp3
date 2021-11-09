@@ -25,7 +25,12 @@ import {ReleasePullRequest} from '../release-pull-request';
 import {BranchName} from '../util/branch-name';
 import {jsonStringify} from '../util/json-stringify';
 import {Changelog} from '../updaters/changelog';
-import {WorkspacePlugin, DependencyGraph, DependencyNode} from './workspace';
+import {
+  WorkspacePlugin,
+  DependencyGraph,
+  DependencyNode,
+  WorkspacePluginOptions,
+} from './workspace';
 
 class Package extends LernaPackage {
   constructor(
@@ -41,7 +46,7 @@ class Package extends LernaPackage {
   }
 }
 
-interface NodeWorkspaceOptions {
+interface NodeWorkspaceOptions extends WorkspacePluginOptions {
   alwaysLinkLocal?: boolean;
 }
 
@@ -55,7 +60,7 @@ export class NodeWorkspace extends WorkspacePlugin<Package> {
     repositoryConfig: RepositoryConfig,
     options: NodeWorkspaceOptions = {}
   ) {
-    super(github, targetBranch, repositoryConfig);
+    super(github, targetBranch, repositoryConfig, options);
     this.alwaysLinkLocal = options.alwaysLinkLocal === false ? false : true;
   }
   async buildAllPackages(candidates: CandidateReleasePullRequest[]): Promise<{
@@ -159,7 +164,6 @@ export class NodeWorkspace extends WorkspacePlugin<Package> {
             jsonStringify(updatedPackage.toJSON(), updatedPackage.rawContent)
           );
         } else if (update.updater instanceof Changelog) {
-          // TODO: update changelog entry
           update.updater.changelogEntry = appendDependenciesSectionToChangelog(
             update.updater.changelogEntry,
             dependencyNotes

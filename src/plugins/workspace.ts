@@ -13,10 +13,11 @@
 // limitations under the License.
 
 import {ManifestPlugin} from '../plugin';
-import {CandidateReleasePullRequest} from '../manifest';
+import {CandidateReleasePullRequest, RepositoryConfig} from '../manifest';
 import {logger} from '../util/logger';
 import {VersionsMap, Version} from '../version';
 import {Merge} from './merge';
+import {GitHub} from '../github';
 
 export type DependencyGraph<T> = Map<string, DependencyNode<T>>;
 export interface DependencyNode<T> {
@@ -24,8 +25,21 @@ export interface DependencyNode<T> {
   value: T;
 }
 
+export interface WorkspacePluginOptions {
+  updateAllPackages?: boolean;
+}
+
 export abstract class WorkspacePlugin<T> extends ManifestPlugin {
-  private updateAllPackages = false;
+  private updateAllPackages: boolean;
+  constructor(
+    github: GitHub,
+    targetBranch: string,
+    repositoryConfig: RepositoryConfig,
+    options: WorkspacePluginOptions = {}
+  ) {
+    super(github, targetBranch, repositoryConfig);
+    this.updateAllPackages = options.updateAllPackages ?? false;
+  }
   async run(
     candidates: CandidateReleasePullRequest[]
   ): Promise<CandidateReleasePullRequest[]> {
