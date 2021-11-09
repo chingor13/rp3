@@ -1,3 +1,7 @@
+exports['GitHub commentOnIssue can create a comment 1'] = {
+  "body": "This is a comment"
+}
+
 exports['GitHub commitsSince finds commits up until a condition 1'] = [
   {
     "sha": "e6daec403626c9987c7af0d97b34f324cd84320a",

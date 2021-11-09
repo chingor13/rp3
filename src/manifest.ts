@@ -59,6 +59,10 @@ export interface CandidateReleasePullRequest {
   config: ReleaserConfig;
 }
 
+interface CandidateRelease extends Release {
+  pullRequest: PullRequest;
+}
+
 interface ReleaserConfigJson {
   'release-type'?: ReleaseType;
   'bump-minor-pre-major'?: boolean;
@@ -349,7 +353,7 @@ export class Manifest {
     );
   }
 
-  async buildReleases(): Promise<Release[]> {
+  async buildReleases(): Promise<CandidateRelease[]> {
     logger.info('Building releases');
     const strategiesByPath = await this.getStrategiesByPath();
 
@@ -359,7 +363,7 @@ export class Manifest {
       500
     );
 
-    const releases: Release[] = [];
+    const releases: CandidateRelease[] = [];
     for await (const pullRequest of pullRequestGenerator) {
       logger.info(
         `Found pull request #${pullRequest.number}: '${pullRequest.title}'`
@@ -398,7 +402,10 @@ export class Manifest {
         const strategy = strategiesByPath[path];
         const release = await strategy.buildRelease(pullRequest);
         if (release) {
-          releases.push(release);
+          releases.push({
+            ...release,
+            pullRequest,
+          });
         }
       }
     }
@@ -409,9 +416,22 @@ export class Manifest {
   async createReleases(): Promise<(GitHubRelease | undefined)[]> {
     const promises: Promise<GitHubRelease | undefined>[] = [];
     for (const release of await this.buildReleases()) {
-      promises.push(this.github.createRelease(release));
+      promises.push(this.createRelease(release));
     }
     return await Promise.all(promises);
+  }
+
+  private async createRelease(
+    release: CandidateRelease
+  ): Promise<GitHubRelease> {
+    // create the release
+    const githubRelease = await this.github.createRelease(release);
+
+    // comment on pull request
+    const comment = `:robot: Release is at ${githubRelease.url} :sunflower:`;
+    await this.github.commentOnIssue(comment, release.pullRequest.number);
+
+    return githubRelease;
   }
 
   private async getStrategiesByPath(): Promise<Record<string, Strategy>> {

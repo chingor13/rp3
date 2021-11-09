@@ -116,6 +116,7 @@ export interface GitHubRelease {
   tagName: string;
   sha: string;
   notes?: string;
+  url: string;
 }
 
 export class GitHub {
@@ -547,6 +548,7 @@ export class GitHub {
           tagName: release.tag_name,
           sha: release.target_commitish,
           notes: release.body_text,
+          url: release.html_url,
         };
       });
     }
@@ -964,6 +966,7 @@ export class GitHub {
         tagName: resp.data.tag_name,
         sha: resp.data.target_commitish,
         notes: resp.data.body_text,
+        url: resp.data.html_url,
       };
     },
     e => {
@@ -977,6 +980,28 @@ export class GitHub {
           throw new DuplicateReleaseError(e, 'tagName');
         }
       }
+    }
+  );
+
+  /**
+   * Makes a comment on a issue/pull request.
+   *
+   * @param {string} comment - The body of the comment to post.
+   * @param {number} number - The issue or pull request number.
+   * @throws {GitHubAPIError} on an API error
+   */
+  commentOnIssue = wrapAsync(
+    async (comment: string, number: number): Promise<string> => {
+      logger.info(
+        `adding comment to https://github.com/${this.repository.owner}/${this.repository.repo}/issue/${number}`
+      );
+      const resp = await this.octokit.issues.createComment({
+        owner: this.repository.owner,
+        repo: this.repository.repo,
+        issue_number: number,
+        body: comment,
+      });
+      return resp.data.html_url;
     }
   );
 }
