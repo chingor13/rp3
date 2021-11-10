@@ -45,10 +45,8 @@ export class JavaYoshi extends Strategy {
   versionsContent?: GitHubFileContents;
 
   constructor(options: JavaStrategyOptions) {
-    super({
-      changelogSections: CHANGELOG_SECTIONS,
-      ...options,
-    });
+    options.changelogSections = options.changelogSections ?? CHANGELOG_SECTIONS;
+    super(options);
     // wrap the configured versioning strategy with snapshotting
     this.versioningStrategy = new JavaSnapshot(this.versioningStrategy);
     this.extraFiles = options.extraFiles || [];

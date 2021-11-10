@@ -38,10 +38,8 @@ const REGEN_ISSUE_REGEX = /(?<prefix>.*)\(#(?<pr>.*)\)(\n|$)/;
 
 export class GoYoshi extends Strategy {
   constructor(options: StrategyOptions) {
-    super({
-      changelogPath: 'CHANGES.md',
-      ...options,
-    });
+    options.changelogPath = options.changelogPath ?? 'CHANGES.md';
+    super(options);
   }
   protected async buildUpdates(
     options: BuildUpdatesOptions

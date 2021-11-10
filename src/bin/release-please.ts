@@ -242,8 +242,7 @@ function pullRequestOptions(yargs: yargs.Argv): yargs.Argv {
       type: 'string',
     })
     .option('draft', {
-      describe:
-        'mark pull request as a draft',
+      describe: 'mark pull request as a draft',
       type: 'boolean',
       default: false,
     })
