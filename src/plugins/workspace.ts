@@ -29,6 +29,22 @@ export interface WorkspacePluginOptions {
   updateAllPackages?: boolean;
 }
 
+interface AllPackages<T> {
+  allPackages: T[];
+  candidatesByPackage: Record<string, CandidateReleasePullRequest>;
+}
+
+/**
+ * The plugin generalizes the logic for handling a workspace and
+ * will bump dependencies of managed packages if those dependencies
+ * are being updated.
+ *
+ * If multiple in-scope packages are being updated, it will merge them
+ * into a single package.
+ *
+ * This class is templatized with `T` which should be information about
+ * the package including the name and current version.
+ */
 export abstract class WorkspacePlugin<T> extends ManifestPlugin {
   private updateAllPackages: boolean;
   constructor(
@@ -125,33 +141,82 @@ export abstract class WorkspacePlugin<T> extends ManifestPlugin {
     return [...outOfScopeCandidates, ...newCandidates];
   }
 
+  /**
+   * Given a package, return the new bumped version after updating
+   * the dependency.
+   * @param {T} pkg The package being updated
+   */
   protected abstract bumpVersion(pkg: T): Version;
+
+  /**
+   * Update an existing candidate pull request to append new
+   * dependency updates into the versions and changelog.
+   * @param {CandidateReleasePullRequest} existingCandidate The existing
+   *   candidate pull request.
+   * @param {T} pkg The package being updated
+   * @param {VersionsMap} updatedVersions Map of package name => version to
+   *   update.
+   * @returns {CandidateReleasePullRequest} The updated pull request
+   */
   protected abstract updateCandidate(
     existingCandidate: CandidateReleasePullRequest,
     pkg: T,
     updatedVersions: VersionsMap
   ): CandidateReleasePullRequest;
+
+  /**
+   * Create a new candidate pull request to update dependencies and force
+   * a version bump.
+   * @param {T} pkg The package being updated
+   * @param {VersionsMap} updatedVersions Map of package name => version to
+   *   update.
+   * @returns {CandidateReleasePullRequest} A new pull request
+   */
   protected abstract newCandidate(
     pkg: T,
     updatedVersions: VersionsMap
   ): CandidateReleasePullRequest;
 
+  /**
+   * Collect all packages being managed in this workspace.
+   * @param {CanididateReleasePullRequest[]} candidates Existing candidate pull
+   *   requests
+   * @returns {AllPackages<T>} The list of packages and candidates grouped by package name
+   */
   protected abstract buildAllPackages(
     candidates: CandidateReleasePullRequest[]
-  ): Promise<{
-    allPackages: T[];
-    candidatesByPackage: Record<string, CandidateReleasePullRequest>;
-  }>;
+  ): Promise<AllPackages<T>>;
 
   /**
    * Builds a graph of dependencies that have been touched
+   * @param {T[]} allPackages All the packages in the workspace
+   * @returns {DependencyGraph<T>} A map of package name to other workspace packages
+   *   it depends on.
    */
   protected abstract buildGraph(allPackages: T[]): Promise<DependencyGraph<T>>;
 
+  /**
+   * Filter to determine whether or not the candidate pull request is
+   * in scope of this workspace.
+   * @param {CandidateReleasePullRequest} candidate The candidate pull request
+   * @returns {boolean} Whether or not this candidate should be handled by this
+   *   workspace.
+   */
   protected abstract inScope(candidate: CandidateReleasePullRequest): boolean;
 
+  /**
+   * Given a package, return the package name of the package.
+   * @param {T} pkg The package definition.
+   * @returns {string} The package name.
+   */
   protected abstract packageNameFromPackage(pkg: T): string;
 
+  /**
+   * Helper to invert the graph from package => packages that it depends on
+   * to package => packages that depend on it.
+   * @param {DependencyGraph<T>} graph
+   * @returns {DependencyGraph<T>}
+   */
   private invertGraph(graph: DependencyGraph<T>): DependencyGraph<T> {
     const dependentGraph: DependencyGraph<T> = new Map();
     for (const [packageName, node] of graph) {
@@ -172,6 +237,12 @@ export abstract class WorkspacePlugin<T> extends ManifestPlugin {
     return dependentGraph;
   }
 
+  /**
+   * Determine all the packages which need to be updated and sort them.
+   * @param {DependencyGraph<T>} graph The graph of package => packages it depends on
+   * @param {string} packageNamesToUpdate Names of the packages which are already
+   *   being updated.
+   */
   protected buildGraphOrder(
     graph: DependencyGraph<T>,
     packageNamesToUpdate: string[]

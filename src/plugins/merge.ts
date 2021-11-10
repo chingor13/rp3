@@ -24,7 +24,12 @@ import {BranchName} from '../util/branch-name';
 import {Update} from '../update';
 import {CompositeUpdater} from '../updaters/composite';
 
-// Merge pull requests into a single
+/**
+ * This plugin merges multiple pull requests into a single
+ * release pull request.
+ *
+ * Release notes are broken up using `<summary>`/`<details>` blocks.
+ */
 export class Merge extends ManifestPlugin {
   async run(
     candidates: CandidateReleasePullRequest[]

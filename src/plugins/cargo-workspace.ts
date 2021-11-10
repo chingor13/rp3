@@ -72,6 +72,13 @@ interface CrateInfo {
   manifest: CargoManifest;
 }
 
+/**
+ * The plugin analyzed a cargo workspace and will bump dependencies
+ * of managed packages if those dependencies are being updated.
+ *
+ * If multiple rust packages are being updated, it will merge them
+ * into a single rust package.
+ */
 export class CargoWorkspace extends WorkspacePlugin<CrateInfo> {
   constructor(
     github: GitHub,

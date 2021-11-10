@@ -54,7 +54,13 @@ interface NodeWorkspaceOptions extends WorkspacePluginOptions {
   alwaysLinkLocal?: boolean;
 }
 
-// Merge Node.js pull requests and use lerna to update cross package dependencies
+/**
+ * The plugin analyzed a cargo workspace and will bump dependencies
+ * of managed packages if those dependencies are being updated.
+ *
+ * If multiple node packages are being updated, it will merge them
+ * into a single node package.
+ */
 export class NodeWorkspace extends WorkspacePlugin<Package> {
   alwaysLinkLocal: boolean;
   private packageGraph?: PackageGraph;

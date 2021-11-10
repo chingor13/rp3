@@ -15,6 +15,12 @@
 import {GitHub} from './github';
 import {CandidateReleasePullRequest, RepositoryConfig} from './manifest';
 
+/**
+ * A plugin runs after a repository manifest has built candidate
+ * pull requests and can make updates that span across multiple
+ * components. A plugin *might* choose to merge pull requests or add
+ * or update existing files.
+ */
 export abstract class ManifestPlugin {
   github: GitHub;
   targetBranch: string;
@@ -29,6 +35,11 @@ export abstract class ManifestPlugin {
     this.repositoryConfig = repositoryConfig;
   }
 
+  /**
+   * Post-process candidate pull requests.
+   * @param {CandidateReleasePullRequest[]} pullRequests Candidate pull requests
+   * @returns {CandidateReleasePullRequest[]} Updated pull requests
+   */
   abstract run(
     pullRequests: CandidateReleasePullRequest[]
   ): Promise<CandidateReleasePullRequest[]>;
