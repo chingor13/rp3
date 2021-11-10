@@ -85,6 +85,8 @@ interface ManifestOptions {
   alwaysLinkLocal?: boolean;
   separatePullRequests?: boolean;
   plugins?: PluginType[];
+  fork?: boolean;
+  signoff?: string;
 }
 
 interface ReleaserPackageConfig extends ReleaserConfigJson {
@@ -121,6 +123,8 @@ export class Manifest {
   releasedVersions: ReleasedVersions;
   targetBranch: string;
   separatePullRequests: boolean;
+  fork: boolean;
+  signoffUser?: string;
   private plugins: PluginType[];
   private _strategiesByPath?: Record<string, Strategy>;
   private _pathsByComponent?: Record<string, string>;
@@ -139,6 +143,8 @@ export class Manifest {
     this.releasedVersions = releasedVersions;
     this.separatePullRequests = manifestOptions?.separatePullRequests || false;
     this.plugins = manifestOptions?.plugins || [];
+    this.fork = manifestOptions?.fork || false;
+    this.signoffUser = manifestOptions?.signoff;
   }
 
   static async fromManifest(
@@ -188,7 +194,12 @@ export class Manifest {
   async createPullRequests(): Promise<(number | undefined)[]> {
     const promises: Promise<number | undefined>[] = [];
     for (const pullRequest of await this.buildPullRequests()) {
-      promises.push(this.github.openPR(pullRequest, this.targetBranch));
+      promises.push(
+        this.github.openPR(pullRequest, this.targetBranch, {
+          fork: this.fork,
+          signoffUser: this.signoffUser,
+        })
+      );
     }
     return await Promise.all(promises);
   }

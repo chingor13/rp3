@@ -33,6 +33,7 @@ import {ReleasePullRequest} from './release-pull-request';
 import {Update} from './update';
 import {Release} from './release';
 import {ROOT_PROJECT_PATH} from './manifest';
+import {signoffCommitMessage} from './util/signoff-commit-message';
 
 // Extract some types from the `request` package.
 type RequestBuilderType = typeof request;
@@ -754,7 +755,11 @@ export class GitHub {
   openPR = wrapAsync(
     async (
       releasePullRequest: ReleasePullRequest,
-      targetBranch: string
+      targetBranch: string,
+      options?: {
+        signoffUser?: string;
+        fork?: boolean;
+      }
     ): Promise<number | undefined> => {
       // check if there's an existing PR, so that we can opt to update it
       // rather than creating a new PR.
@@ -781,6 +786,10 @@ export class GitHub {
         releasePullRequest.updates,
         targetBranch
       );
+      let message = releasePullRequest.title.toString();
+      if (options?.signoffUser) {
+        message = signoffCommitMessage(message, options.signoffUser);
+      }
       const prNumber = await createPullRequest(this.octokit, changes, {
         upstreamOwner: this.repository.owner,
         upstreamRepo: this.repository.repo,
@@ -791,8 +800,8 @@ export class GitHub {
           .slice(0, MAX_ISSUE_BODY_SIZE),
         primary: targetBranch,
         force: true,
-        fork: true, // FIXME
-        message: releasePullRequest.title.toString(),
+        fork: options?.fork === false ? false : true,
+        message,
         logger: logger,
         draft: releasePullRequest.draft,
       });
