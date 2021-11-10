@@ -61,6 +61,7 @@ export class Merge extends ManifestPlugin {
             : new CompositeUpdater(...updaters),
       });
     }
+
     const pullRequest = {
       title: PullRequestTitle.ofTargetBranch(
         this.targetBranch,
@@ -70,7 +71,7 @@ export class Merge extends ManifestPlugin {
       updates,
       labels: Array.from(labels),
       headRefName: BranchName.ofTargetBranch(this.targetBranch).toString(),
-      draft: false,
+      draft: !candidates.some(candidate => !candidate.pullRequest.draft),
     };
 
     const releaseTypes = new Set(

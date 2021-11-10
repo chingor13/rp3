@@ -95,5 +95,55 @@ describe('Merge plugin', () => {
       assertHasUpdate(updates, 'path2/foo', RawContent);
       snapshot(dateSafe(candidate!.pullRequest.body.toString()));
     });
+
+    it('merges multiple pull requests as a draft', async () => {
+      const candidates: CandidateReleasePullRequest[] = [
+        buildMockCandidatePullRequest(
+          'python',
+          'python',
+          '1.0.0',
+          'python-pkg',
+          [
+            {
+              path: 'path1/foo',
+              createIfMissing: false,
+              updater: new RawContent('foo'),
+            },
+          ],
+          'python notes',
+          true
+        ),
+        buildMockCandidatePullRequest(
+          'node',
+          'node',
+          '3.3.4',
+          '@here/pkgA',
+          [
+            {
+              path: 'path1/foo',
+              createIfMissing: false,
+              updater: new RawContent('bar'),
+            },
+            {
+              path: 'path2/foo',
+              createIfMissing: false,
+              updater: new RawContent('asdf'),
+            },
+          ],
+          'some notes',
+          true
+        ),
+      ];
+      const plugin = new Merge(github, 'main', {});
+      const newCandidates = await plugin.run(candidates);
+      expect(newCandidates).lengthOf(1);
+      const candidate = newCandidates[0];
+      const updates = candidate!.pullRequest.updates;
+      expect(updates).lengthOf(2);
+      assertHasUpdate(updates, 'path1/foo', CompositeUpdater);
+      assertHasUpdate(updates, 'path2/foo', RawContent);
+      snapshot(dateSafe(candidate!.pullRequest.body.toString()));
+      expect(candidate.pullRequest.draft).to.be.true;
+    });
   });
 });
