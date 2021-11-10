@@ -220,7 +220,7 @@ export class Manifest {
     const expectedReleases = Object.keys(this.releasedVersions).length;
 
     // SHAs by path
-    const shasByPath: Record<string, string> = {};
+    const releaseShasByPath: Record<string, string> = {};
 
     // Releases by path
     const releasesByPath: Record<string, Release> = {};
@@ -238,7 +238,7 @@ export class Manifest {
         continue;
       }
       if (expectedVersion.toString() === tagName.version.toString()) {
-        shasByPath[path] = release.sha;
+        releaseShasByPath[path] = release.sha;
         releasesByPath[path] = {
           tag: tagName,
           sha: release.sha,
@@ -266,19 +266,14 @@ export class Manifest {
       this.targetBranch,
       500
     );
-    const shas = new Set(Object.values(shasByPath));
-    const expectedShas = shas.size;
+    const releaseShas = new Set(Object.values(releaseShasByPath));
+    const expectedShas = releaseShas.size;
 
     // sha => release pull request
     const releasePullRequestsBySha: Record<string, PullRequest> = {};
     let commitsFound = 0;
     for await (const commit of commitGenerator) {
-      commits.push({
-        sha: commit.sha,
-        message: commit.message,
-        files: commit.files,
-      });
-      if (shas.has(commit.sha)) {
+      if (releaseShas.has(commit.sha)) {
         if (commit.pullRequest) {
           releasePullRequestsBySha[commit.sha] = commit.pullRequest;
         } else {
@@ -291,6 +286,11 @@ export class Manifest {
       if (commitsFound >= expectedShas) {
         break;
       }
+      commits.push({
+        sha: commit.sha,
+        message: commit.message,
+        files: commit.files,
+      });
     }
 
     if (commitsFound < expectedShas) {
@@ -311,8 +311,8 @@ export class Manifest {
     for (const path in this.repositoryConfig) {
       const config = this.repositoryConfig[path];
       logger.info(`Building candidate release pull request for path: ${path}`);
-      logger.info(`type: ${config.releaseType}`);
-      logger.info(`targetBranch: ${this.targetBranch}`);
+      logger.debug(`type: ${config.releaseType}`);
+      logger.debug(`targetBranch: ${this.targetBranch}`);
       const pathCommits =
         path === ROOT_PROJECT_PATH ? commits : commitsPerPath[path];
       if (!pathCommits || pathCommits.length === 0) {
@@ -320,7 +320,7 @@ export class Manifest {
         continue;
       }
       const latestReleasePullRequest =
-        releasePullRequestsBySha[shasByPath[path]];
+        releasePullRequestsBySha[releaseShasByPath[path]];
       if (!latestReleasePullRequest) {
         logger.warn('No latest release pull request found.');
       }

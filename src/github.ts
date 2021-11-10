@@ -259,12 +259,13 @@ export class GitHub {
     }
   }
 
-  // TODO: fetch files touched by merge commits
   private async mergeCommitsGraphQL(
     targetBranch: string,
     cursor?: string
   ): Promise<CommitHistory | null> {
-    logger.info(`Fetching merge commits on branch ${targetBranch}`);
+    logger.debug(
+      `Fetching merge commits on branch ${targetBranch} with cursor: ${cursor}`
+    );
     const response = await this.graphqlRequest({
       query: `query pullRequestsSince($owner: String!, $repo: String!, $num: Int!, $maxFilesChanged: Int, $targetBranch: String!, $cursor: String) {
         repository(owner: $owner, name: $repo) {
@@ -433,7 +434,9 @@ export class GitHub {
     targetBranch: string,
     cursor?: string
   ): Promise<PullRequestHistory | null> {
-    logger.info(`Fetching merged pull requests on branch ${targetBranch}`);
+    logger.debug(
+      `Fetching merged pull requests on branch ${targetBranch} with cursor ${cursor}`
+    );
     const response = await this.graphqlRequest({
       query: `query mergedPullRequests($owner: String!, $repo: String!, $num: Int!, $maxFilesChanged: Int, $targetBranch: String!, $cursor: String) {
           repository(owner: $owner, name: $repo) {
@@ -536,7 +539,7 @@ export class GitHub {
    */
   private listReleases = wrapAsync(
     async (page = 1, perPage = 100): Promise<GitHubRelease[]> => {
-      logger.info(`Fetching releases page ${page}`);
+      logger.debug(`Fetching releases page ${page}`);
       const releases = await this.octokit.repos.listReleases({
         owner: this.repository.owner,
         repo: this.repository.repo,
@@ -656,7 +659,7 @@ export class GitHub {
     path: string,
     branch: string
   ): Promise<GitHubFileContents> {
-    logger.info(`Fetching ${path} from branch ${branch}`);
+    logger.debug(`Fetching ${path} from branch ${branch}`);
     try {
       return await this.getFileContentsWithSimpleAPI(path, branch);
     } catch (err) {
@@ -714,7 +717,7 @@ export class GitHub {
       if (prefix) {
         prefix = normalizePrefix(prefix);
       }
-      logger.info(
+      logger.debug(
         `finding files by filename and ref: ${filename}/${ref}/${prefix}`
       );
       const response = await this.octokit.git.getTree({
@@ -1003,7 +1006,7 @@ export class GitHub {
    */
   commentOnIssue = wrapAsync(
     async (comment: string, number: number): Promise<string> => {
-      logger.info(
+      logger.debug(
         `adding comment to https://github.com/${this.repository.owner}/${this.repository.repo}/issue/${number}`
       );
       const resp = await this.octokit.issues.createComment({

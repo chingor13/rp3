@@ -24,6 +24,5 @@ export interface ReleasePullRequest {
   labels: string[];
   headRefName: string;
   version?: Version;
-  packageName?: string;
   draft: boolean;
 }

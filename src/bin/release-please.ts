@@ -22,6 +22,7 @@ import {Manifest} from '../manifest';
 import {ChangelogSection} from '../release-notes';
 import {logger} from '../util/logger';
 import {getReleaserTypes, ReleaseType} from '../factory';
+import * as util from 'util';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const parseGithubRepoUrl = require('parse-github-repo-url');
@@ -77,6 +78,7 @@ interface ReleaseArgs {
 }
 
 interface PullRequestArgs {
+  draft?: boolean;
   label?: string;
   snapshot?: boolean;
   monorepoTags?: boolean;
@@ -239,6 +241,12 @@ function pullRequestOptions(yargs: yargs.Argv): yargs.Argv {
       describe: 'Override the detected latest tag name',
       type: 'string',
     })
+    .option('draft', {
+      describe:
+        'mark pull request as a draft',
+      type: 'boolean',
+      default: false,
+    })
     .middleware(_argv => {
       const argv = _argv as CreatePullRequestArgs;
 
@@ -311,10 +319,21 @@ const createReleasePullRequestCommand: yargs.CommandModule<
     const targetBranch = argv.targetBranch || github.repository.defaultBranch;
     let manifest: Manifest;
     if (argv.releaseType) {
-      manifest = await Manifest.fromConfig(github, targetBranch, {
-        releaseType: argv.releaseType,
-        component: argv.component || '',
-      });
+      manifest = await Manifest.fromConfig(
+        github,
+        targetBranch,
+        {
+          releaseType: argv.releaseType,
+          component: argv.component,
+          draft: argv.draft,
+          bumpMinorPreMajor: argv.bumpMinorPreMajor,
+          bumpPatchForMinorPreMajor: argv.bumpPatchForMinorPreMajor,
+          changelogPath: argv.changelogPath,
+          changelogSections: argv.changelogSections,
+          releaseAs: argv.releaseAs,
+        },
+        argv
+      );
     } else {
       manifest = await Manifest.fromManifest(
         github,
@@ -326,7 +345,22 @@ const createReleasePullRequestCommand: yargs.CommandModule<
 
     if (argv.dryRun) {
       const pullRequests = await manifest.buildPullRequests();
-      logger.info(pullRequests);
+      console.log(`Would open ${pullRequests.length} pull requests`);
+      console.log('fork:', manifest.fork);
+      for (const pullRequest of pullRequests) {
+        console.log('title:', pullRequest.title.toString());
+        console.log('branch:', pullRequest.headRefName);
+        console.log('draft:', pullRequest.draft);
+        console.log('body:', pullRequest.body.toString());
+        console.log('updates:', pullRequest.updates.length);
+        for (const update of pullRequest.updates) {
+          console.log(
+            `  ${update.path}: `,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (update.updater as any).constructor
+          );
+        }
+      }
     } else {
       const pullRequestNumbers = await manifest.createPullRequests();
       console.log(pullRequestNumbers);
@@ -347,10 +381,16 @@ const createReleaseCommand: yargs.CommandModule<{}, CreateReleaseArgs> = {
     const targetBranch = argv.targetBranch || github.repository.defaultBranch;
     let manifest: Manifest;
     if (argv.releaseType) {
-      manifest = await Manifest.fromConfig(github, targetBranch, {
-        releaseType: argv.releaseType,
-        component: argv.component || '',
-      });
+      manifest = await Manifest.fromConfig(
+        github,
+        targetBranch,
+        {
+          releaseType: argv.releaseType,
+          component: argv.component,
+          draft: argv.draft,
+        },
+        argv
+      );
     } else {
       manifest = await Manifest.fromManifest(
         github,
@@ -397,7 +437,8 @@ const createManifestPullRequestCommand: yargs.CommandModule<
 
     if (argv.dryRun) {
       const pullRequests = await manifest.buildPullRequests();
-      logger.info(pullRequests);
+      console.log(util.inspect(pullRequests));
+      console.log(JSON.stringify(pullRequests));
     } else {
       const pullRequestNumbers = await manifest.createPullRequests();
       console.log(pullRequestNumbers);
