@@ -8,7 +8,7 @@ exports['GoYoshi buildReleasePullRequest combines google-api-go-client autogener
 
 ### Features
 
-* **all:** auto-regenerate discovery clients, refs [#1281](github.com/googleapis/google-api-go-client/issues/1281) [#1280](github.com/googleapis/google-api-go-client/issues/1280) [#1279](github.com/googleapis/google-api-go-client/issues/1279) [#1278](github.com/googleapis/google-api-go-client/issues/1278)
+* **all:** auto-regenerate discovery clients, refs [#1281](https://github.com/googleapis/google-api-go-client/issues/1281) [#1280](https://github.com/googleapis/google-api-go-client/issues/1280) [#1279](https://github.com/googleapis/google-api-go-client/issues/1279) [#1278](https://github.com/googleapis/google-api-go-client/issues/1278)
 
 ---
 This PR was generated with [Release Please](https://github.com/googleapis/release-please). See [documentation](https://github.com/googleapis/release-please#release-please).
@@ -24,13 +24,13 @@ exports['GoYoshi buildReleasePullRequest filters out submodule commits 1'] = `
 
 ### Features
 
-* some generic feature ([5c5e4ab](github.com/googleapis/go-yoshi-test-repo/commit/5c5e4ab88ed278b50d0fd0208d142639))
+* some generic feature ([5c5e4ab](https://github.com/googleapis/go-yoshi-test-repo/commit/5c5e4ab88ed278b50d0fd0208d142639))
 
 
 ### Bug Fixes
 
-* some generic fix ([a151e7a](github.com/googleapis/go-yoshi-test-repo/commit/a151e7a6d7914c7c5e59c077362816be))
-* **translate:** some translate fix ([a74c6a3](github.com/googleapis/go-yoshi-test-repo/commit/a74c6a3c43273a62de7e47bef2e11fb0))
+* some generic fix ([a151e7a](https://github.com/googleapis/go-yoshi-test-repo/commit/a151e7a6d7914c7c5e59c077362816be))
+* **translate:** some translate fix ([a74c6a3](https://github.com/googleapis/go-yoshi-test-repo/commit/a74c6a3c43273a62de7e47bef2e11fb0))
 
 ---
 This PR was generated with [Release Please](https://github.com/googleapis/release-please). See [documentation](https://github.com/googleapis/release-please#release-please).

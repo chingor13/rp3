@@ -21,6 +21,8 @@ import {
   buildGitHubFileContent,
   buildGitHubFileRaw,
   stubSuggesterWithSnapshot,
+  assertHasUpdate,
+  dateSafe,
 } from './helpers';
 import {expect} from 'chai';
 import {Version} from '../src/version';
@@ -34,6 +36,7 @@ import {PullRequestTitle} from '../src/util/pull-request-title';
 import {PullRequestBody} from '../src/util/pull-request-body';
 import {RawContent} from '../src/updaters/raw-content';
 import {TagName} from '../src/util/tag-name';
+import snapshot = require('snap-shot-it');
 
 const sandbox = sinon.createSandbox();
 const fixturesPath = './test/fixtures';
@@ -212,7 +215,9 @@ describe('Manifest', () => {
       const pullRequest = pullRequests[0];
       expect(pullRequest.version?.toString()).to.eql('1.0.1');
       // simple release type updates the changelog and version.txt
-      expect(pullRequest.updates).lengthOf(2);
+      assertHasUpdate(pullRequest.updates, 'CHANGELOG.md');
+      assertHasUpdate(pullRequest.updates, 'version.txt');
+      assertHasUpdate(pullRequest.updates, '.release-please-manifest.json');
     });
 
     it('should find the component from config', async () => {
@@ -355,6 +360,7 @@ describe('Manifest', () => {
       );
       const pullRequests = await manifest.buildPullRequests();
       expect(pullRequests).lengthOf(1);
+      snapshot(dateSafe(pullRequests[0].body.toString()));
     });
 
     it('should allow creating multiple pull requests', async () => {
@@ -440,6 +446,8 @@ describe('Manifest', () => {
       );
       const pullRequests = await manifest.buildPullRequests();
       expect(pullRequests).lengthOf(2);
+      snapshot(dateSafe(pullRequests[0].body.toString()));
+      snapshot(dateSafe(pullRequests[1].body.toString()));
     });
 
     it('should create a draft pull request', async () => {

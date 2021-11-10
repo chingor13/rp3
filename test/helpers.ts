@@ -222,7 +222,7 @@ export function assertHasUpdate(
   const found = updates.find(update => {
     return update.path === path;
   });
-  expect(found).to.not.be.undefined;
+  expect(found, `update for ${path}`).to.not.be.undefined;
   if (clazz) {
     expect(found?.updater).instanceof(
       clazz,
@@ -236,7 +236,7 @@ export function assertNoHasUpdate(updates: Update[], path: string) {
   const found = updates.find(update => {
     return update.path === path;
   });
-  expect(found).to.be.undefined;
+  expect(found, `update for ${path}`).to.be.undefined;
 }
 
 export function loadCommitFixtures(name: string): Commit[] {

@@ -14,7 +14,7 @@
 
 import {ChangelogSection} from './release-notes';
 import {GitHub, GitHubRelease} from './github';
-import {Version} from './version';
+import {Version, VersionsMap} from './version';
 import {Commit} from './commit';
 import {PullRequest} from './pull-request';
 import {logger} from './util/logger';
@@ -34,6 +34,7 @@ import {Release} from './release';
 import {Strategy} from './strategy';
 import {PullRequestBody} from './util/pull-request-body';
 import {Merge} from './plugins/merge';
+import {ReleasePleaseManifest} from './updaters/release-please-manifest';
 
 export interface ReleaserConfig {
   releaseType: ReleaseType;
@@ -87,6 +88,7 @@ interface ManifestOptions {
   plugins?: PluginType[];
   fork?: boolean;
   signoff?: string;
+  manifestPath?: string;
 }
 
 interface ReleaserPackageConfig extends ReleaserConfigJson {
@@ -128,6 +130,7 @@ export class Manifest {
   private plugins: PluginType[];
   private _strategiesByPath?: Record<string, Strategy>;
   private _pathsByComponent?: Record<string, string>;
+  private manifestPath: string;
 
   constructor(
     github: GitHub,
@@ -141,6 +144,8 @@ export class Manifest {
     this.targetBranch = targetBranch;
     this.repositoryConfig = repositoryConfig;
     this.releasedVersions = releasedVersions;
+    this.manifestPath =
+      manifestOptions?.manifestPath || RELEASE_PLEASE_MANIFEST;
     this.separatePullRequests = manifestOptions?.separatePullRequests || false;
     this.plugins = manifestOptions?.plugins || [];
     this.fork = manifestOptions?.fork || false;
@@ -328,6 +333,18 @@ export class Manifest {
         config.draft
       );
       if (releasePullRequest) {
+        if (releasePullRequest.version) {
+          const versionsMap: VersionsMap = new Map();
+          versionsMap.set(path, releasePullRequest.version);
+          releasePullRequest.updates.push({
+            path: this.manifestPath,
+            createIfMissing: false,
+            updater: new ReleasePleaseManifest({
+              version: releasePullRequest.version,
+              versionsMap,
+            }),
+          });
+        }
         newReleasePullRequests.push({
           path,
           config,

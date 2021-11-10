@@ -60,7 +60,7 @@ export class ReleaseNotes {
     options: BuildNotesOptions
   ): Promise<string> {
     const context = {
-      host: options.host || 'github.com',
+      host: options.host || 'https://github.com',
       owner: options.owner,
       repository: options.repository,
       version: options.version,
