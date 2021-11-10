@@ -14,7 +14,15 @@
 
 import {DefaultUpdater} from '../default';
 
+/**
+ * Updates a versions.rb file which is expected to have a version string.
+ */
 export class VersionRB extends DefaultUpdater {
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(content: string): string {
     return content.replace(
       /(["'])[0-9]+\.[0-9]+\.[0-9](-\w+)?["']/,

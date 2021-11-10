@@ -16,7 +16,15 @@ import {logger} from '../../util/logger';
 import {jsonStringify} from '../../util/json-stringify';
 import {DefaultUpdater} from '../default';
 
+/**
+ * Updates a root composer.json
+ */
 export class RootComposerUpdatePackages extends DefaultUpdater {
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(content: string): string {
     if (!this.versionsMap || this.versionsMap.size === 0) {
       logger.info('no updates necessary');

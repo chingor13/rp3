@@ -21,7 +21,17 @@ const BLOCK_START_REGEX =
 const BLOCK_END_REGEX = /{x-version-update-end}/;
 const VERSION_REGEX = /\d+\.\d+\.\d+(-\w+(\.\d+)?)?(-SNAPSHOT)?/;
 
+/**
+ * Updates a file annotated with region markers. These region markers are
+ * either denoted inline with `{x-version-update:<component-name>:current|released}`
+ * or with a `{x-version-update-start:<component-name>}` and `{x-version-update-end}`.
+ */
 export class JavaUpdate extends DefaultUpdater {
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(content: string): string {
     if (!this.versionsMap) {
       logger.warn('missing versions map');

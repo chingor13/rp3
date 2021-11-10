@@ -21,7 +21,16 @@ interface ManifestModule {
   versions: string[];
 }
 
+/**
+ * Updates a manifest.json file.
+ * @see https://github.com/googleapis/google-cloud-php/blob/master/docs/manifest.json
+ */
 export class PHPManifest extends DefaultUpdater {
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(content: string): string {
     if (!this.versionsMap || this.versionsMap.size === 0) {
       logger.info('no updates necessary');

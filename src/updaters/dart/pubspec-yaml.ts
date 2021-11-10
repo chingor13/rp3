@@ -15,7 +15,15 @@
 import {logger} from '../../util/logger';
 import {DefaultUpdater} from '../default';
 
+/**
+ * Updates a Dart pubspec.yaml file.
+ */
 export class PubspecYaml extends DefaultUpdater {
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(content: string): string {
     const oldVersion = content.match(/version: ([0-9.]+)\+?([0-9]*$)/);
     let buildNumber = '';

@@ -16,7 +16,17 @@ import {JavaUpdate} from './java-update';
 import {VersionsMap, Version} from '../../version';
 import {logger} from '../../util/logger';
 
+/**
+ * Updates a versions.txt file which contains current versions of
+ * components within a Java repo.
+ * @see https://github.com/googleapis/java-asset/blob/main/versions.txt
+ */
 export class VersionsManifest extends JavaUpdate {
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(content: string): string {
     if (!this.versionsMap) {
       logger.warn('missing versions map');

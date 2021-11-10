@@ -15,7 +15,15 @@
 import {logger} from '../../util/logger';
 import {DefaultUpdater} from '../default';
 
+/**
+ * Updates an OCaml .opam file
+ */
 export class Opam extends DefaultUpdater {
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(content: string): string {
     const oldVersion = content.match(/^version: "([A-Za-z0-9_\-+.~]+)"$/m);
     if (oldVersion) {

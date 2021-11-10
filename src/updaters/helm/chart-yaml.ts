@@ -16,7 +16,15 @@ import * as yaml from 'js-yaml';
 import {logger} from '../../util/logger';
 import {DefaultUpdater} from '../default';
 
+/**
+ * Updates a Helm chart.yaml file.
+ */
 export class ChartYaml extends DefaultUpdater {
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(content: string): string {
     const data = yaml.load(content, {json: true});
     if (data === null || data === undefined) {

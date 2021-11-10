@@ -15,7 +15,15 @@
 import {logger} from '../../util/logger';
 import {DefaultUpdater} from '../default';
 
+/**
+ * Updates KMR blueprint yaml file.
+ */
 export class KRMBlueprintVersion extends DefaultUpdater {
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(content: string): string {
     // js-yaml(and kpt TS SDK) does not preserve comments hence regex match
     // match starting cnrm/ ending with semver to prevent wrong updates like pinned config.kubernetes.io/function

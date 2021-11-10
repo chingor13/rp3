@@ -15,7 +15,7 @@
 // Generic
 import {Changelog} from '../updaters/changelog';
 // PHP Specific.
-import {RootComposerUpdatePackage} from '../updaters/php/root-composer-update-package';
+import {RootComposerUpdatePackages} from '../updaters/php/root-composer-update-packages';
 import {Strategy, BuildUpdatesOptions, StrategyOptions} from '../strategy';
 import {Update} from '../update';
 import {VersionsMap} from '../version';
@@ -63,7 +63,7 @@ export class PHP extends Strategy {
     updates.push({
       path: this.addPath('composer.json'),
       createIfMissing: false,
-      updater: new RootComposerUpdatePackage({
+      updater: new RootComposerUpdatePackages({
         version,
         versionsMap,
       }),

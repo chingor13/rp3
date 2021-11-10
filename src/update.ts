@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Version, VersionsMap} from './version';
 import {GitHubFileContents} from './github';
 
-export interface UpdateOptions {
-  version: Version;
-  versionsMap?: VersionsMap;
-}
-
+/**
+ * An update is a collection of data that represents changes to
+ * a file in a repository.
+ */
 export interface Update {
   // If provided, skip looking up the file
   cachedFileContents?: GitHubFileContents;
@@ -35,6 +33,15 @@ export interface Update {
   updater: Updater;
 }
 
+/**
+ * An updater is responsible for updating code for a file.
+ * Given initial file contents, return updated contents.
+ */
 export interface Updater {
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(content: string | undefined): string;
 }

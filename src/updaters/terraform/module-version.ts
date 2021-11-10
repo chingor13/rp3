@@ -15,7 +15,15 @@
 import {logger} from '../../util/logger';
 import {DefaultUpdater} from '../default';
 
+/**
+ * Updates a Terraform Module versions.tf file.
+ */
 export class ModuleVersion extends DefaultUpdater {
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(content: string): string {
     const oldVersion = content.match(/v[0-9]+\.[0-9]+\.[0-9]+(-\w+)?/);
     if (oldVersion) {

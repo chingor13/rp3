@@ -12,8 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Updater, UpdateOptions} from '../update';
+import {Updater} from '../update';
 import {Version, VersionsMap} from '../version';
+
+// Constructor options for the DefaultUpdater class
+export interface UpdateOptions {
+  // The primary version to update
+  version: Version;
+
+  // Map of component/package => version used for updating
+  // multiple versions at the same time.
+  versionsMap?: VersionsMap;
+}
 
 /**
  * This updater writes a plain file with the version string as the
@@ -26,6 +36,12 @@ export class DefaultUpdater implements Updater {
     this.version = options.version;
     this.versionsMap = options.versionsMap;
   }
+
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(_content: string): string {
     return this.version + '\n';
   }

@@ -15,7 +15,15 @@
 import {logger} from '../../util/logger';
 import {DefaultUpdater} from '../default';
 
+/**
+ * Updates an OCaml dune-project file.
+ */
 export class DuneProject extends DefaultUpdater {
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(content: string): string {
     const oldVersion = content.match(/^\(version ([A-Za-z0-9_\-+.~]+)\)$/m);
     if (oldVersion) {

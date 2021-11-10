@@ -97,6 +97,10 @@ export abstract class Strategy {
     this.mainTemplate = options.mainTemplate;
   }
 
+  /**
+   * Specify the files necessary to update in a release pull request.
+   * @param {BuildUpdatesOptions} options
+   */
   protected abstract async buildUpdates(
     options: BuildUpdatesOptions
   ): Promise<Update[]>;
@@ -116,6 +120,11 @@ export abstract class Strategy {
     return component;
   }
 
+  /**
+   * Override this method to post process commits
+   * @param {ConventionalCommit[]} commits parsed commits
+   * @returns {ConventionalCommit[]} modified commits
+   */
   protected postProcessCommits(
     commits: ConventionalCommit[]
   ): ConventionalCommit[] {
@@ -143,6 +152,17 @@ export abstract class Strategy {
     });
   }
 
+  /**
+   * Builds a candidate release pull request
+   * @param {Commit[]} commits Raw commits to consider for this release.
+   * @param {Release} latestRelease Optional. The last release for this
+   *   component if available.
+   * @param {boolean} draft Optional. Whether or not to create the pull
+   *   request as a draft. Defaults to `false`.
+   * @returns {ReleasePullRequest | undefined} The release pull request to
+   *   open for this path/component. Returns undefined if we should not
+   *   open a pull request.
+   */
   async buildReleasePullRequest(
     commits: Commit[],
     latestRelease?: Release,
@@ -232,6 +252,11 @@ export abstract class Strategy {
     return new Map();
   }
 
+  /**
+   * Given a merged pull request, build the candidate release.
+   * @param {PullRequest} mergedPullRequest The merged release pull request.
+   * @returns {Release} The candidate release.
+   */
   async buildRelease(mergedPullRequest: PullRequest): Promise<Release> {
     const pullRequestTitle =
       PullRequestTitle.parse(mergedPullRequest.title) ||
@@ -277,6 +302,9 @@ export abstract class Strategy {
     };
   }
 
+  /**
+   * Override this to handle the initial version of a new library.
+   */
   protected initialReleaseVersion(): Version {
     return Version.parse('1.0.0');
   }

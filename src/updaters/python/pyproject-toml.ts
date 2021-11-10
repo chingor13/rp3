@@ -38,7 +38,15 @@ export function parsePyProject(content: string): PyProject {
   return TOML.parse(content) as PyProject;
 }
 
+/**
+ * Updates a pyproject.toml file
+ */
 export class PyProjectToml extends DefaultUpdater {
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(content: string): string {
     const parsed = parsePyProject(content);
     const project = parsed.project || parsed.tool?.poetry;

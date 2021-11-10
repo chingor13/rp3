@@ -14,11 +14,25 @@
 
 import {Updater} from '../update';
 
+/**
+ * The CompositeUpdater chains 0...n updaters and updates
+ * the content in order.
+ */
 export class CompositeUpdater implements Updater {
   updaters: Updater[];
+  /**
+   * Instantiate a new CompositeUpdater
+   * @param {Updater[]} updaters The updaters to chain together
+   */
   constructor(...updaters: Updater[]) {
     this.updaters = updaters;
   }
+
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(content: string | undefined): string {
     for (const updater of this.updaters) {
       content = updater.updateContent(content);

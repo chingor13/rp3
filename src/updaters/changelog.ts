@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {UpdateOptions} from '../update';
-import {DefaultUpdater} from './default';
+import {DefaultUpdater, UpdateOptions} from './default';
 
 interface ChangelogOptions extends UpdateOptions {
   changelogEntry: string;

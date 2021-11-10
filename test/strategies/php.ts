@@ -22,7 +22,7 @@ import {buildMockCommit} from '../helpers';
 import {TagName} from '../../src/util/tag-name';
 import {Version} from '../../src/version';
 import {Changelog} from '../../src/updaters/changelog';
-import {RootComposerUpdatePackage} from '../../src/updaters/php/root-composer-update-package';
+import {RootComposerUpdatePackages} from '../../src/updaters/php/root-composer-update-packages';
 
 const sandbox = sinon.createSandbox();
 
@@ -97,7 +97,7 @@ describe('PHP', () => {
       const updates = release!.updates;
       expect(updates).lengthOf(2);
       assertHasUpdate(updates, 'CHANGELOG.md', Changelog);
-      assertHasUpdate(updates, 'composer.json', RootComposerUpdatePackage);
+      assertHasUpdate(updates, 'composer.json', RootComposerUpdatePackages);
     });
   });
 });

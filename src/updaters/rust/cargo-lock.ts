@@ -21,6 +21,11 @@ import {DefaultUpdater} from '../default';
  * Updates `Cargo.lock` lockfiles, preserving formatting and comments.
  */
 export class CargoLock extends DefaultUpdater {
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(content: string): string {
     let payload = content;
 

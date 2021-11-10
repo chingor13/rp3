@@ -18,7 +18,15 @@ import {DefaultUpdater} from '../default';
 
 type LockFile = {version: string};
 
+/**
+ * This updates a Node.js package.json file's main version.
+ */
 export class PackageJson extends DefaultUpdater {
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(content: string): string {
     const parsed = JSON.parse(content) as LockFile;
     logger.info(`updating from ${parsed.version} to ${this.version}`);

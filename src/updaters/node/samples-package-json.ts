@@ -12,21 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {UpdateOptions} from '../../update';
 import {logger} from '../../util/logger';
 import {jsonStringify} from '../../util/json-stringify';
-import {DefaultUpdater} from '../default';
+import {DefaultUpdater, UpdateOptions} from '../default';
 
 interface SamplesPackageJsonOptions extends UpdateOptions {
   packageName: string;
 }
 
+/**
+ * Updates the a Node.js package.json file with the library in the
+ * dependencies section.
+ */
 export class SamplesPackageJson extends DefaultUpdater {
   packageName: string;
+
+  /**
+   * Instantiate a new SamplesPackageJson updater
+   * @param options
+   */
   constructor(options: SamplesPackageJsonOptions) {
     super(options);
     this.packageName = options.packageName;
   }
+
+  /**
+   * Given initial file contents, return updated contents.
+   * @param {string} content The initial content
+   * @returns {string} The updated content
+   */
   updateContent(content: string): string {
     const parsed = JSON.parse(content);
     if (!parsed.dependencies || !parsed.dependencies[this.packageName]) {

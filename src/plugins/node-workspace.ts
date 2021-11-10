@@ -161,7 +161,6 @@ export class NodeWorkspace extends WorkspacePlugin<Package> {
       }
     }
     const dependencyNotes = getChangelogDepsNotes(pkg, updatedPackage);
-    logger.info('notes', dependencyNotes);
     existingCandidate.pullRequest.updates =
       existingCandidate.pullRequest.updates.map(update => {
         if (update.path === `${existingCandidate.path}/package.json`) {
