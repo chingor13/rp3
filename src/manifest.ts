@@ -36,6 +36,9 @@ import {PullRequestBody} from './util/pull-request-body';
 import {Merge} from './plugins/merge';
 import {ReleasePleaseManifest} from './updaters/release-please-manifest';
 
+/**
+ * These are configurations provided to each strategy per-path.
+ */
 export interface ReleaserConfig {
   releaseType: ReleaseType;
   versioning?: VersioningStrategyType;
@@ -140,6 +143,31 @@ export class Manifest {
   private _pathsByComponent?: Record<string, string>;
   private manifestPath: string;
 
+  /**
+   * Create a Manifest from explicit config in code. This assumes that the
+   * repository has a single component at the root path.
+   *
+   * @param {GitHub} github GitHub client
+   * @param {string} targetBranch The releaseable base branch
+   * @param {RepositoryConfig} repositoryConfig Parsed configuration of path => release configuration
+   * @param {ReleasedVersions} releasedVersions Parsed versions of path => latest release version
+   * @param {ManifestOptions} manifestOptions Optional. Manifest options
+   * @param {string} manifestOptions.bootstrapSha If provided, use this SHA
+   *   as the point to consider commits after
+   * @param {boolean} manifestOptions.alwaysLinkLocal Option for the node-workspace
+   *   plugin
+   * @param {boolean} manifestOptions.separatePullRequests If true, create separate pull
+   *   requests instead of a single manifest release pull request
+   * @param {PluginType[]} manifestOptions.plugins Any plugins to use for this repository
+   * @param {boolean} manifestOptions.fork If true, create pull requests from a fork. Defaults
+   *   to `false`
+   * @param {string} manifestOptions.signoff Add a Signed-off-by annotation to the commit
+   * @param {string} manifestOptions.manifestPath Path to the versions manifest
+   * @param {string[]} manifestOptions.labels Labels that denote a pending, untagged release
+   *   pull request. Defaults to `[autorelease: pending]`
+   * @param {string[]} manifestOptions.releaseLabels Labels to apply to a tagged release
+   *   pull request. Defaults to `[autorelease: tagged]`
+   */
   constructor(
     github: GitHub,
     targetBranch: string,
@@ -163,6 +191,15 @@ export class Manifest {
     this.labels = manifestOptions?.labels || DEFAULT_LABELS;
   }
 
+  /**
+   * Create a Manifest from config files in the repository.
+   *
+   * @param {GitHub} github GitHub client
+   * @param {string} targetBranch The releaseable base branch
+   * @param {string} configFile Optional. The path to the manifest config file
+   * @param {string} manifestFile Optional. The path to the manifest versions file
+   * @returns {Manifest}
+   */
   static async fromManifest(
     github: GitHub,
     targetBranch: string,
@@ -185,6 +222,31 @@ export class Manifest {
     );
   }
 
+  /**
+   * Create a Manifest from explicit config in code. This assumes that the
+   * repository has a single component at the root path.
+   *
+   * @param {GitHub} github GitHub client
+   * @param {string} targetBranch The releaseable base branch
+   * @param {ReleaserConfig} config Release strategy options
+   * @param {ManifestOptions} manifestOptions Optional. Manifest options
+   * @param {string} manifestOptions.bootstrapSha If provided, use this SHA
+   *   as the point to consider commits after
+   * @param {boolean} manifestOptions.alwaysLinkLocal Option for the node-workspace
+   *   plugin
+   * @param {boolean} manifestOptions.separatePullRequests If true, create separate pull
+   *   requests instead of a single manifest release pull request
+   * @param {PluginType[]} manifestOptions.plugins Any plugins to use for this repository
+   * @param {boolean} manifestOptions.fork If true, create pull requests from a fork. Defaults
+   *   to `false`
+   * @param {string} manifestOptions.signoff Add a Signed-off-by annotation to the commit
+   * @param {string} manifestOptions.manifestPath Path to the versions manifest
+   * @param {string[]} manifestOptions.labels Labels that denote a pending, untagged release
+   *   pull request. Defaults to `[autorelease: pending]`
+   * @param {string[]} manifestOptions.releaseLabels Labels to apply to a tagged release
+   *   pull request. Defaults to `[autorelease: tagged]`
+   * @returns {Manifest}
+   */
   static async fromConfig(
     github: GitHub,
     targetBranch: string,
@@ -207,6 +269,14 @@ export class Manifest {
     );
   }
 
+  /**
+   * Build all candidate pull requests for this repository.
+   *
+   * Iterates through each path and builds a candidate pull request for component.
+   * Applies any configured plugins.
+   *
+   * @returns {ReleasePullRequest[]} The candidate pull requests to open or update.
+   */
   async buildPullRequests(): Promise<ReleasePullRequest[]> {
     logger.info('Building pull requests');
     const pathsByComponent = await this.getPathsByComponent();
@@ -379,6 +449,11 @@ export class Manifest {
     );
   }
 
+  /**
+   * Opens/updates all candidate release pull requests for this repository.
+   *
+   * @returns {number[]} Pull request numbers of release pull requests
+   */
   async createPullRequests(): Promise<(number | undefined)[]> {
     const candidatePullRequests = await this.buildPullRequests();
     if (candidatePullRequests.length === 0) {
@@ -452,6 +527,11 @@ export class Manifest {
     }
   }
 
+  /**
+   * Find merged, untagged releases and build candidate releases to tag.
+   *
+   * @returns {CandidateRelease[]} List of release candidates
+   */
   async buildReleases(): Promise<CandidateRelease[]> {
     logger.info('Building releases');
     const strategiesByPath = await this.getStrategiesByPath();
@@ -516,6 +596,13 @@ export class Manifest {
     return releases;
   }
 
+  /**
+   * Find merged, untagged releases. For each release, create a GitHub release,
+   * comment on the pull request used to generated it and update the pull request
+   * labels.
+   *
+   * @returns {GitHubRelease[]} List of created GitHub releases
+   */
   async createReleases(): Promise<(GitHubRelease | undefined)[]> {
     const releasesByPullRequest: Record<number, CandidateRelease[]> = {};
     const pullRequestsByNumber: Record<number, PullRequest> = {};
@@ -619,9 +706,16 @@ export class Manifest {
   }
 }
 
+/**
+ * Helper to convert parsed JSON releaser config into ReleaserConfig for
+ * the Manifest.
+ *
+ * @param {ReleaserPackageConfig} config Parsed configuration from JSON file.
+ * @returns {ReleaserConfig}
+ */
 function extractReleaserConfig(config: ReleaserPackageConfig): ReleaserConfig {
   return {
-    releaseType: config['release-type'] || 'node', // FIXME
+    releaseType: config['release-type'] || 'node', // for backwards-compatibility
     bumpMinorPreMajor: config['bump-minor-pre-major'],
     bumpPatchForMinorPreMajor: config['bump-patch-for-minor-pre-major'],
     changelogSections: config['changelog-sections'],
@@ -636,6 +730,14 @@ function extractReleaserConfig(config: ReleaserPackageConfig): ReleaserConfig {
   };
 }
 
+/**
+ * Helper to convert fetch the manifest config from the repository and
+ * parse into configuration for the Manifest.
+ *
+ * @param {GitHub} github GitHub client
+ * @param {string} configFile Path in the repository to the manifest config
+ * @param {string} branch Branch to fetch the config file from
+ */
 async function parseConfig(
   github: GitHub,
   configFile: string,
@@ -661,6 +763,13 @@ async function parseConfig(
   return {config: repositoryConfig, options: manifestOptions};
 }
 
+/**
+ * Helper to parse the manifest versions file.
+ *
+ * @param {GitHub} github GitHub client
+ * @param {string} manifestFile Path in the repository to the versions file
+ * @param {string} branch Branch to fetch the versions file from
+ */
 async function parseReleasedVersions(
   github: GitHub,
   manifestFile: string,
@@ -733,6 +842,11 @@ async function latestReleaseVersion(
   return;
 }
 
+/**
+ * Helper to compare if a list of labels fully contains another list of labels
+ * @param {string[]} expected List of labels expected to be contained
+ * @param {string[]} existing List of existing labels to consider
+ */
 function hasAllLabels(expected: string[], existing: string[]): boolean {
   const existingSet = new Set(existing);
   for (const label of expected) {
