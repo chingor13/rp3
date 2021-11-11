@@ -65,7 +65,7 @@ function mockPullRequests(github: GitHub, pullRequests: PullRequest[]) {
       yield pullRequest;
     }
   }
-  sandbox.stub(github, 'mergedPullRequestIterator').returns(fakeGenerator());
+  sandbox.stub(github, 'pullRequestIterator').returns(fakeGenerator());
 }
 
 function mockCreateRelease(
@@ -672,6 +672,16 @@ describe('Manifest', () => {
         .withArgs('README.md', 'main')
         .resolves(buildGitHubFileRaw('some-content'));
       stubSuggesterWithSnapshot(sandbox, this.test!.fullTitle());
+      mockPullRequests(github, []);
+      sandbox.stub(github, 'getPullRequest').withArgs(22).resolves({
+        number: 22,
+        title: 'pr title1',
+        body: 'pr body1',
+        headBranchName: 'release-please/branches/main',
+        baseBranchName: 'main',
+        labels: [],
+        files: [],
+      });
       const manifest = new Manifest(
         github,
         'main',
@@ -725,18 +735,57 @@ describe('Manifest', () => {
         .resolves(buildGitHubFileRaw('some-content'))
         .withArgs('pkg2/README.md', 'main')
         .resolves(buildGitHubFileRaw('some-content-2'));
+      mockPullRequests(github, []);
       sandbox
-        .stub(github, 'openPR')
+        .stub(github, 'getPullRequest')
+        .withArgs(123)
+        .resolves({
+          number: 123,
+          title: 'pr title1',
+          body: 'pr body1',
+          headBranchName: 'release-please/branches/main',
+          baseBranchName: 'main',
+          labels: [],
+          files: [],
+        })
+        .withArgs(124)
+        .resolves({
+          number: 124,
+          title: 'pr title2',
+          body: 'pr body2',
+          headBranchName: 'release-please/branches/main2',
+          baseBranchName: 'main',
+          labels: [],
+          files: [],
+        });
+      sandbox
+        .stub(github, 'createPullRequest')
         .withArgs(
           sinon.match.has('headRefName', 'release-please/branches/main'),
           'main'
         )
-        .resolves(123)
+        .resolves({
+          number: 123,
+          title: 'pr title1',
+          body: 'pr body1',
+          headBranchName: 'release-please/branches/main',
+          baseBranchName: 'main',
+          labels: [],
+          files: [],
+        })
         .withArgs(
           sinon.match.has('headRefName', 'release-please/branches/main2'),
           'main'
         )
-        .resolves(124);
+        .resolves({
+          number: 124,
+          title: 'pr title2',
+          body: 'pr body2',
+          headBranchName: 'release-please/branches/main2',
+          baseBranchName: 'main',
+          labels: [],
+          files: [],
+        });
       const manifest = new Manifest(
         github,
         'main',
@@ -807,6 +856,16 @@ describe('Manifest', () => {
         .withArgs('README.md', 'main')
         .resolves(buildGitHubFileRaw('some-content'));
       stubSuggesterWithSnapshot(sandbox, this.test!.fullTitle());
+      mockPullRequests(github, []);
+      sandbox.stub(github, 'getPullRequest').withArgs(22).resolves({
+        number: 22,
+        title: 'pr title1',
+        body: 'pr body1',
+        headBranchName: 'release-please/branches/main',
+        baseBranchName: 'main',
+        labels: [],
+        files: [],
+      });
       const manifest = new Manifest(
         github,
         'main',
@@ -860,6 +919,16 @@ describe('Manifest', () => {
         .withArgs('README.md', 'main')
         .resolves(buildGitHubFileRaw('some-content'));
       stubSuggesterWithSnapshot(sandbox, this.test!.fullTitle());
+      mockPullRequests(github, []);
+      sandbox.stub(github, 'getPullRequest').withArgs(22).resolves({
+        number: 22,
+        title: 'pr title1',
+        body: 'pr body1',
+        headBranchName: 'release-please/branches/main',
+        baseBranchName: 'main',
+        labels: [],
+        files: [],
+      });
       const manifest = new Manifest(
         github,
         'main',
@@ -881,6 +950,81 @@ describe('Manifest', () => {
           separatePullRequests: true,
           plugins: ['node-workspace'],
           fork: true,
+        }
+      );
+      sandbox.stub(manifest, 'buildPullRequests').resolves([
+        {
+          title: PullRequestTitle.ofTargetBranch('main'),
+          body: new PullRequestBody([
+            {
+              notes: 'Some release notes',
+            },
+          ]),
+          updates: [
+            {
+              path: 'README.md',
+              createIfMissing: false,
+              updater: new RawContent('some raw content'),
+            },
+          ],
+          labels: [],
+          headRefName: 'release-please/branches/main',
+          draft: false,
+        },
+      ]);
+      const pullRequestNumbers = await manifest.createPullRequests();
+      expect(pullRequestNumbers).lengthOf(1);
+    });
+
+    it('updates an existing pull request', async function () {
+      sandbox
+        .stub(github, 'getFileContentsOnBranch')
+        .withArgs('README.md', 'main')
+        .resolves(buildGitHubFileRaw('some-content'));
+      stubSuggesterWithSnapshot(sandbox, this.test!.fullTitle());
+      mockPullRequests(github, [
+        {
+          number: 22,
+          title: 'pr title1',
+          body: new PullRequestBody([]).toString(),
+          headBranchName: 'release-please/branches/main',
+          baseBranchName: 'main',
+          labels: [],
+          files: [],
+        },
+      ]);
+      sandbox
+        .stub(github, 'updatePullRequest')
+        .withArgs(22, sinon.match.any, sinon.match.any, sinon.match.any)
+        .resolves({
+          number: 22,
+          title: 'pr title1',
+          body: 'pr body1',
+          headBranchName: 'release-please/branches/main',
+          baseBranchName: 'main',
+          labels: [],
+          files: [],
+        });
+      const manifest = new Manifest(
+        github,
+        'main',
+        {
+          'path/a': {
+            releaseType: 'node',
+            component: 'pkg1',
+          },
+          'path/b': {
+            releaseType: 'node',
+            component: 'pkg2',
+          },
+        },
+        {
+          'path/a': Version.parse('1.0.0'),
+          'path/b': Version.parse('0.2.3'),
+        },
+        {
+          separatePullRequests: true,
+          plugins: ['node-workspace'],
         }
       );
       sandbox.stub(manifest, 'buildPullRequests').resolves([

@@ -196,19 +196,6 @@ export class Manifest {
     );
   }
 
-  async createPullRequests(): Promise<(number | undefined)[]> {
-    const promises: Promise<number | undefined>[] = [];
-    for (const pullRequest of await this.buildPullRequests()) {
-      promises.push(
-        this.github.openPR(pullRequest, this.targetBranch, {
-          fork: this.fork,
-          signoffUser: this.signoffUser,
-        })
-      );
-    }
-    return await Promise.all(promises);
-  }
-
   async buildPullRequests(): Promise<ReleasePullRequest[]> {
     logger.info('Building pull requests');
     const pathsByComponent = await this.getPathsByComponent();
@@ -380,13 +367,84 @@ export class Manifest {
     );
   }
 
+  async createPullRequests(): Promise<(number | undefined)[]> {
+    const candidatePullRequests = await this.buildPullRequests();
+    if (candidatePullRequests.length === 0) {
+      return [];
+    }
+
+    // collect open release pull requests
+    const openPullRequests: PullRequest[] = [];
+    const generator = this.github.pullRequestIterator(
+      this.targetBranch,
+      'OPEN'
+    );
+    for await (const openPullRequest of generator) {
+      const pullRequestBody = PullRequestBody.parse(openPullRequest.body);
+      const branchName = BranchName.parse(openPullRequest.headBranchName);
+      if (pullRequestBody && branchName) {
+        openPullRequests.push(openPullRequest);
+      }
+    }
+    logger.info(`found ${openPullRequests.length} open release pull requests.`);
+
+    const promises: Promise<number | undefined>[] = [];
+    for (const pullRequest of candidatePullRequests) {
+      promises.push(
+        this.createOrUpdatePullRequest(pullRequest, openPullRequests)
+      );
+    }
+    return await Promise.all(promises);
+  }
+
+  private async createOrUpdatePullRequest(
+    pullRequest: ReleasePullRequest,
+    openPullRequests: PullRequest[]
+  ): Promise<number | undefined> {
+    // look for existing, open pull rquest
+    const existing = openPullRequests.find(
+      openPullRequest =>
+        openPullRequest.headBranchName === pullRequest.headRefName
+    );
+    if (existing) {
+      // If unchanged, no need to push updates
+      if (existing.body === pullRequest.body.toString()) {
+        logger.info(
+          `PR https://github.com/${this.repository.owner}/${this.repository.repo}/pull/${existing.number} remained the same`
+        );
+        return undefined;
+      }
+      const updatedPullRequest = await this.github.updatePullRequest(
+        existing.number,
+        pullRequest,
+        this.targetBranch,
+        {
+          fork: this.fork,
+          signoffUser: this.signoffUser,
+        }
+      );
+      return updatedPullRequest.number;
+    } else {
+      const newPullRequest = await this.github.createPullRequest(
+        pullRequest,
+        this.targetBranch,
+        {
+          fork: this.fork,
+          signoffUser: this.signoffUser,
+        }
+      );
+      return newPullRequest.number;
+    }
+  }
+
   async buildReleases(): Promise<CandidateRelease[]> {
     logger.info('Building releases');
     const strategiesByPath = await this.getStrategiesByPath();
 
     // Find merged release pull requests
-    const pullRequestGenerator = this.github.mergedPullRequestIterator(
+    const pullRequestGenerator = this.github.pullRequestIterator(
       this.targetBranch,
+      'MERGED',
       500
     );
 

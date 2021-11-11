@@ -415,7 +415,7 @@ exports['GitHub getFileContents should support Github Data API in case of a big 
   "sha": "2f3d2c47bf49f81aca0df9ffc49524a213a2dc33"
 }
 
-exports['GitHub mergedPullRequestIterator finds merged pull requests with labels 1'] = [
+exports['GitHub pullRequestIterator finds merged pull requests with labels 1'] = [
   {
     "sha": "198808aae0adc62c9ad95452170fd691ac40bd00",
     "number": 2827,

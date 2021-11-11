@@ -321,7 +321,7 @@ describe('GitHub', () => {
     });
   });
 
-  describe('mergedPullRequestIterator', () => {
+  describe('pullRequestIterator', () => {
     it('finds merged pull requests with labels', async () => {
       const graphql = JSON.parse(
         readFileSync(resolve(fixturesPath, 'merged-pull-requests.json'), 'utf8')
@@ -329,7 +329,7 @@ describe('GitHub', () => {
       req.post('/graphql').reply(200, {
         data: graphql,
       });
-      const generator = github.mergedPullRequestIterator('main');
+      const generator = github.pullRequestIterator('main');
       const pullRequests: PullRequest[] = [];
       for await (const pullRequest of generator) {
         pullRequests.push(pullRequest);

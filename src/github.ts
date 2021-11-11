@@ -396,15 +396,16 @@ export class GitHub {
    * @yields {PullRequest}
    * @throws {GitHubAPIError} on an API error
    */
-  async *mergedPullRequestIterator(
+  async *pullRequestIterator(
     targetBranch: string,
+    status: 'OPEN' | 'CLOSED' | 'MERGED' = 'MERGED',
     maxResults: number = Number.MAX_SAFE_INTEGER
   ) {
     let cursor: string | undefined = undefined;
     const results = 0;
     while (results < maxResults) {
       const response: PullRequestHistory | null =
-        await this.pullRequestsGraphQL(targetBranch, cursor);
+        await this.pullRequestsGraphQL(targetBranch, status, cursor);
       // no response usually means we ran out of results
       if (!response) {
         break;
@@ -432,13 +433,14 @@ export class GitHub {
    */
   private async pullRequestsGraphQL(
     targetBranch: string,
+    status: 'OPEN' | 'CLOSED' | 'MERGED' = 'MERGED',
     cursor?: string
   ): Promise<PullRequestHistory | null> {
     logger.debug(
       `Fetching merged pull requests on branch ${targetBranch} with cursor ${cursor}`
     );
     const response = await this.graphqlRequest({
-      query: `query mergedPullRequests($owner: String!, $repo: String!, $num: Int!, $maxFilesChanged: Int, $targetBranch: String!, $cursor: String) {
+      query: `query mergedPullRequests($owner: String!, $repo: String!, $num: Int!, $maxFilesChanged: Int, $targetBranch: String!, $status: String!, $cursor: String) {
           repository(owner: $owner, name: $repo) {
             pullRequests(first: $num, after: $cursor, baseRefName: $targetBranch, states: MERGED, orderBy: {field: CREATED_AT, direction: DESC}) {
               nodes {
@@ -477,6 +479,7 @@ export class GitHub {
       repo: this.repository.repo,
       num: 25,
       targetBranch,
+      status,
     });
     if (!response.repository.pullRequests) {
       logger.warn(
@@ -755,7 +758,7 @@ export class GitHub {
    * @param {GitHubPR} options The pull request options
    * @throws {GitHubAPIError} on an API error
    */
-  openPR = wrapAsync(
+  createPullRequest = wrapAsync(
     async (
       releasePullRequest: ReleasePullRequest,
       targetBranch: string,
@@ -763,27 +766,7 @@ export class GitHub {
         signoffUser?: string;
         fork?: boolean;
       }
-    ): Promise<number | undefined> => {
-      // check if there's an existing PR, so that we can opt to update it
-      // rather than creating a new PR.
-      // const headRefName = `refs/heads/${targetBranch}`;
-      // let openReleasePR: number | undefined;
-      // const releasePRCandidates = await this.findOpenReleasePRs(options.labels);
-      // for (const releasePR of releasePRCandidates) {
-      //   if (refName && refName.includes(releasePR.head.ref)) {
-      //     openReleasePR = releasePR as PullsListResponseItem;
-      //     break;
-      //   }
-      // }
-
-      // Short-circuit if there have been no changes to the pull-request body.
-      // if (openReleasePR && openReleasePR.body === releasePullRequest.body) {
-      //   logger.info(
-      //     `PR https://github.com/${this.repository.owner}/${this.repository.repo}/pull/${openReleasePR} remained the same`
-      //   );
-      //   return undefined;
-      // }
-
+    ): Promise<PullRequest> => {
       //  Update the files for the release if not already supplied
       const changes = await this.getChangeSet(
         releasePullRequest.updates,
@@ -808,27 +791,92 @@ export class GitHub {
         logger: logger,
         draft: releasePullRequest.draft,
       });
+      return await this.getPullRequest(prNumber);
+    }
+  );
 
-      // If a release PR was already open, update the title and body:
-      // if (openReleasePR) {
-      //   logger.info(
-      //     `update pull-request #${openReleasePR}: ${chalk.yellow(
-      //       releasePullRequest.title
-      //     )}`
-      //   );
-      //   await this.request('PATCH /repos/:owner/:repo/pulls/:pull_number', {
-      //     pull_number: openReleasePR.number,
-      //     owner: this.owner,
-      //     repo: this.repo,
-      //     title: options.title,
-      //     body: options.body,
-      //     state: 'open',
-      //   });
-      //   return openReleasePR.number;
-      // } else {
-      //   return prNumber;
-      // }
-      return prNumber;
+  getPullRequest = wrapAsync(async (number: number): Promise<PullRequest> => {
+    const response = await this.octokit.pulls.get({
+      owner: this.repository.owner,
+      repo: this.repository.repo,
+      pull_number: number,
+    });
+    return {
+      headBranchName: response.data.head.ref,
+      baseBranchName: response.data.base.ref,
+      number: response.data.number,
+      title: response.data.title,
+      body: response.data.body || '',
+      files: [],
+      labels: response.data.labels
+        .map(label => label.name)
+        .filter(name => !!name) as string[],
+    };
+  });
+
+  /**
+   * Update a pull request's title and body.
+   */
+  updatePullRequest = wrapAsync(
+    async (
+      number: number,
+      releasePullRequest: ReleasePullRequest,
+      targetBranch: string,
+      options?: {
+        signoffUser?: string;
+        fork?: boolean;
+      }
+    ): Promise<PullRequest> => {
+      //  Update the files for the release if not already supplied
+      const changes = await this.getChangeSet(
+        releasePullRequest.updates,
+        targetBranch
+      );
+      let message = releasePullRequest.title.toString();
+      if (options?.signoffUser) {
+        message = signoffCommitMessage(message, options.signoffUser);
+      }
+      const title = releasePullRequest.title.toString();
+      const body = releasePullRequest.body
+        .toString()
+        .slice(0, MAX_ISSUE_BODY_SIZE);
+      const prNumber = await createPullRequest(this.octokit, changes, {
+        upstreamOwner: this.repository.owner,
+        upstreamRepo: this.repository.repo,
+        title,
+        branch: releasePullRequest.headRefName,
+        description: body,
+        primary: targetBranch,
+        force: true,
+        fork: options?.fork === false ? false : true,
+        message,
+        logger: logger,
+        draft: releasePullRequest.draft,
+      });
+      if (prNumber !== number) {
+        logger.warn(
+          `updated code for ${prNumber}, but update requested for ${number}`
+        );
+      }
+      const response = await this.octokit.pulls.update({
+        owner: this.repository.owner,
+        repo: this.repository.repo,
+        pull_number: number,
+        title: releasePullRequest.title.toString(),
+        body,
+        state: 'open',
+      });
+      return {
+        headBranchName: response.data.head.ref,
+        baseBranchName: response.data.base.ref,
+        number: response.data.number,
+        title: response.data.title,
+        body: response.data.body || '',
+        files: [],
+        labels: response.data.labels
+          .map(label => label.name)
+          .filter(name => !!name) as string[],
+      };
     }
   );
 
