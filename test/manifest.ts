@@ -679,6 +679,60 @@ describe('Manifest', () => {
       expect(pullRequests[1].version?.toString()).to.eql('3.3.3');
     });
 
+    it('should allow specifying a bootstrap sha', async () => {
+      mockReleases(github, []);
+      mockCommits(github, [
+        {
+          sha: 'aaaaaa',
+          message: 'fix: some bugfix 1',
+          files: ['path/a/foo'],
+        },
+        {
+          sha: 'bbbbbb',
+          message: 'fix: some bugfix 2',
+          files: ['path/a/foo'],
+        },
+        {
+          sha: 'cccccc',
+          message: 'fix: some bugfix',
+          files: ['path/b/foo'],
+        },
+        {
+          sha: 'dddddd',
+          message: 'fix: some bugfix',
+          files: ['path/b/foo'],
+        },
+      ]);
+      const config = {
+        'bootstrap-sha': 'cccccc',
+        'separate-pull-requests': true,
+        packages: {
+          'path/a': {
+            'release-type': 'simple',
+            component: 'pkg1',
+          },
+          'path/b': {
+            'release-type': 'simple',
+            component: 'pkg2',
+          },
+        },
+      };
+      const versions = {
+        'path/a': '0.0.0',
+        'path/b': '0.0.0',
+      };
+      sandbox
+        .stub(github, 'getFileContentsOnBranch')
+        .withArgs('release-please-config.json', 'main')
+        .resolves(buildGitHubFileRaw(JSON.stringify(config)))
+        .withArgs('.release-please-manifest.json', 'main')
+        .resolves(buildGitHubFileRaw(JSON.stringify(versions)));
+      const manifest = await Manifest.fromManifest(github, 'main');
+      const pullRequests = await manifest.buildPullRequests();
+      expect(pullRequests).lengthOf(1);
+      expect(pullRequests[0].version?.toString()).to.eql('1.0.0');
+    });
+
     describe('with plugins', () => {
       beforeEach(() => {
         mockReleases(github, [

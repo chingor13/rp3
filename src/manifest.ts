@@ -150,6 +150,7 @@ export class Manifest {
   private _strategiesByPath?: Record<string, Strategy>;
   private _pathsByComponent?: Record<string, string>;
   private manifestPath: string;
+  private bootstrapSha?: string;
 
   /**
    * Create a Manifest from explicit config in code. This assumes that the
@@ -197,6 +198,7 @@ export class Manifest {
     this.releaseLabels =
       manifestOptions?.releaseLabels || DEFAULT_RELEASE_LABELS;
     this.labels = manifestOptions?.labels || DEFAULT_LABELS;
+    this.bootstrapSha = manifestOptions?.bootstrapSha;
   }
 
   /**
@@ -293,7 +295,7 @@ export class Manifest {
     // Collect all the SHAs of the latest release packages
     logger.info('Collecting release commit SHAs');
     let releasesFound = 0;
-    const expectedReleases = Object.keys(this.releasedVersions).length;
+    const expectedReleases = Object.keys(strategiesByPath).length;
 
     // SHAs by path
     const releaseShasByPath: Record<string, string> = {};
@@ -347,7 +349,7 @@ export class Manifest {
 
     // sha => release pull request
     const releasePullRequestsBySha: Record<string, PullRequest> = {};
-    let commitsFound = 0;
+    let releaseCommitsFound = 0;
     for await (const commit of commitGenerator) {
       if (releaseShas.has(commit.sha)) {
         if (commit.pullRequest) {
@@ -357,9 +359,12 @@ export class Manifest {
             `Release SHA ${commit.sha} did not have an associated pull request`
           );
         }
-        commitsFound += 1;
+        releaseCommitsFound += 1;
       }
-      if (commitsFound >= expectedShas) {
+      if (
+        releaseCommitsFound >= expectedShas &&
+        (!this.bootstrapSha || commit.sha === this.bootstrapSha)
+      ) {
         break;
       }
       commits.push({
@@ -369,14 +374,14 @@ export class Manifest {
       });
     }
 
-    if (commitsFound < expectedShas) {
+    if (releaseCommitsFound < expectedShas) {
       logger.warn(
-        `Expected ${expectedShas} commits, only found ${commitsFound}`
+        `Expected ${expectedShas} commits, only found ${releaseCommitsFound}`
       );
     }
 
     // split commits by path
-    logger.info('Splitting commits by path');
+    logger.info(`Splitting ${commits.length} commits by path`);
     const cs = new CommitSplit({
       includeEmpty: true,
       packagePaths: Object.keys(this.repositoryConfig),
