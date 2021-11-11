@@ -41,9 +41,13 @@ import {ReleasePleaseManifest} from './updaters/release-please-manifest';
  */
 export interface ReleaserConfig {
   releaseType: ReleaseType;
+
+  // Versioning config
   versioning?: VersioningStrategyType;
   bumpMinorPreMajor?: boolean;
   bumpPatchForMinorPreMajor?: boolean;
+
+  // Strategy options
   changelogSections?: ChangelogSection[];
   changelogPath?: string;
   releaseAs?: string;

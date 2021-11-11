@@ -117,6 +117,7 @@ export async function buildStrategy(
     changelogPath: options.changelogPath,
     changelogSections: options.changelogSections,
     versioningStrategy,
+    skipGitHubRelease: options.skipGithubRelease,
   };
   switch (options.releaseType) {
     case 'ruby': {

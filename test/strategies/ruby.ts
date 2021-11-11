@@ -137,7 +137,8 @@ describe('Ruby', () => {
         files: [],
         sha: 'abc123',
       });
-      expect(release.tag.separator).to.eql('/');
+      expect(release, 'Release').to.not.be.undefined;
+      expect(release!.tag.separator).to.eql('/');
     });
   });
 });

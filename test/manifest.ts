@@ -1222,6 +1222,97 @@ describe('Manifest', () => {
         .to.be.a('string')
         .and.satisfy((msg: string) => msg.startsWith('### [3.2.7]'));
     });
+
+    it('should allow skipping releases', async () => {
+      mockPullRequests(github, [
+        {
+          headBranchName: 'release-please/branches/main',
+          baseBranchName: 'main',
+          number: 1234,
+          title: 'chore: release main',
+          body: pullRequestBody('release-notes/multiple.txt'),
+          labels: ['autorelease: pending'],
+          files: [
+            'packages/bot-config-utils/package.json',
+            'packages/label-utils/package.json',
+            'packages/object-selector/package.json',
+            'packages/datastore-lock/package.json',
+          ],
+          sha: 'abc123',
+        },
+      ]);
+      const getFileContentsStub = sandbox.stub(
+        github,
+        'getFileContentsOnBranch'
+      );
+      getFileContentsStub
+        .withArgs('packages/bot-config-utils/package.json', 'main')
+        .resolves(
+          buildGitHubFileRaw(
+            JSON.stringify({name: '@google-automations/bot-config-utils'})
+          )
+        )
+        .withArgs('packages/label-utils/package.json', 'main')
+        .resolves(
+          buildGitHubFileRaw(
+            JSON.stringify({name: '@google-automations/label-utils'})
+          )
+        )
+        .withArgs('packages/object-selector/package.json', 'main')
+        .resolves(
+          buildGitHubFileRaw(
+            JSON.stringify({name: '@google-automations/object-selector'})
+          )
+        )
+        .withArgs('packages/datastore-lock/package.json', 'main')
+        .resolves(
+          buildGitHubFileRaw(
+            JSON.stringify({name: '@google-automations/datastore-lock'})
+          )
+        );
+      const manifest = new Manifest(
+        github,
+        'main',
+        {
+          'packages/bot-config-utils': {
+            releaseType: 'node',
+          },
+          'packages/label-utils': {
+            releaseType: 'node',
+          },
+          'packages/object-selector': {
+            releaseType: 'node',
+            skipGithubRelease: true,
+          },
+          'packages/datastore-lock': {
+            releaseType: 'node',
+          },
+        },
+        {
+          'packages/bot-config-utils': Version.parse('3.1.4'),
+          'packages/label-utils': Version.parse('1.0.1'),
+          'packages/object-selector': Version.parse('1.0.2'),
+          'packages/datastore-lock': Version.parse('2.0.0'),
+        }
+      );
+      const releases = await manifest.buildReleases();
+      expect(releases).lengthOf(3);
+      expect(releases[0].tag.toString()).to.eql('bot-config-utils-v3.2.0');
+      expect(releases[0].sha).to.eql('abc123');
+      expect(releases[0].notes)
+        .to.be.a('string')
+        .and.satisfy((msg: string) => msg.startsWith('### Features'));
+      expect(releases[1].tag.toString()).to.eql('label-utils-v1.1.0');
+      expect(releases[1].sha).to.eql('abc123');
+      expect(releases[1].notes)
+        .to.be.a('string')
+        .and.satisfy((msg: string) => msg.startsWith('### Features'));
+      expect(releases[2].tag.toString()).to.eql('datastore-lock-v2.1.0');
+      expect(releases[2].sha).to.eql('abc123');
+      expect(releases[2].notes)
+        .to.be.a('string')
+        .and.satisfy((msg: string) => msg.startsWith('### Features'));
+    });
   });
 
   describe('createReleases', () => {

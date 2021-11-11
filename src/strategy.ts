@@ -56,6 +56,7 @@ export interface StrategyOptions {
   headerPartial?: string;
   mainTemplate?: string;
   tagSeparator?: string;
+  skipGitHubRelease?: boolean;
 }
 
 /**
@@ -72,6 +73,7 @@ export abstract class Strategy {
   protected repository: Repository;
   readonly changelogPath: string;
   protected tagSeparator?: string;
+  private skipGitHubRelease: boolean;
 
   // CHANGELOG configuration
   protected changelogSections?: ChangelogSection[];
@@ -94,6 +96,7 @@ export abstract class Strategy {
     this.headerPartial = options.headerPartial;
     this.mainTemplate = options.mainTemplate;
     this.tagSeparator = options.tagSeparator;
+    this.skipGitHubRelease = options.skipGitHubRelease || false;
   }
 
   /**
@@ -257,7 +260,13 @@ export abstract class Strategy {
    * @param {PullRequest} mergedPullRequest The merged release pull request.
    * @returns {Release} The candidate release.
    */
-  async buildRelease(mergedPullRequest: PullRequest): Promise<Release> {
+  async buildRelease(
+    mergedPullRequest: PullRequest
+  ): Promise<Release | undefined> {
+    if (this.skipGitHubRelease) {
+      return undefined;
+    }
+
     const pullRequestTitle =
       PullRequestTitle.parse(mergedPullRequest.title) ||
       PullRequestTitle.parse(
