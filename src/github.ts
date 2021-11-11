@@ -1067,6 +1067,40 @@ export class GitHub {
       return resp.data.html_url;
     }
   );
+
+  removeIssueLabels = wrapAsync(
+    async (labels: string[], number: number): Promise<void> => {
+      if (labels.length === 0) {
+        return;
+      }
+      logger.debug(`removing labels: ${labels} from issue/pull ${number}`);
+      await Promise.all(
+        labels.map(label =>
+          this.octokit.issues.removeLabel({
+            owner: this.repository.owner,
+            repo: this.repository.repo,
+            issue_number: number,
+            name: label,
+          })
+        )
+      );
+    }
+  );
+
+  addIssueLabels = wrapAsync(
+    async (labels: string[], number: number): Promise<void> => {
+      if (labels.length === 0) {
+        return;
+      }
+      logger.debug(`adding labels: ${labels} from issue/pull ${number}`);
+      await this.octokit.issues.addLabels({
+        owner: this.repository.owner,
+        repo: this.repository.repo,
+        issue_number: number,
+        labels,
+      });
+    }
+  );
 }
 
 // Takes a potentially unqualified branch name, and turns it

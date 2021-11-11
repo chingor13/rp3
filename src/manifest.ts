@@ -48,8 +48,6 @@ export interface ReleaserConfig {
   draft?: boolean;
   component?: string;
   packageName?: string;
-  labels?: string[];
-  releaseLabels?: string[];
 
   // Ruby-only
   versionFile?: string;
@@ -63,7 +61,7 @@ export interface CandidateReleasePullRequest {
   config: ReleaserConfig;
 }
 
-interface CandidateRelease extends Release {
+export interface CandidateRelease extends Release {
   pullRequest: PullRequest;
 }
 
@@ -93,6 +91,8 @@ interface ManifestOptions {
   fork?: boolean;
   signoff?: string;
   manifestPath?: string;
+  labels?: string[];
+  releaseLabels?: string[];
 }
 
 interface ReleaserPackageConfig extends ReleaserConfigJson {
@@ -119,6 +119,8 @@ const RELEASE_PLEASE_CONFIG = 'release-please-config.json';
 const RELEASE_PLEASE_MANIFEST = '.release-please-manifest.json';
 export const ROOT_PROJECT_PATH = '.';
 const DEFAULT_COMPONENT_NAME = '';
+const DEFAULT_LABELS = ['autorelease: pending'];
+const DEFAULT_RELEASE_LABELS = ['autorelease: tagged'];
 
 export const MANIFEST_PULL_REQUEST_TITLE_PATTERN = 'chore: release ${branch}';
 
@@ -131,6 +133,8 @@ export class Manifest {
   separatePullRequests: boolean;
   fork: boolean;
   signoffUser?: string;
+  private labels: string[];
+  private releaseLabels: string[];
   private plugins: PluginType[];
   private _strategiesByPath?: Record<string, Strategy>;
   private _pathsByComponent?: Record<string, string>;
@@ -154,6 +158,9 @@ export class Manifest {
     this.plugins = manifestOptions?.plugins || [];
     this.fork = manifestOptions?.fork || false;
     this.signoffUser = manifestOptions?.signoff;
+    this.releaseLabels =
+      manifestOptions?.releaseLabels || DEFAULT_RELEASE_LABELS;
+    this.labels = manifestOptions?.labels || DEFAULT_LABELS;
   }
 
   static async fromManifest(
@@ -321,7 +328,8 @@ export class Manifest {
       const releasePullRequest = await strategy.buildReleasePullRequest(
         commits,
         latestRelease,
-        config.draft
+        config.draft,
+        this.labels
       );
       if (releasePullRequest) {
         if (releasePullRequest.version) {
@@ -503,17 +511,53 @@ export class Manifest {
   }
 
   async createReleases(): Promise<(GitHubRelease | undefined)[]> {
-    const promises: Promise<GitHubRelease | undefined>[] = [];
+    const releasesByPullRequest: Record<number, CandidateRelease[]> = {};
+    const pullRequestsByNumber: Record<number, PullRequest> = {};
     for (const release of await this.buildReleases()) {
+      pullRequestsByNumber[release.pullRequest.number] = release.pullRequest;
+      if (releasesByPullRequest[release.pullRequest.number]) {
+        releasesByPullRequest[release.pullRequest.number].push(release);
+      } else {
+        releasesByPullRequest[release.pullRequest.number] = [release];
+      }
+    }
+
+    const promises: Promise<GitHubRelease[]>[] = [];
+    for (const pullNumber in releasesByPullRequest) {
+      promises.push(
+        this.createReleasesForPullRequest(
+          releasesByPullRequest[pullNumber],
+          pullRequestsByNumber[pullNumber]
+        )
+      );
+    }
+    const releases = await Promise.all(promises);
+    return releases.reduce((collection, r) => collection.concat(r), []);
+  }
+
+  private async createReleasesForPullRequest(
+    releases: CandidateRelease[],
+    pullRequest: PullRequest
+  ): Promise<GitHubRelease[]> {
+    // create the release
+    const promises: Promise<GitHubRelease>[] = [];
+    for (const release of releases) {
       promises.push(this.createRelease(release));
     }
-    return await Promise.all(promises);
+    const githubReleases = await Promise.all(promises);
+
+    // adjust tags on pullRequest
+    await Promise.all([
+      this.github.removeIssueLabels(this.labels, pullRequest.number),
+      this.github.addIssueLabels(this.releaseLabels, pullRequest.number),
+    ]);
+
+    return githubReleases;
   }
 
   private async createRelease(
     release: CandidateRelease
   ): Promise<GitHubRelease> {
-    // create the release
     const githubRelease = await this.github.createRelease(release);
 
     // comment on pull request
@@ -583,8 +627,6 @@ function extractReleaserConfig(config: ReleaserPackageConfig): ReleaserConfig {
     packageName: config['package-name'],
     versionFile: config['version-file'],
     extraFiles: config['extra-files'],
-    labels: (config['label'] || '').split(','),
-    releaseLabels: (config['release-label'] || '').split(','),
   };
 }
 

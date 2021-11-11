@@ -168,56 +168,103 @@ describe('Manifest', () => {
   });
 
   describe('buildPullRequests', () => {
-    it('should handle single package repository', async () => {
-      mockReleases(github, [
-        {
-          sha: 'abc123',
-          tagName: 'v1.0.0',
-          url: 'https://github.com/fake-owner/fake-repo/releases/tag/v1.0.0',
-        },
-      ]);
-      mockCommits(github, [
-        {
-          sha: 'def456',
-          message: 'fix: some bugfix',
-          files: [],
-        },
-        {
-          sha: 'abc123',
-          message: 'chore: release 1.0.0',
-          files: [],
-          pullRequest: {
-            headBranchName: 'release-please/branches/main',
-            baseBranchName: 'main',
-            number: 123,
-            title: 'chore: release 1.0.0',
-            body: '',
-            labels: [],
-            files: [],
+    describe('with basic config', () => {
+      beforeEach(() => {
+        mockReleases(github, [
+          {
             sha: 'abc123',
+            tagName: 'v1.0.0',
+            url: 'https://github.com/fake-owner/fake-repo/releases/tag/v1.0.0',
           },
-        },
-      ]);
-      const manifest = new Manifest(
-        github,
-        'main',
-        {
-          '.': {
-            releaseType: 'simple',
+        ]);
+        mockCommits(github, [
+          {
+            sha: 'def456',
+            message: 'fix: some bugfix',
+            files: [],
           },
-        },
-        {
-          '.': Version.parse('1.0.0'),
-        }
-      );
-      const pullRequests = await manifest.buildPullRequests();
-      expect(pullRequests).lengthOf(1);
-      const pullRequest = pullRequests[0];
-      expect(pullRequest.version?.toString()).to.eql('1.0.1');
-      // simple release type updates the changelog and version.txt
-      assertHasUpdate(pullRequest.updates, 'CHANGELOG.md');
-      assertHasUpdate(pullRequest.updates, 'version.txt');
-      assertHasUpdate(pullRequest.updates, '.release-please-manifest.json');
+          {
+            sha: 'abc123',
+            message: 'chore: release 1.0.0',
+            files: [],
+            pullRequest: {
+              headBranchName: 'release-please/branches/main',
+              baseBranchName: 'main',
+              number: 123,
+              title: 'chore: release 1.0.0',
+              body: '',
+              labels: [],
+              files: [],
+              sha: 'abc123',
+            },
+          },
+        ]);
+      });
+
+      it('should handle single package repository', async () => {
+        const manifest = new Manifest(
+          github,
+          'main',
+          {
+            '.': {
+              releaseType: 'simple',
+            },
+          },
+          {
+            '.': Version.parse('1.0.0'),
+          }
+        );
+        const pullRequests = await manifest.buildPullRequests();
+        expect(pullRequests).lengthOf(1);
+        const pullRequest = pullRequests[0];
+        expect(pullRequest.version?.toString()).to.eql('1.0.1');
+        // simple release type updates the changelog and version.txt
+        assertHasUpdate(pullRequest.updates, 'CHANGELOG.md');
+        assertHasUpdate(pullRequest.updates, 'version.txt');
+        assertHasUpdate(pullRequest.updates, '.release-please-manifest.json');
+      });
+
+      it('should create a draft pull request', async () => {
+        const manifest = new Manifest(
+          github,
+          'main',
+          {
+            '.': {
+              releaseType: 'simple',
+              draft: true,
+            },
+          },
+          {
+            '.': Version.parse('1.0.0'),
+          }
+        );
+        const pullRequests = await manifest.buildPullRequests();
+        expect(pullRequests).lengthOf(1);
+        const pullRequest = pullRequests[0];
+        expect(pullRequest.draft).to.be.true;
+      });
+
+      it('allows customizing pull request labels', async () => {
+        const manifest = new Manifest(
+          github,
+          'main',
+          {
+            '.': {
+              releaseType: 'simple',
+            },
+          },
+          {
+            '.': Version.parse('1.0.0'),
+          },
+          {
+            labels: ['some-special-label'],
+          }
+        );
+        const pullRequests = await manifest.buildPullRequests();
+        expect(pullRequests).lengthOf(1);
+        const pullRequest = pullRequests[0];
+        expect(pullRequest.labels).to.eql(['some-special-label']);
+      });
     });
 
     it('should find the component from config', async () => {
@@ -448,55 +495,6 @@ describe('Manifest', () => {
       expect(pullRequests).lengthOf(2);
       snapshot(dateSafe(pullRequests[0].body.toString()));
       snapshot(dateSafe(pullRequests[1].body.toString()));
-    });
-
-    it('should create a draft pull request', async () => {
-      mockReleases(github, [
-        {
-          sha: 'abc123',
-          tagName: 'v1.0.0',
-          url: 'https://github.com/fake-owner/fake-repo/releases/tag/v1.0.0',
-        },
-      ]);
-      mockCommits(github, [
-        {
-          sha: 'def456',
-          message: 'fix: some bugfix',
-          files: [],
-        },
-        {
-          sha: 'abc123',
-          message: 'chore: release 1.0.0',
-          files: [],
-          pullRequest: {
-            headBranchName: 'release-please/branches/main',
-            baseBranchName: 'main',
-            number: 123,
-            title: 'chore: release 1.0.0',
-            body: '',
-            labels: [],
-            files: [],
-            sha: 'abc123',
-          },
-        },
-      ]);
-      const manifest = new Manifest(
-        github,
-        'main',
-        {
-          '.': {
-            releaseType: 'simple',
-            draft: true,
-          },
-        },
-        {
-          '.': Version.parse('1.0.0'),
-        }
-      );
-      const pullRequests = await manifest.buildPullRequests();
-      expect(pullRequests).lengthOf(1);
-      const pullRequest = pullRequests[0];
-      expect(pullRequest.draft).to.be.true;
     });
 
     describe('with plugins', () => {
@@ -1255,6 +1253,10 @@ describe('Manifest', () => {
         {sha: 'abc123', tagName: 'release-brancher-v1.3.1'},
       ]);
       const commentStub = sandbox.stub(github, 'commentOnIssue').resolves();
+      const addLabelsStub = sandbox.stub(github, 'addIssueLabels').resolves();
+      const removeLabelsStub = sandbox
+        .stub(github, 'removeIssueLabels')
+        .resolves();
       const manifest = new Manifest(
         github,
         'main',
@@ -1273,6 +1275,16 @@ describe('Manifest', () => {
       expect(releases[0]!.sha).to.eql('abc123');
       expect(releases[0]!.notes).to.eql('some release notes');
       sinon.assert.calledOnce(commentStub);
+      sinon.assert.calledOnceWithExactly(
+        addLabelsStub,
+        ['autorelease: tagged'],
+        1234
+      );
+      sinon.assert.calledOnceWithExactly(
+        removeLabelsStub,
+        ['autorelease: pending'],
+        1234
+      );
     });
     it('should handle a multiple manifest release', async () => {
       mockPullRequests(github, [
@@ -1329,6 +1341,10 @@ describe('Manifest', () => {
         {sha: 'abc123', tagName: 'datastore-lock-v2.1.0'},
       ]);
       const commentStub = sandbox.stub(github, 'commentOnIssue').resolves();
+      const addLabelsStub = sandbox.stub(github, 'addIssueLabels').resolves();
+      const removeLabelsStub = sandbox
+        .stub(github, 'removeIssueLabels')
+        .resolves();
       const manifest = new Manifest(
         github,
         'main',
@@ -1368,6 +1384,16 @@ describe('Manifest', () => {
       expect(releases[3]!.sha).to.eql('abc123');
       expect(releases[3]!.notes).to.be.string;
       sinon.assert.callCount(commentStub, 4);
+      sinon.assert.calledOnceWithExactly(
+        addLabelsStub,
+        ['autorelease: tagged'],
+        1234
+      );
+      sinon.assert.calledOnceWithExactly(
+        removeLabelsStub,
+        ['autorelease: pending'],
+        1234
+      );
     });
     it('should handle a single standalone release', async () => {
       mockPullRequests(github, [
@@ -1382,6 +1408,10 @@ describe('Manifest', () => {
           sha: 'abc123',
         },
       ]);
+      const addLabelsStub = sandbox.stub(github, 'addIssueLabels').resolves();
+      const removeLabelsStub = sandbox
+        .stub(github, 'removeIssueLabels')
+        .resolves();
       const manifest = new Manifest(
         github,
         'main',
@@ -1402,6 +1432,81 @@ describe('Manifest', () => {
       expect(releases[0]!.sha).to.eql('abc123');
       expect(releases[0]!.notes).to.be.string;
       sinon.assert.calledOnce(commentStub);
+      sinon.assert.calledOnceWithExactly(
+        addLabelsStub,
+        ['autorelease: tagged'],
+        1234
+      );
+      sinon.assert.calledOnceWithExactly(
+        removeLabelsStub,
+        ['autorelease: pending'],
+        1234
+      );
+    });
+    it('should allow customizing pull request labels', async () => {
+      mockPullRequests(github, [
+        {
+          headBranchName: 'release-please/branches/main',
+          baseBranchName: 'main',
+          number: 1234,
+          title: 'chore: release main',
+          body: pullRequestBody('release-notes/single-manifest.txt'),
+          labels: [],
+          files: [],
+          sha: 'abc123',
+        },
+      ]);
+      const getFileContentsStub = sandbox.stub(
+        github,
+        'getFileContentsOnBranch'
+      );
+      getFileContentsStub
+        .withArgs('package.json', 'main')
+        .resolves(
+          buildGitHubFileRaw(
+            JSON.stringify({name: '@google-cloud/release-brancher'})
+          )
+        );
+      mockCreateRelease(github, [
+        {sha: 'abc123', tagName: 'release-brancher-v1.3.1'},
+      ]);
+      const commentStub = sandbox.stub(github, 'commentOnIssue').resolves();
+      const addLabelsStub = sandbox.stub(github, 'addIssueLabels').resolves();
+      const removeLabelsStub = sandbox
+        .stub(github, 'removeIssueLabels')
+        .resolves();
+      const manifest = new Manifest(
+        github,
+        'main',
+        {
+          '.': {
+            releaseType: 'node',
+          },
+        },
+        {
+          '.': Version.parse('1.3.1'),
+        },
+        {
+          labels: ['some-pull-request-label'],
+          releaseLabels: ['some-tagged-label'],
+        }
+      );
+      const releases = await manifest.createReleases();
+      expect(releases).lengthOf(1);
+      expect(releases[0]!.tagName).to.eql('release-brancher-v1.3.1');
+      expect(releases[0]!.sha).to.eql('abc123');
+      expect(releases[0]!.notes).to.eql('some release notes');
+      sinon.assert.calledOnce(commentStub);
+      sinon.assert.calledOnceWithExactly(
+        addLabelsStub,
+        ['some-tagged-label'],
+        1234
+      );
+      sinon.assert.calledOnceWithExactly(
+        removeLabelsStub,
+        ['some-pull-request-label'],
+        1234
+      );
     });
   });
 });

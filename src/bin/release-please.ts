@@ -336,8 +336,6 @@ const createReleasePullRequestCommand: yargs.CommandModule<
           changelogPath: argv.changelogPath,
           changelogSections: argv.changelogSections,
           releaseAs: argv.releaseAs,
-          labels: (argv.label || '').split(','),
-          releaseLabels: [], // unnecessary for the pull request command
         },
         argv
       );
@@ -395,8 +393,6 @@ const createReleaseCommand: yargs.CommandModule<{}, CreateReleaseArgs> = {
           releaseType: argv.releaseType,
           component: argv.component,
           draft: argv.draft,
-          labels: (argv.label || '').split('\n'),
-          releaseLabels: (argv.releaseLabel || '').split('\n'),
         },
         argv
       );

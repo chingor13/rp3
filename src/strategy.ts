@@ -33,8 +33,6 @@ import {
 } from './manifest';
 import {PullRequestBody} from './util/pull-request-body';
 
-const DEFAULT_LABELS = ['autorelease: pending', 'type: release'];
-const DEFAULT_RELEASE_LABELS = ['autorelease: tagged'];
 const DEFAULT_CHANGELOG_PATH = 'CHANGELOG.md';
 
 export interface BuildUpdatesOptions {
@@ -45,8 +43,6 @@ export interface BuildUpdatesOptions {
 }
 export interface StrategyOptions {
   path?: string;
-  labels?: string[];
-  releaseLabels?: string[];
   bumpMinorPreMajor?: boolean;
   bumpPatchForMinorPreMajor?: boolean;
   github: GitHub;
@@ -67,8 +63,6 @@ export interface StrategyOptions {
  */
 export abstract class Strategy {
   path: string;
-  labels: string[];
-  releaseLabels: string[];
   github: GitHub;
   component?: string;
   packageName?: string;
@@ -85,8 +79,6 @@ export abstract class Strategy {
 
   constructor(options: StrategyOptions) {
     this.path = options.path || ROOT_PROJECT_PATH;
-    this.labels = options.labels || DEFAULT_LABELS;
-    this.releaseLabels = options.releaseLabels || DEFAULT_RELEASE_LABELS;
     this.github = options.github;
     this.component = options.component;
     this.packageName = options.packageName;
@@ -170,7 +162,8 @@ export abstract class Strategy {
   async buildReleasePullRequest(
     commits: Commit[],
     latestRelease?: Release,
-    draft?: boolean
+    draft?: boolean,
+    labels: string[] = []
   ): Promise<ReleasePullRequest | undefined> {
     const conventionalCommits = this.postProcessCommits(
       parseConventionalCommits(commits)
@@ -239,7 +232,7 @@ export abstract class Strategy {
       title: pullRequestTitle,
       body: pullRequestBody,
       updates,
-      labels: this.labels,
+      labels,
       headRefName: branchName.toString(),
       version: newVersion,
       draft: draft ?? false,
