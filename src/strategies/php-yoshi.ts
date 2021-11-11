@@ -88,7 +88,7 @@ export class PHPYoshi extends Strategy {
     });
     const component = this.component || (await this.getDefaultComponent());
     const newVersionTag = new TagName(newVersion, component);
-    let releaseNotesBody = '';
+    let releaseNotesBody = `## ${newVersion.toString()}`;
     for (const directory of topLevelDirectories) {
       try {
         const contents = await this.github.getFileContentsOnBranch(
@@ -257,14 +257,12 @@ function updatePHPChangelogEntry(
   changelogEntry: string,
   entryUpdate: string
 ) {
-  {
-    // Remove the first line of the entry, in favor of <summary>.
-    // This also allows us to use the same regex for extracting release
-    // notes (since the string "## v0.0.0" doesn't show up multiple times).
-    const entryUpdateSplit: string[] = entryUpdate.split(/\r?\n/);
-    entryUpdateSplit.shift();
-    entryUpdate = entryUpdateSplit.join('\n');
-  }
+  // Remove the first line of the entry, in favor of <summary>.
+  // This also allows us to use the same regex for extracting release
+  // notes (since the string "## v0.0.0" doesn't show up multiple times).
+  const entryUpdateSplit: string[] = entryUpdate.split(/\r?\n/);
+  entryUpdateSplit.shift();
+  entryUpdate = entryUpdateSplit.join('\n');
   return `${changelogEntry}
 
 <details><summary>${pkgKey}</summary>

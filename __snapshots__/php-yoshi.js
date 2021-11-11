@@ -3,7 +3,7 @@ exports['PHPYoshi buildReleasePullRequest returns release PR changes with defaul
 ---
 
 
-
+## 1.0.0
 
 <details><summary>google/client1 1.2.4</summary>
 
@@ -44,7 +44,7 @@ exports['PHPYoshi buildReleasePullRequest returns release PR changes with semver
 ---
 
 
-
+## 0.123.5
 
 <details><summary>google/client1 1.2.4</summary>
 

@@ -434,16 +434,16 @@ export class GitHub {
    */
   private async pullRequestsGraphQL(
     targetBranch: string,
-    status: 'OPEN' | 'CLOSED' | 'MERGED' = 'MERGED',
+    states: 'OPEN' | 'CLOSED' | 'MERGED' = 'MERGED',
     cursor?: string
   ): Promise<PullRequestHistory | null> {
     logger.debug(
-      `Fetching ${status} pull requests on branch ${targetBranch} with cursor ${cursor}`
+      `Fetching ${states} pull requests on branch ${targetBranch} with cursor ${cursor}`
     );
     const response = await this.graphqlRequest({
-      query: `query mergedPullRequests($owner: String!, $repo: String!, $num: Int!, $maxFilesChanged: Int, $targetBranch: String!, $status: [PullRequestState!], $cursor: String) {
+      query: `query mergedPullRequests($owner: String!, $repo: String!, $num: Int!, $maxFilesChanged: Int, $targetBranch: String!, $states: [PullRequestState!], $cursor: String) {
           repository(owner: $owner, name: $repo) {
-            pullRequests(first: $num, after: $cursor, baseRefName: $targetBranch, states: $status, orderBy: {field: CREATED_AT, direction: DESC}) {
+            pullRequests(first: $num, after: $cursor, baseRefName: $targetBranch, states: $states, orderBy: {field: CREATED_AT, direction: DESC}) {
               nodes {
                 number
                 title
@@ -480,7 +480,7 @@ export class GitHub {
       repo: this.repository.repo,
       num: 25,
       targetBranch,
-      status,
+      states,
       maxFilesChanged: 64,
     });
     if (!response.repository.pullRequests) {
@@ -493,20 +493,18 @@ export class GitHub {
       []) as GraphQLPullRequest[];
     return {
       pageInfo: response.repository.pullRequests.pageInfo,
-      data: pullRequests
-        .filter(pullRequest => !!pullRequest.mergeCommit)
-        .map(pullRequest => {
-          return {
-            sha: pullRequest.mergeCommit?.oid, // already filtered non-merged
-            number: pullRequest.number,
-            baseBranchName: pullRequest.baseRefName,
-            headBranchName: pullRequest.headRefName,
-            labels: (pullRequest.labels.nodes || []).map(l => l.name),
-            title: pullRequest.title,
-            body: pullRequest.body + '',
-            files: pullRequest.files.nodes.map(node => node.path),
-          };
-        }),
+      data: pullRequests.map(pullRequest => {
+        return {
+          sha: pullRequest.mergeCommit?.oid, // already filtered non-merged
+          number: pullRequest.number,
+          baseBranchName: pullRequest.baseRefName,
+          headBranchName: pullRequest.headRefName,
+          labels: (pullRequest.labels.nodes || []).map(l => l.name),
+          title: pullRequest.title,
+          body: pullRequest.body + '',
+          files: pullRequest.files.nodes.map(node => node.path),
+        };
+      }),
     };
   }
 

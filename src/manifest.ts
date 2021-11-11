@@ -393,12 +393,10 @@ export class Manifest {
       'OPEN'
     );
     for await (const openPullRequest of generator) {
-      const pullRequestBody = PullRequestBody.parse(openPullRequest.body);
-      const branchName = BranchName.parse(openPullRequest.headBranchName);
       if (
-        pullRequestBody &&
-        branchName &&
-        hasAllLabels(this.labels, openPullRequest.labels)
+        hasAllLabels(this.labels, openPullRequest.labels) &&
+        BranchName.parse(openPullRequest.headBranchName) &&
+        PullRequestBody.parse(openPullRequest.body)
       ) {
         openPullRequests.push(openPullRequest);
       }
