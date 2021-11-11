@@ -402,7 +402,7 @@ export class GitHub {
     maxResults: number = Number.MAX_SAFE_INTEGER
   ) {
     let cursor: string | undefined = undefined;
-    const results = 0;
+    let results = 0;
     while (results < maxResults) {
       const response: PullRequestHistory | null =
         await this.pullRequestsGraphQL(targetBranch, status, cursor);
@@ -411,6 +411,7 @@ export class GitHub {
         break;
       }
       for (let i = 0; i < response.data.length; i++) {
+        results += 1;
         yield response.data[i];
       }
       if (!response.pageInfo.hasNextPage) {
@@ -437,12 +438,12 @@ export class GitHub {
     cursor?: string
   ): Promise<PullRequestHistory | null> {
     logger.debug(
-      `Fetching merged pull requests on branch ${targetBranch} with cursor ${cursor}`
+      `Fetching ${status} pull requests on branch ${targetBranch} with cursor ${cursor}`
     );
     const response = await this.graphqlRequest({
-      query: `query mergedPullRequests($owner: String!, $repo: String!, $num: Int!, $maxFilesChanged: Int, $targetBranch: String!, $status: String!, $cursor: String) {
+      query: `query mergedPullRequests($owner: String!, $repo: String!, $num: Int!, $maxFilesChanged: Int, $targetBranch: String!, $status: [PullRequestState!], $cursor: String) {
           repository(owner: $owner, name: $repo) {
-            pullRequests(first: $num, after: $cursor, baseRefName: $targetBranch, states: MERGED, orderBy: {field: CREATED_AT, direction: DESC}) {
+            pullRequests(first: $num, after: $cursor, baseRefName: $targetBranch, states: $status, orderBy: {field: CREATED_AT, direction: DESC}) {
               nodes {
                 number
                 title
@@ -480,6 +481,7 @@ export class GitHub {
       num: 25,
       targetBranch,
       status,
+      maxFilesChanged: 64,
     });
     if (!response.repository.pullRequests) {
       logger.warn(

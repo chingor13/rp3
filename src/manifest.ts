@@ -386,6 +386,7 @@ export class Manifest {
     }
 
     // collect open release pull requests
+    logger.info('Looking for open release pull requests');
     const openPullRequests: PullRequest[] = [];
     const generator = this.github.pullRequestIterator(
       this.targetBranch,
@@ -394,7 +395,11 @@ export class Manifest {
     for await (const openPullRequest of generator) {
       const pullRequestBody = PullRequestBody.parse(openPullRequest.body);
       const branchName = BranchName.parse(openPullRequest.headBranchName);
-      if (pullRequestBody && branchName) {
+      if (
+        pullRequestBody &&
+        branchName &&
+        hasAllLabels(this.labels, openPullRequest.labels)
+      ) {
         openPullRequests.push(openPullRequest);
       }
     }
@@ -457,18 +462,21 @@ export class Manifest {
     const pullRequestGenerator = this.github.pullRequestIterator(
       this.targetBranch,
       'MERGED',
-      500
+      200
     );
 
     const releases: CandidateRelease[] = [];
     for await (const pullRequest of pullRequestGenerator) {
-      logger.info(
+      if (!hasAllLabels(this.labels, pullRequest.labels)) {
+        continue;
+      }
+      logger.debug(
         `Found pull request #${pullRequest.number}: '${pullRequest.title}'`
       );
 
       const pullRequestBody = PullRequestBody.parse(pullRequest.body);
       if (!pullRequestBody) {
-        logger.info('could not parse pull request body as a release PR');
+        logger.debug('could not parse pull request body as a release PR');
         continue;
       }
 
@@ -725,4 +733,14 @@ async function latestReleaseVersion(
     return version;
   }
   return;
+}
+
+function hasAllLabels(expected: string[], existing: string[]): boolean {
+  const existingSet = new Set(existing);
+  for (const label of expected) {
+    if (!existingSet.has(label)) {
+      return false;
+    }
+  }
+  return true;
 }
