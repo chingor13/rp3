@@ -733,6 +733,96 @@ describe('Manifest', () => {
       expect(pullRequests[0].version?.toString()).to.eql('1.0.0');
     });
 
+    it('should allow specifying a last release sha', async () => {
+      mockReleases(github, [
+        {
+          sha: 'abc123',
+          tagName: 'pkg1-v1.0.0',
+          url: 'https://github.com/fake-owner/fake-repo/releases/tag/pkg1-v1.0.0',
+        },
+        {
+          sha: 'def234',
+          tagName: 'pkg2-v0.2.3',
+          url: 'https://github.com/fake-owner/fake-repo/releases/tag/pkg2-v1.0.0',
+        },
+      ]);
+      mockCommits(github, [
+        {
+          sha: 'aaaaaa',
+          message: 'fix: some bugfix',
+          files: ['path/a/foo'],
+        },
+        {
+          sha: 'abc123',
+          message: 'chore: release 1.0.0',
+          files: [],
+          pullRequest: {
+            headBranchName: 'release-please/branches/main/components/pkg1',
+            baseBranchName: 'main',
+            number: 123,
+            title: 'chore: release 1.0.0',
+            body: '',
+            labels: [],
+            files: [],
+            sha: 'abc123',
+          },
+        },
+        {
+          sha: 'bbbbbb',
+          message: 'fix: some bugfix',
+          files: ['path/b/foo'],
+        },
+        {
+          sha: 'cccccc',
+          message: 'fix: some bugfix',
+          files: ['path/a/foo'],
+        },
+        {
+          sha: 'def234',
+          message: 'chore: release 0.2.3',
+          files: [],
+          pullRequest: {
+            headBranchName: 'release-please/branches/main/components/pkg2',
+            baseBranchName: 'main',
+            number: 123,
+            title: 'chore: release 0.2.3',
+            body: '',
+            labels: [],
+            files: [],
+            sha: 'def234',
+          },
+        },
+      ]);
+      const config = {
+        'last-release-sha': 'bbbbbb',
+        'separate-pull-requests': true,
+        packages: {
+          'path/a': {
+            'release-type': 'simple',
+            component: 'pkg1',
+          },
+          'path/b': {
+            'release-type': 'simple',
+            component: 'pkg2',
+          },
+        },
+      };
+      const versions = {
+        'path/a': '0.0.0',
+        'path/b': '0.0.0',
+      };
+      sandbox
+        .stub(github, 'getFileContentsOnBranch')
+        .withArgs('release-please-config.json', 'main')
+        .resolves(buildGitHubFileRaw(JSON.stringify(config)))
+        .withArgs('.release-please-manifest.json', 'main')
+        .resolves(buildGitHubFileRaw(JSON.stringify(versions)));
+      const manifest = await Manifest.fromManifest(github, 'main');
+      const pullRequests = await manifest.buildPullRequests();
+      expect(pullRequests).lengthOf(1);
+      expect(pullRequests[0].version?.toString()).to.eql('1.0.0');
+    });
+
     describe('with plugins', () => {
       beforeEach(() => {
         mockReleases(github, [

@@ -113,7 +113,7 @@ export type PluginType = 'node-workspace' | 'cargo-workspace';
 /**
  * This is the schema of the manifest config json
  */
-export interface Config extends ReleaserConfigJson {
+interface ManifestConfig extends ReleaserConfigJson {
   packages: Record<string, ReleaserPackageConfig>;
   'bootstrap-sha'?: string;
   'last-release-sha'?: string;
@@ -151,6 +151,7 @@ export class Manifest {
   private _pathsByComponent?: Record<string, string>;
   private manifestPath: string;
   private bootstrapSha?: string;
+  private lastReleaseSha?: string;
 
   /**
    * Create a Manifest from explicit config in code. This assumes that the
@@ -199,6 +200,7 @@ export class Manifest {
       manifestOptions?.releaseLabels || DEFAULT_RELEASE_LABELS;
     this.labels = manifestOptions?.labels || DEFAULT_LABELS;
     this.bootstrapSha = manifestOptions?.bootstrapSha;
+    this.lastReleaseSha = manifestOptions?.lastReleaseSha;
   }
 
   /**
@@ -330,6 +332,7 @@ export class Manifest {
       }
     }
 
+    const needsBootstrap = releasesFound < expectedReleases;
     if (releasesFound < expectedReleases) {
       logger.warn(
         `Expected ${expectedReleases} releases, only found ${releasesFound}`
@@ -361,10 +364,18 @@ export class Manifest {
         }
         releaseCommitsFound += 1;
       }
-      if (
-        releaseCommitsFound >= expectedShas &&
-        (!this.bootstrapSha || commit.sha === this.bootstrapSha)
-      ) {
+      if (this.lastReleaseSha && this.lastReleaseSha === commit.sha) {
+        logger.info(
+          `Using configured lastReleaseSha ${this.lastReleaseSha} as last commit.`
+        );
+        break;
+      } else if (needsBootstrap && commit.sha === this.bootstrapSha) {
+        logger.info(
+          `Needed bootstrapping, found configured bootstrapSha ${this.bootstrapSha}`
+        );
+        break;
+      } else if (!needsBootstrap && releaseCommitsFound >= expectedShas) {
+        // found enough commits
         break;
       }
       commits.push({
@@ -756,7 +767,7 @@ async function parseConfig(
   configFile: string,
   branch: string
 ): Promise<{config: RepositoryConfig; options: ManifestOptions}> {
-  const config = await github.getFileJson<Config>(configFile, branch);
+  const config = await github.getFileJson<ManifestConfig>(configFile, branch);
   const defaultConfig = extractReleaserConfig(config);
   const repositoryConfig: RepositoryConfig = {};
   for (const path in config.packages) {
