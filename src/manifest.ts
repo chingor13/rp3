@@ -109,6 +109,10 @@ interface ReleaserPackageConfig extends ReleaserConfigJson {
 }
 
 export type PluginType = 'node-workspace' | 'cargo-workspace';
+
+/**
+ * This is the schema of the manifest config json
+ */
 export interface Config extends ReleaserConfigJson {
   packages: Record<string, ReleaserPackageConfig>;
   'bootstrap-sha'?: string;

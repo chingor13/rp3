@@ -20,7 +20,7 @@ import * as yargs from 'yargs';
 import {GitHub, GH_API_URL, GH_GRAPHQL_URL} from '../github';
 import {Manifest} from '../manifest';
 import {ChangelogSection} from '../release-notes';
-import {logger} from '../util/logger';
+import {logger, setLogger, CheckpointLogger} from '../util/logger';
 import {getReleaserTypes, ReleaseType} from '../factory';
 import * as util from 'util';
 
@@ -500,6 +500,23 @@ export const parser = yargs
   .command(createReleaseCommand)
   .command(createManifestPullRequestCommand)
   .command(createManifestReleaseCommand)
+  .option('debug', {
+    describe: 'print verbose errors (use only for local debugging).',
+    default: false,
+    type: 'boolean',
+  })
+  .option('trace', {
+    describe: 'print extra verbose errors (use only for local debugging).',
+    default: false,
+    type: 'boolean',
+  })
+  .middleware(argv => {
+    if (argv.trace) {
+      setLogger(new CheckpointLogger(true, true));
+    } else if (argv.debug) {
+      setLogger(new CheckpointLogger(true));
+    }
+  })
   .demandCommand(1)
   .strict(true)
   .scriptName('release-please');
