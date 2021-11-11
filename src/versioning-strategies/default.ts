@@ -29,8 +29,8 @@ interface DefaultVersioningStrategyOptions {
 }
 
 export class DefaultVersioningStrategy implements VersioningStrategy {
-  bumpMinorPreMajor: boolean;
-  bumpPatchForMinorPreMajor: boolean;
+  readonly bumpMinorPreMajor: boolean;
+  readonly bumpPatchForMinorPreMajor: boolean;
   constructor(options: DefaultVersioningStrategyOptions = {}) {
     this.bumpMinorPreMajor = options.bumpMinorPreMajor === true;
     this.bumpPatchForMinorPreMajor = options.bumpPatchForMinorPreMajor === true;

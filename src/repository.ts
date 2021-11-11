@@ -13,7 +13,7 @@
 // limitations under the License.
 
 export interface Repository {
-  owner: string;
-  repo: string;
-  defaultBranch: string;
+  readonly owner: string;
+  readonly repo: string;
+  readonly defaultBranch: string;
 }

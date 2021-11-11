@@ -48,7 +48,7 @@ interface RubyYoshiStrategyOptions extends StrategyOptions {
 }
 
 export class RubyYoshi extends Strategy {
-  versionFile: string;
+  readonly versionFile: string;
   constructor(options: RubyYoshiStrategyOptions) {
     super({
       ...options,

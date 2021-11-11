@@ -125,14 +125,14 @@ const DEFAULT_RELEASE_LABELS = ['autorelease: tagged'];
 export const MANIFEST_PULL_REQUEST_TITLE_PATTERN = 'chore: release ${branch}';
 
 export class Manifest {
-  repository: Repository;
-  github: GitHub;
-  repositoryConfig: RepositoryConfig;
-  releasedVersions: ReleasedVersions;
-  targetBranch: string;
-  separatePullRequests: boolean;
-  fork: boolean;
-  signoffUser?: string;
+  private repository: Repository;
+  private github: GitHub;
+  readonly repositoryConfig: RepositoryConfig;
+  readonly releasedVersions: ReleasedVersions;
+  private targetBranch: string;
+  private separatePullRequests: boolean;
+  readonly fork: boolean;
+  private signoffUser?: string;
   private labels: string[];
   private releaseLabels: string[];
   private plugins: PluginType[];

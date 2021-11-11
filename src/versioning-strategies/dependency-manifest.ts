@@ -26,7 +26,6 @@ import {
 const DEPENDENCY_UPDATE_REGEX =
   /^deps: update dependency (.*) to (v.*)(\s\(#\d+\))?$/m;
 
-// FIXME: implement this versioning strategy
 export class DependencyManifest extends DefaultVersioningStrategy {
   determineReleaseType(
     version: Version,

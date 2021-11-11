@@ -15,7 +15,7 @@
 import {TagName} from './util/tag-name';
 
 export interface Release {
-  tag: TagName;
-  sha: string;
-  notes: string;
+  readonly tag: TagName;
+  readonly sha: string;
+  readonly notes: string;
 }

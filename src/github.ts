@@ -122,10 +122,10 @@ export interface GitHubRelease {
 }
 
 export class GitHub {
-  repository: Repository;
-  octokit: OctokitType;
-  request: RequestFunctionType;
-  graphql: Function;
+  readonly repository: Repository;
+  private octokit: OctokitType;
+  private request: RequestFunctionType;
+  private graphql: Function;
 
   constructor(options: GitHubOptions) {
     this.repository = options.repository;

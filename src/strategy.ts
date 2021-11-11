@@ -62,20 +62,20 @@ export interface StrategyOptions {
  * necessary to update in a release pull request.
  */
 export abstract class Strategy {
-  path: string;
-  github: GitHub;
-  component?: string;
-  packageName?: string;
-  versioningStrategy: VersioningStrategy;
-  targetBranch: string;
-  repository: Repository;
-  changelogPath: string;
+  readonly path: string;
+  protected github: GitHub;
+  readonly component?: string;
+  protected packageName?: string;
+  readonly versioningStrategy: VersioningStrategy;
+  protected targetBranch: string;
+  protected repository: Repository;
+  readonly changelogPath: string;
 
   // CHANGELOG configuration
-  changelogSections?: ChangelogSection[];
-  commitPartial?: string;
-  headerPartial?: string;
-  mainTemplate?: string;
+  protected changelogSections?: ChangelogSection[];
+  protected commitPartial?: string;
+  protected headerPartial?: string;
+  protected mainTemplate?: string;
 
   constructor(options: StrategyOptions) {
     this.path = options.path || ROOT_PROJECT_PATH;

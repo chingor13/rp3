@@ -28,7 +28,7 @@ interface RubyStrategyOptions extends StrategyOptions {
 }
 
 export class Ruby extends Strategy {
-  versionFile: string;
+  readonly versionFile: string;
   constructor(options: RubyStrategyOptions) {
     super(options);
     this.versionFile = options.versionFile ?? '';

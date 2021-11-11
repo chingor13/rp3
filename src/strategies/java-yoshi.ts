@@ -20,6 +20,7 @@ import {Strategy, StrategyOptions, BuildUpdatesOptions} from '../strategy';
 import {Changelog} from '../updaters/changelog';
 import {GitHubFileContents} from '../github';
 import {JavaSnapshot} from '../versioning-strategies/java-snapshot';
+import {DefaultVersioningStrategy} from '../versioning-strategies/default';
 
 const CHANGELOG_SECTIONS = [
   {type: 'feat', section: 'Features'},
@@ -41,14 +42,16 @@ interface JavaStrategyOptions extends StrategyOptions {
 }
 
 export class JavaYoshi extends Strategy {
-  extraFiles: string[];
-  versionsContent?: GitHubFileContents;
+  readonly extraFiles: string[];
+  private versionsContent?: GitHubFileContents;
 
   constructor(options: JavaStrategyOptions) {
     options.changelogSections = options.changelogSections ?? CHANGELOG_SECTIONS;
-    super(options);
     // wrap the configured versioning strategy with snapshotting
-    this.versioningStrategy = new JavaSnapshot(this.versioningStrategy);
+    options.versioningStrategy = new JavaSnapshot(
+      options.versioningStrategy || new DefaultVersioningStrategy()
+    );
+    super(options);
     this.extraFiles = options.extraFiles || [];
   }
 

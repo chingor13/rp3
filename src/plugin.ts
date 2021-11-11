@@ -22,9 +22,9 @@ import {CandidateReleasePullRequest, RepositoryConfig} from './manifest';
  * or update existing files.
  */
 export abstract class ManifestPlugin {
-  github: GitHub;
-  targetBranch: string;
-  repositoryConfig: RepositoryConfig;
+  readonly github: GitHub;
+  readonly targetBranch: string;
+  readonly repositoryConfig: RepositoryConfig;
   constructor(
     github: GitHub,
     targetBranch: string,

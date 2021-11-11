@@ -43,10 +43,10 @@ interface BuildNotesOptions {
 
 export class ReleaseNotes {
   // allow for customized commit template.
-  changelogSections?: ChangelogSection[];
-  commitPartial?: string;
-  headerPartial?: string;
-  mainTemplate?: string;
+  private changelogSections?: ChangelogSection[];
+  private commitPartial?: string;
+  private headerPartial?: string;
+  private mainTemplate?: string;
 
   constructor(options: ReleaseNotesOptions = {}) {
     this.changelogSections = options.changelogSections;
