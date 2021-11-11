@@ -28,50 +28,32 @@ const fakeCommit: ConventionalCommit = {
   files: [],
 };
 
-class RemoveSnapshotVersionUpdate implements VersionUpdater {
-  name = 'remove-snapshot';
-  parent?: VersionUpdater;
-  constructor(parent?: VersionUpdater) {
-    this.parent = parent;
+class AddSnapshotVersionUpdate implements VersionUpdater {
+  strategy: VersioningStrategy;
+  name = 'java-snapshot';
+  constructor(strategy: VersioningStrategy) {
+    this.strategy = strategy;
   }
   bump(version: Version): Version {
-    if (this.parent) {
-      version = this.parent.bump(version);
-    }
-    return new Version(
-      version.major,
-      version.minor,
-      version.patch,
-      version.preRelease
-        ? version.preRelease.replace(/-?SNAPSHOT/, '')
-        : undefined,
-      version.build
-    );
+    const nextPatch = this.strategy.bump(version, [fakeCommit]);
+    nextPatch.preRelease = nextPatch.preRelease
+      ? `${nextPatch.preRelease}-SNAPSHOT`
+      : 'SNAPSHOT';
+    return nextPatch;
   }
 }
 
-export class JavaSnapshot implements VersioningStrategy {
+export class JavaAddSnapshot implements VersioningStrategy {
   strategy: VersioningStrategy;
   constructor(strategy: VersioningStrategy) {
     this.strategy = strategy;
   }
 
   determineReleaseType(
-    version: Version,
-    commits: ConventionalCommit[]
+    _version: Version,
+    _commits: ConventionalCommit[]
   ): VersionUpdater {
-    const parentBump = this.strategy.determineReleaseType(version, commits);
-    if (version.preRelease?.match(/-?SNAPSHOT/)) {
-      const patchBumpVersion = this.strategy
-        .determineReleaseType(version, [fakeCommit])
-        .bump(version);
-      const parentBumpVersion = parentBump.bump(version);
-      if (patchBumpVersion.toString() === parentBumpVersion.toString()) {
-        return new RemoveSnapshotVersionUpdate();
-      }
-      return new RemoveSnapshotVersionUpdate(parentBump);
-    }
-    return parentBump;
+    return new AddSnapshotVersionUpdate(this.strategy);
   }
 
   bump(version: Version, commits: ConventionalCommit[]): Version {

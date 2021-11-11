@@ -89,10 +89,35 @@ describe('JavaYoshi', () => {
         .withArgs('versions.txt', 'main')
         .resolves(buildGitHubFileContent(fixturesPath, 'versions.txt'));
       const latestRelease = {
-        tag: new TagName(
-          Version.parse('0.123.5-SNAPSHOT'),
-          'google-cloud-automl'
-        ),
+        tag: new TagName(Version.parse('0.123.4'), 'google-cloud-automl'),
+        sha: 'abc123',
+        notes: 'some notes',
+      };
+      const release = await strategy.buildReleasePullRequest(
+        COMMITS,
+        latestRelease
+      );
+      expect(release!.version?.toString()).to.eql(expectedVersion);
+    });
+    it('returns a snapshot bump PR', async () => {
+      const expectedVersion = '0.123.5-SNAPSHOT';
+      const strategy = new JavaYoshi({
+        targetBranch: 'main',
+        github,
+        component: 'google-cloud-automl',
+      });
+      sandbox.stub(github, 'findFilesByFilename').resolves([]);
+      const getFileContentsStub = sandbox.stub(
+        github,
+        'getFileContentsOnBranch'
+      );
+      getFileContentsStub
+        .withArgs('versions.txt', 'main')
+        .resolves(
+          buildGitHubFileContent(fixturesPath, 'versions-released.txt')
+        );
+      const latestRelease = {
+        tag: new TagName(Version.parse('0.123.4'), 'google-cloud-automl'),
         sha: 'abc123',
         notes: 'some notes',
       };

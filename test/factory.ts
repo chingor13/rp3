@@ -106,6 +106,7 @@ describe('factory', () => {
         'path1/foo1.java',
         'path2/foo2.java',
       ]);
+      console.log(strategy.versioningStrategy);
       expect(strategy.versioningStrategy).instanceof(JavaSnapshot);
       const versioningStrategy = strategy.versioningStrategy as JavaSnapshot;
       expect(versioningStrategy.strategy).instanceof(DefaultVersioningStrategy);
