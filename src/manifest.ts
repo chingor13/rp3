@@ -755,11 +755,10 @@ async function parseConfig(
   const defaultConfig = extractReleaserConfig(config);
   const repositoryConfig: RepositoryConfig = {};
   for (const path in config.packages) {
-    const packageConfig: ReleaserConfig = {
-      ...defaultConfig,
-      ...extractReleaserConfig(config.packages[path]),
-    };
-    repositoryConfig[path] = packageConfig;
+    repositoryConfig[path] = mergeReleaserConfig(
+      defaultConfig,
+      extractReleaserConfig(config.packages[path])
+    );
   }
   const manifestOptions = {
     bootstrapSha: config['bootstrap-sha'],
@@ -848,6 +847,31 @@ async function latestReleaseVersion(
     return version;
   }
   return;
+}
+
+function mergeReleaserConfig(
+  defaultConfig: ReleaserConfig,
+  pathConfig: ReleaserConfig
+) {
+  return {
+    releaseType: pathConfig.releaseType ?? defaultConfig.releaseType,
+    bumpMinorPreMajor:
+      pathConfig.bumpMinorPreMajor ?? defaultConfig.bumpMinorPreMajor,
+    bumpPatchForMinorPreMajor:
+      pathConfig.bumpPatchForMinorPreMajor ??
+      defaultConfig.bumpPatchForMinorPreMajor,
+    changelogSections:
+      pathConfig.changelogSections ?? defaultConfig.changelogSections,
+    changelogPath: pathConfig.changelogPath ?? defaultConfig.changelogPath,
+    releaseAs: pathConfig.releaseAs ?? defaultConfig.releaseAs,
+    skipGithubRelease:
+      pathConfig.skipGithubRelease ?? defaultConfig.skipGithubRelease,
+    draft: pathConfig.draft ?? defaultConfig.draft,
+    component: pathConfig.component ?? defaultConfig.component,
+    packageName: pathConfig.packageName ?? defaultConfig.packageName,
+    versionFile: pathConfig.versionFile ?? defaultConfig.versionFile,
+    extraFiles: pathConfig.extraFiles ?? defaultConfig.extraFiles,
+  };
 }
 
 /**

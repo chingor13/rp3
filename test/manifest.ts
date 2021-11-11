@@ -557,31 +557,125 @@ describe('Manifest', () => {
           },
         },
       ]);
-      const manifest = new Manifest(
-        github,
-        'main',
-        {
+      const config = {
+        'separate-pull-requests': true,
+        packages: {
           'path/a': {
-            releaseType: 'simple',
+            'release-type': 'simple',
             component: 'pkg1',
           },
           'path/b': {
-            releaseType: 'simple',
+            'release-type': 'simple',
             component: 'pkg2',
-            releaseAs: '3.3.3',
+            'release-as': '3.3.3',
           },
         },
-        {
-          'path/a': Version.parse('1.0.0'),
-          'path/b': Version.parse('0.2.3'),
-        },
-        {
-          separatePullRequests: true,
-        }
-      );
+      };
+      const versions = {
+        'path/a': '1.0.0',
+        'path/b': '0.2.3',
+      };
+      sandbox
+        .stub(github, 'getFileContentsOnBranch')
+        .withArgs('release-please-config.json', 'main')
+        .resolves(buildGitHubFileRaw(JSON.stringify(config)))
+        .withArgs('.release-please-manifest.json', 'main')
+        .resolves(buildGitHubFileRaw(JSON.stringify(versions)));
+      const manifest = await Manifest.fromManifest(github, 'main');
       const pullRequests = await manifest.buildPullRequests();
       expect(pullRequests).lengthOf(2);
       expect(pullRequests[0].version?.toString()).to.eql('1.0.1');
+      expect(pullRequests[1].version?.toString()).to.eql('3.3.3');
+    });
+
+    it('should allow forcing release-as on entire manifest', async () => {
+      mockReleases(github, [
+        {
+          sha: 'abc123',
+          tagName: 'pkg1-v1.0.0',
+          url: 'https://github.com/fake-owner/fake-repo/releases/tag/pkg1-v1.0.0',
+        },
+        {
+          sha: 'def234',
+          tagName: 'pkg2-v0.2.3',
+          url: 'https://github.com/fake-owner/fake-repo/releases/tag/pkg2-v1.0.0',
+        },
+      ]);
+      mockCommits(github, [
+        {
+          sha: 'aaaaaa',
+          message: 'fix: some bugfix',
+          files: ['path/a/foo'],
+        },
+        {
+          sha: 'abc123',
+          message: 'chore: release 1.0.0',
+          files: [],
+          pullRequest: {
+            headBranchName: 'release-please/branches/main/components/pkg1',
+            baseBranchName: 'main',
+            number: 123,
+            title: 'chore: release 1.0.0',
+            body: '',
+            labels: [],
+            files: [],
+            sha: 'abc123',
+          },
+        },
+        {
+          sha: 'bbbbbb',
+          message: 'fix: some bugfix',
+          files: ['path/b/foo'],
+        },
+        {
+          sha: 'cccccc',
+          message: 'fix: some bugfix',
+          files: ['path/a/foo'],
+        },
+        {
+          sha: 'def234',
+          message: 'chore: release 0.2.3',
+          files: [],
+          pullRequest: {
+            headBranchName: 'release-please/branches/main/components/pkg2',
+            baseBranchName: 'main',
+            number: 123,
+            title: 'chore: release 0.2.3',
+            body: '',
+            labels: [],
+            files: [],
+            sha: 'def234',
+          },
+        },
+      ]);
+      const config = {
+        'release-as': '3.3.3',
+        'separate-pull-requests': true,
+        packages: {
+          'path/a': {
+            'release-type': 'simple',
+            component: 'pkg1',
+          },
+          'path/b': {
+            'release-type': 'simple',
+            component: 'pkg2',
+          },
+        },
+      };
+      const versions = {
+        'path/a': '1.0.0',
+        'path/b': '0.2.3',
+      };
+      sandbox
+        .stub(github, 'getFileContentsOnBranch')
+        .withArgs('release-please-config.json', 'main')
+        .resolves(buildGitHubFileRaw(JSON.stringify(config)))
+        .withArgs('.release-please-manifest.json', 'main')
+        .resolves(buildGitHubFileRaw(JSON.stringify(versions)));
+      const manifest = await Manifest.fromManifest(github, 'main');
+      const pullRequests = await manifest.buildPullRequests();
+      expect(pullRequests).lengthOf(2);
+      expect(pullRequests[0].version?.toString()).to.eql('3.3.3');
       expect(pullRequests[1].version?.toString()).to.eql('3.3.3');
     });
 
