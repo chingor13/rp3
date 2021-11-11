@@ -93,6 +93,7 @@ fork: false
 message: chore(main): release
 logger: [object Object]
 draft: false
+labels: 
 `
 
 exports['Manifest createPullRequests handles fork = true: changes'] = `
@@ -121,6 +122,7 @@ fork: true
 message: chore(main): release
 logger: [object Object]
 draft: false
+labels: 
 `
 
 exports['Manifest createPullRequests handles signoff users: changes'] = `
@@ -151,4 +153,5 @@ message: chore(main): release
 Signed-off-by: Alice <alice@example.com>
 logger: [object Object]
 draft: false
+labels: 
 `

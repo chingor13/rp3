@@ -75,6 +75,7 @@ interface ManifestConfigArgs {
 interface ReleaseArgs {
   draft?: boolean;
   releaseLabel?: string;
+  label?: string;
 }
 
 interface PullRequestArgs {
@@ -166,8 +167,13 @@ function releaseOptions(yargs: yargs.Argv): yargs.Argv {
       type: 'boolean',
       default: false,
     })
+    .option('label', {
+      default: 'autorelease: pending',
+      describe: 'comma-separated list of labels to remove to from release PR',
+    })
     .option('release-label', {
       describe: 'set a pull request label other than "autorelease: tagged"',
+      default: 'autorelease: tagged',
       type: 'string',
     });
 }
@@ -177,7 +183,7 @@ function pullRequestOptions(yargs: yargs.Argv): yargs.Argv {
   return yargs
     .option('label', {
       default: 'autorelease: pending',
-      describe: 'label to remove from release PR',
+      describe: 'comma-separated list of labels to add to from release PR',
     })
     .option('release-as', {
       describe: 'override the semantically determined release version',
@@ -330,6 +336,8 @@ const createReleasePullRequestCommand: yargs.CommandModule<
           changelogPath: argv.changelogPath,
           changelogSections: argv.changelogSections,
           releaseAs: argv.releaseAs,
+          labels: (argv.label || '').split(','),
+          releaseLabels: [], // unnecessary for the pull request command
         },
         argv
       );
@@ -387,6 +395,8 @@ const createReleaseCommand: yargs.CommandModule<{}, CreateReleaseArgs> = {
           releaseType: argv.releaseType,
           component: argv.component,
           draft: argv.draft,
+          labels: (argv.label || '').split('\n'),
+          releaseLabels: (argv.releaseLabel || '').split('\n'),
         },
         argv
       );

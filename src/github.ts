@@ -790,6 +790,7 @@ export class GitHub {
         message,
         logger: logger,
         draft: releasePullRequest.draft,
+        labels: releasePullRequest.labels,
       });
       return await this.getPullRequest(prNumber);
     }

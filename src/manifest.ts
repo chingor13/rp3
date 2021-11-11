@@ -48,6 +48,8 @@ export interface ReleaserConfig {
   draft?: boolean;
   component?: string;
   packageName?: string;
+  labels?: string[];
+  releaseLabels?: string[];
 
   // Ruby-only
   versionFile?: string;
@@ -73,6 +75,8 @@ interface ReleaserConfigJson {
   'release-as'?: string;
   'skip-github-release'?: boolean;
   draft?: boolean;
+  label?: string;
+  'release-label'?: string;
 
   // Ruby-only
   'version-file'?: string;
@@ -579,6 +583,8 @@ function extractReleaserConfig(config: ReleaserPackageConfig): ReleaserConfig {
     packageName: config['package-name'],
     versionFile: config['version-file'],
     extraFiles: config['extra-files'],
+    labels: (config['label'] || '').split(','),
+    releaseLabels: (config['release-label'] || '').split(','),
   };
 }
 

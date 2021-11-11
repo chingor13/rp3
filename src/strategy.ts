@@ -34,6 +34,7 @@ import {
 import {PullRequestBody} from './util/pull-request-body';
 
 const DEFAULT_LABELS = ['autorelease: pending', 'type: release'];
+const DEFAULT_RELEASE_LABELS = ['autorelease: tagged'];
 const DEFAULT_CHANGELOG_PATH = 'CHANGELOG.md';
 
 export interface BuildUpdatesOptions {
@@ -45,6 +46,7 @@ export interface BuildUpdatesOptions {
 export interface StrategyOptions {
   path?: string;
   labels?: string[];
+  releaseLabels?: string[];
   bumpMinorPreMajor?: boolean;
   bumpPatchForMinorPreMajor?: boolean;
   github: GitHub;
@@ -66,6 +68,7 @@ export interface StrategyOptions {
 export abstract class Strategy {
   path: string;
   labels: string[];
+  releaseLabels: string[];
   github: GitHub;
   component?: string;
   packageName?: string;
@@ -83,6 +86,7 @@ export abstract class Strategy {
   constructor(options: StrategyOptions) {
     this.path = options.path || ROOT_PROJECT_PATH;
     this.labels = options.labels || DEFAULT_LABELS;
+    this.releaseLabels = options.releaseLabels || DEFAULT_RELEASE_LABELS;
     this.github = options.github;
     this.component = options.component;
     this.packageName = options.packageName;
