@@ -23,6 +23,7 @@ import {TagName} from '../../src/util/tag-name';
 import {Version} from '../../src/version';
 import {Changelog} from '../../src/updaters/changelog';
 import {VersionRB} from '../../src/updaters/ruby/version-rb';
+import {PullRequestBody} from '../../src/util/pull-request-body';
 
 const sandbox = sinon.createSandbox();
 
@@ -118,5 +119,25 @@ describe('Ruby', () => {
     });
     // TODO: add tests for tag separator
     // TODO: add tests for post-processing commit messages
+  });
+  describe('buildRelease', () => {
+    it('overrides the tag separator', async () => {
+      const strategy = new Ruby({
+        targetBranch: 'main',
+        github,
+        component: 'google-cloud-automl',
+      });
+      const release = await strategy.buildRelease({
+        title: 'chore(main): release v1.2.3',
+        headBranchName: 'release-please/branches/main',
+        baseBranchName: 'main',
+        number: 1234,
+        body: new PullRequestBody([]).toString(),
+        labels: [],
+        files: [],
+        sha: 'abc123',
+      });
+      expect(release.tag.separator).to.eql('/');
+    });
   });
 });

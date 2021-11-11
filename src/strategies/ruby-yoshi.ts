@@ -65,6 +65,7 @@ export class RubyYoshi extends Strategy {
         resolve(__dirname, '../../../templates/template.hbs'),
         'utf8'
       ),
+      tagSeparator: '/',
     });
     this.versionFile = options.versionFile ?? '';
   }
@@ -95,10 +96,6 @@ export class RubyYoshi extends Strategy {
       }),
     });
     return updates;
-  }
-
-  tagSeparator(): string {
-    return '/';
   }
 
   protected postProcessCommits(

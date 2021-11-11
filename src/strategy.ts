@@ -55,6 +55,7 @@ export interface StrategyOptions {
   commitPartial?: string;
   headerPartial?: string;
   mainTemplate?: string;
+  tagSeparator?: string;
 }
 
 /**
@@ -70,6 +71,7 @@ export abstract class Strategy {
   protected targetBranch: string;
   protected repository: Repository;
   readonly changelogPath: string;
+  protected tagSeparator?: string;
 
   // CHANGELOG configuration
   protected changelogSections?: ChangelogSection[];
@@ -91,6 +93,7 @@ export abstract class Strategy {
     this.commitPartial = options.commitPartial;
     this.headerPartial = options.headerPartial;
     this.mainTemplate = options.mainTemplate;
+    this.tagSeparator = options.tagSeparator;
   }
 
   /**
@@ -293,7 +296,7 @@ export abstract class Strategy {
     }
 
     return {
-      tag: new TagName(version, component),
+      tag: new TagName(version, component, this.tagSeparator),
       notes: notes || '',
       sha: mergedPullRequest.sha,
     };

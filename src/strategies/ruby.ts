@@ -32,6 +32,7 @@ export class Ruby extends Strategy {
   constructor(options: RubyStrategyOptions) {
     super(options);
     this.versionFile = options.versionFile ?? '';
+    this.tagSeparator = '/';
   }
 
   protected async buildUpdates(
@@ -60,10 +61,6 @@ export class Ruby extends Strategy {
       }),
     });
     return updates;
-  }
-
-  tagSeparator(): string {
-    return '/';
   }
 
   protected postProcessCommits(
