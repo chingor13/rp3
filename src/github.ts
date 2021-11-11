@@ -127,13 +127,27 @@ export class GitHub {
   private request: RequestFunctionType;
   private graphql: Function;
 
-  constructor(options: GitHubOptions) {
+  private constructor(options: GitHubOptions) {
     this.repository = options.repository;
     this.octokit = options.octokitAPIs.octokit;
     this.request = options.octokitAPIs.request;
     this.graphql = options.octokitAPIs.graphql;
   }
 
+  /**
+   * Build a new GitHub client with auto-detected default branch.
+   *
+   * @param {GitHubCreateOptions} options Configuration options
+   * @param {string} options.owner The repository owner.
+   * @param {string} options.repo The repository name.
+   * @param {string} options.defaultBranch Optional. The repository's default branch.
+   *   Defaults to the value fetched via the API.
+   * @param {string} options.apiUrl Optional. The base url of the GitHub API.
+   * @param {string} options.graphqlUrl Optional. The base url of the GraphQL API.
+   * @param {OctokitAPISs} options.octokitAPIs Optional. Override the internal
+   *   client instances with a pre-authenticated instance.
+   * @param {string} token Optional. A GitHub API token used for authentication.
+   */
   static async create(options: GitHubCreateOptions): Promise<GitHub> {
     const apiUrl = options.apiUrl ?? GH_API_URL;
     const graphqlUrl = options.graphqlUrl ?? GH_GRAPHQL_URL;
@@ -721,7 +735,7 @@ export class GitHub {
         prefix = normalizePrefix(prefix);
       }
       logger.debug(
-        `finding files by filename and ref: ${filename}/${ref}/${prefix}`
+        `finding files by filename: ${filename}, ref: ${ref}, prefix: ${prefix}`
       );
       const response = await this.octokit.git.getTree({
         owner: this.repository.owner,
@@ -755,6 +769,8 @@ export class GitHub {
   /**
    * Open a pull request
    *
+   * @param {ReleasePullRequest} releasePullRequest Pull request data to update
+   * @param {string} targetBranch The base branch of the pull request
    * @param {GitHubPR} options The pull request options
    * @throws {GitHubAPIError} on an API error
    */
@@ -796,6 +812,11 @@ export class GitHub {
     }
   );
 
+  /**
+   * Fetch a pull request given the pull number
+   * @param {number} number The pull request number
+   * @returns {PullRequest}
+   */
   getPullRequest = wrapAsync(async (number: number): Promise<PullRequest> => {
     const response = await this.octokit.pulls.get({
       owner: this.repository.owner,
@@ -817,6 +838,9 @@ export class GitHub {
 
   /**
    * Update a pull request's title and body.
+   * @param {number} number The pull request number
+   * @param {ReleasePullRequest} releasePullRequest Pull request data to update
+   * @param {}
    */
   updatePullRequest = wrapAsync(
     async (
@@ -889,7 +913,7 @@ export class GitHub {
    * @return {Changes} The changeset to suggest.
    * @throws {GitHubAPIError} on an API error
    */
-  async getChangeSet(
+  private async getChangeSet(
     updates: Update[],
     defaultBranch: string
   ): Promise<Changes> {
@@ -1068,6 +1092,12 @@ export class GitHub {
     }
   );
 
+  /**
+   * Removes labels from an issue/pull request.
+   *
+   * @param {string[]} labels The labels to remove.
+   * @param {number} number The issue/pull request number.
+   */
   removeIssueLabels = wrapAsync(
     async (labels: string[], number: number): Promise<void> => {
       if (labels.length === 0) {
@@ -1087,6 +1117,12 @@ export class GitHub {
     }
   );
 
+  /**
+   * Adds label to an issue/pull request.
+   *
+   * @param {string[]} labels The labels to add.
+   * @param {number} number The issue/pull request number.
+   */
   addIssueLabels = wrapAsync(
     async (labels: string[], number: number): Promise<void> => {
       if (labels.length === 0) {
