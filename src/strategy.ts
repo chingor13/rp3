@@ -57,6 +57,7 @@ export interface StrategyOptions {
   mainTemplate?: string;
   tagSeparator?: string;
   skipGitHubRelease?: boolean;
+  releaseAs?: string;
 }
 
 /**
@@ -74,6 +75,7 @@ export abstract class Strategy {
   readonly changelogPath: string;
   protected tagSeparator?: string;
   private skipGitHubRelease: boolean;
+  private releaseAs?: string;
 
   // CHANGELOG configuration
   protected changelogSections?: ChangelogSection[];
@@ -97,6 +99,7 @@ export abstract class Strategy {
     this.mainTemplate = options.mainTemplate;
     this.tagSeparator = options.tagSeparator;
     this.skipGitHubRelease = options.skipGitHubRelease || false;
+    this.releaseAs = options.releaseAs;
   }
 
   /**
@@ -175,7 +178,9 @@ export abstract class Strategy {
       parseConventionalCommits(commits)
     );
 
-    const newVersion = latestRelease
+    const newVersion = this.releaseAs
+      ? Version.parse(this.releaseAs)
+      : latestRelease
       ? await this.versioningStrategy.bump(
           latestRelease.tag.version,
           conventionalCommits
