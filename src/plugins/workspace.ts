@@ -77,34 +77,36 @@ export abstract class WorkspacePlugin<T> extends ManifestPlugin {
       [[], []] as CandidateReleasePullRequest[][]
     );
 
-    logger.info(`found ${inScopeCandidates.length} in-scope releases.`);
+    logger.info(`Found ${inScopeCandidates.length} in-scope releases`);
     if (inScopeCandidates.length === 0) {
       return outOfScopeCandidates;
     }
 
-    logger.info('building list of all packages');
+    logger.info('Building list of all packages');
     const {allPackages, candidatesByPackage} = await this.buildAllPackages(
       inScopeCandidates
     );
+    logger.info(`Building dependency graph for ${allPackages.length} packages`);
     const graph = await this.buildGraph(allPackages);
 
     const packageNamesToUpdate = this.updateAllPackages
       ? allPackages.map(this.packageNameFromPackage)
       : Object.keys(candidatesByPackage);
     const orderedPackages = this.buildGraphOrder(graph, packageNamesToUpdate);
+    logger.info(`Updating ${orderedPackages.length} packages`);
 
     const updatedVersions: VersionsMap = new Map();
     for (const pkg of orderedPackages) {
       const packageName = this.packageNameFromPackage(pkg);
-      logger.info(`package: ${packageName}`);
+      logger.debug(`package: ${packageName}`);
       const existingCandidate = candidatesByPackage[packageName];
       if (existingCandidate) {
         const version = existingCandidate.pullRequest.version!;
-        logger.info(`version: ${version} from release-please`);
+        logger.debug(`version: ${version} from release-please`);
         updatedVersions.set(packageName, version);
       } else {
         const version = this.bumpVersion(pkg);
-        logger.info(`version: ${version} forced bump`);
+        logger.debug(`version: ${version} forced bump`);
         updatedVersions.set(packageName, version);
       }
     }
@@ -115,7 +117,11 @@ export abstract class WorkspacePlugin<T> extends ManifestPlugin {
       const existingCandidate = candidatesByPackage[packageName];
       if (existingCandidate) {
         // if already has an pull request, update the changelog and update
-        logger.info('updating exising candidate');
+        logger.info(
+          `Updating exising candidate pull request for ${this.packageNameFromPackage(
+            pkg
+          )}`
+        );
         const newCandidate = this.updateCandidate(
           existingCandidate,
           pkg,
@@ -124,13 +130,17 @@ export abstract class WorkspacePlugin<T> extends ManifestPlugin {
         newCandidates.push(newCandidate);
       } else {
         // otherwise, build a new pull request with changelog and entry update
-        logger.info('creating new candidate');
+        logger.info(
+          `Creating new candidate pull request for ${this.packageNameFromPackage(
+            pkg
+          )}`
+        );
         const newCandidate = this.newCandidate(pkg, updatedVersions);
         newCandidates.push(newCandidate);
       }
     }
 
-    logger.info(`Merging ${newCandidates.length} candidates.`);
+    logger.info(`Merging ${newCandidates.length} in-scope candidates`);
     const mergePlugin = new Merge(
       this.github,
       this.targetBranch,
@@ -272,7 +282,6 @@ export abstract class WorkspacePlugin<T> extends ManifestPlugin {
     visited: Set<T>,
     path: string[]
   ) {
-    logger.info(`visiting ${name}`);
     if (path.indexOf(name) !== -1) {
       throw new Error(
         `found cycle in dependency graph: ${path.join(' -> ')} -> ${name}`
@@ -297,7 +306,7 @@ export abstract class WorkspacePlugin<T> extends ManifestPlugin {
     }
 
     if (!visited.has(node.value)) {
-      logger.info(
+      logger.debug(
         `marking ${name} as visited and adding ${this.packageNameFromPackage(
           node.value
         )} to order`

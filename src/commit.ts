@@ -366,7 +366,11 @@ export function parseConventionalCommits(
         });
       }
     } catch (_err) {
-      logger.warn(`commit could not be parsed: ${commit}`);
+      logger.debug(
+        `commit could not be parsed: ${commit.sha} ${
+          commit.message.split('\n')[0]
+        }`
+      );
     }
   }
 

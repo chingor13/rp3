@@ -340,20 +340,6 @@ describe('GitHub', () => {
     });
   });
 
-  // describe('closePR', () => {
-  //   it('updates a PR to state.closed', async () => {
-  //     req.patch('/repos/fake/fake/pulls/1', {state: 'closed'}).reply(200);
-  //     const closed = await github.closePR(1);
-  //     expect(closed).to.be.true;
-  //     req.done();
-  //   });
-  //   it('does not close a PR from a forked repo', async () => {
-  //     const gh = new GitHub({owner: 'fake', repo: 'fake', defaultBranch: 'main'});
-  //     const closed = await gh.closePR(1);
-  //     expect(closed).to.be.false;
-  //   });
-  // });
-
   describe('commitsSince', () => {
     it('finds commits up until a condition', async () => {
       const graphql = JSON.parse(
@@ -469,20 +455,18 @@ describe('GitHub', () => {
 
   describe('releaseIterator', () => {
     it('iterates through releases', async () => {
-      const releasesResponse = JSON.parse(
-        readFileSync(resolve(fixturesPath, 'list-releases.json'), 'utf8')
+      const graphql = JSON.parse(
+        readFileSync(resolve(fixturesPath, 'releases.json'), 'utf8')
       );
-      req
-        .get('/repos/fake/fake/releases?page=1&per_page=100')
-        .reply(200, releasesResponse)
-        .get('/repos/fake/fake/releases?page=2&per_page=100')
-        .reply(200, []);
+      req.post('/graphql').reply(200, {
+        data: graphql,
+      });
       const generator = github.releaseIterator();
       const releases: GitHubRelease[] = [];
       for await (const release of generator) {
         releases.push(release);
       }
-      expect(releases).lengthOf(2);
+      expect(releases).lengthOf(5);
     });
   });
 

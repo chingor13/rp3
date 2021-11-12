@@ -93,8 +93,10 @@ export class NodeWorkspace extends WorkspacePlugin<Package> {
       }
       const candidate = candidatesByPath.get(path);
       if (candidate) {
-        logger.info(`found ${candidate.path} in changes`);
-        const packagePath = `${candidate.path}/package.json`;
+        logger.debug(
+          `Found candidate pull request for path: ${candidate.path}`
+        );
+        const packagePath = addPath(candidate.path, 'package.json');
         const packageUpdate = candidate.pullRequest.updates.find(
           update => update.path === packagePath
         );
@@ -115,8 +117,10 @@ export class NodeWorkspace extends WorkspacePlugin<Package> {
           candidatesByPackage[pkg.name] = candidate;
         }
       } else {
-        logger.info(`no candidate for path: ${path}`);
-        const packagePath = `${path}/package.json`;
+        const packagePath = addPath(path, 'package.json');
+        logger.debug(
+          `No candidate pull request for path: ${path} - inspect package from ${packagePath}`
+        );
         const contents = await this.github.getFileContentsOnBranch(
           packagePath,
           this.targetBranch
@@ -169,7 +173,7 @@ export class NodeWorkspace extends WorkspacePlugin<Package> {
     const dependencyNotes = getChangelogDepsNotes(pkg, updatedPackage);
     existingCandidate.pullRequest.updates =
       existingCandidate.pullRequest.updates.map(update => {
-        if (update.path === `${existingCandidate.path}/package.json`) {
+        if (update.path === addPath(existingCandidate.path, 'package.json')) {
           update.updater = new RawContent(
             jsonStringify(updatedPackage.toJSON(), updatedPackage.rawContent)
           );
@@ -236,14 +240,14 @@ export class NodeWorkspace extends WorkspacePlugin<Package> {
       ]),
       updates: [
         {
-          path: `${updatedPackage.location}/package.json`,
+          path: addPath(updatedPackage.location, 'package.json'),
           createIfMissing: false,
           updater: new RawContent(
             jsonStringify(packageJson, updatedPackage.rawContent)
           ),
         },
         {
-          path: `${updatedPackage.location}/CHANGELOG.md`,
+          path: addPath(updatedPackage.location, 'CHANGELOG.md'),
           createIfMissing: false,
           updater: new Changelog({
             version,
@@ -389,4 +393,8 @@ function appendDependenciesSectionToChangelog(
   }
 
   return `${changelog}\n\n\n### Dependencies\n\n${notes}`;
+}
+
+function addPath(path: string, file: string): string {
+  return path === ROOT_PROJECT_PATH ? file : `${path}/${file}`;
 }

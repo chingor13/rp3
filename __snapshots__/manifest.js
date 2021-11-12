@@ -9,8 +9,6 @@ exports['Manifest buildPullRequests should allow creating multiple pull requests
 ### Bug Fixes
 
 * some bugfix ([aaaaaa](https://github.com/fake-owner/fake-repo/commit/aaaaaa))
-* some bugfix ([bbbbbb](https://github.com/fake-owner/fake-repo/commit/bbbbbb))
-* some bugfix ([cccccc](https://github.com/fake-owner/fake-repo/commit/cccccc))
 
 ---
 This PR was generated with [Release Please](https://github.com/googleapis/release-please). See [documentation](https://github.com/googleapis/release-please#release-please).
@@ -26,9 +24,7 @@ exports['Manifest buildPullRequests should allow creating multiple pull requests
 
 ### Bug Fixes
 
-* some bugfix ([aaaaaa](https://github.com/fake-owner/fake-repo/commit/aaaaaa))
 * some bugfix ([bbbbbb](https://github.com/fake-owner/fake-repo/commit/bbbbbb))
-* some bugfix ([cccccc](https://github.com/fake-owner/fake-repo/commit/cccccc))
 
 ---
 This PR was generated with [Release Please](https://github.com/googleapis/release-please). See [documentation](https://github.com/googleapis/release-please#release-please).
@@ -47,8 +43,6 @@ exports['Manifest buildPullRequests should handle multiple package repository 1'
 ### Bug Fixes
 
 * some bugfix ([aaaaaa](https://github.com/fake-owner/fake-repo/commit/aaaaaa))
-* some bugfix ([bbbbbb](https://github.com/fake-owner/fake-repo/commit/bbbbbb))
-* some bugfix ([cccccc](https://github.com/fake-owner/fake-repo/commit/cccccc))
 </details>
 
 <details><summary>pkg2: 0.2.4</summary>
@@ -58,9 +52,7 @@ exports['Manifest buildPullRequests should handle multiple package repository 1'
 
 ### Bug Fixes
 
-* some bugfix ([aaaaaa](https://github.com/fake-owner/fake-repo/commit/aaaaaa))
 * some bugfix ([bbbbbb](https://github.com/fake-owner/fake-repo/commit/bbbbbb))
-* some bugfix ([cccccc](https://github.com/fake-owner/fake-repo/commit/cccccc))
 </details>
 
 ---

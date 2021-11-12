@@ -114,6 +114,7 @@ export async function buildStrategy(
     bumpMinorPreMajor: options.bumpMinorPreMajor,
     bumpPatchForMinorPreMajor: options.bumpPatchForMinorPreMajor,
     component: options.component,
+    packageName: options.packageName,
     changelogPath: options.changelogPath,
     changelogSections: options.changelogSections,
     versioningStrategy,

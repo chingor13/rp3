@@ -48,7 +48,7 @@ describe('factory', () => {
       expect(versioningStrategy.bumpMinorPreMajor).to.be.false;
       expect(versioningStrategy.bumpPatchForMinorPreMajor).to.be.false;
       expect(strategy.path).to.eql('.');
-      expect(strategy.component).to.be.undefined;
+      expect(strategy.component).not.ok;
     });
     it('should build a with configuration', async () => {
       const strategy = await buildStrategy({
@@ -106,7 +106,6 @@ describe('factory', () => {
         'path1/foo1.java',
         'path2/foo2.java',
       ]);
-      console.log(strategy.versioningStrategy);
       expect(strategy.versioningStrategy).instanceof(JavaSnapshot);
       const versioningStrategy = strategy.versioningStrategy as JavaSnapshot;
       expect(versioningStrategy.strategy).instanceof(DefaultVersioningStrategy);

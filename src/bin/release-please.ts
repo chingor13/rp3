@@ -22,7 +22,6 @@ import {Manifest} from '../manifest';
 import {ChangelogSection} from '../release-notes';
 import {logger, setLogger, CheckpointLogger} from '../util/logger';
 import {getReleaserTypes, ReleaseType} from '../factory';
-import * as util from 'util';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const parseGithubRepoUrl = require('parse-github-repo-url');
@@ -442,8 +441,22 @@ const createManifestPullRequestCommand: yargs.CommandModule<
 
     if (argv.dryRun) {
       const pullRequests = await manifest.buildPullRequests();
-      console.log(util.inspect(pullRequests));
-      console.log(JSON.stringify(pullRequests));
+      console.log(`Would open ${pullRequests.length} pull requests`);
+      console.log('fork:', manifest.fork);
+      for (const pullRequest of pullRequests) {
+        console.log('title:', pullRequest.title.toString());
+        console.log('branch:', pullRequest.headRefName);
+        console.log('draft:', pullRequest.draft);
+        console.log('body:', pullRequest.body.toString());
+        console.log('updates:', pullRequest.updates.length);
+        for (const update of pullRequest.updates) {
+          console.log(
+            `  ${update.path}: `,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (update.updater as any).constructor
+          );
+        }
+      }
     } else {
       const pullRequestNumbers = await manifest.createPullRequests();
       console.log(pullRequestNumbers);

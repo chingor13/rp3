@@ -114,7 +114,7 @@ export class CargoWorkspace extends WorkspacePlugin<CrateInfo> {
     const allCrates: CrateInfo[] = [];
     const candidatesByPackage: Record<string, CandidateReleasePullRequest> = {};
     for (const path of cargoManifest.workspace.members) {
-      const manifestPath = `${path}/Cargo.toml`;
+      const manifestPath = addPath(path, 'Cargo.toml');
       logger.info(`looking for candidate with path: ${path}`);
       const candidate = candidates.find(c => c.path === path);
       // get original content of the crate
@@ -187,7 +187,7 @@ export class CargoWorkspace extends WorkspacePlugin<CrateInfo> {
 
     existingCandidate.pullRequest.updates =
       existingCandidate.pullRequest.updates.map(update => {
-        if (update.path === `${existingCandidate.path}/Cargo.toml`) {
+        if (update.path === addPath(existingCandidate.path, 'Cargo.toml')) {
           update.updater = new RawContent(updatedContent);
         } else if (update.updater instanceof Changelog) {
           update.updater.changelogEntry = appendDependenciesSectionToChangelog(
@@ -247,12 +247,12 @@ export class CargoWorkspace extends WorkspacePlugin<CrateInfo> {
       ]),
       updates: [
         {
-          path: `${pkg.path}/Cargo.toml`,
+          path: addPath(pkg.path, 'Cargo.toml'),
           createIfMissing: false,
           updater: new RawContent(updatedContent),
         },
         {
-          path: `${pkg.path}/CHANGELOG.md`,
+          path: addPath(pkg.path, 'CHANGELOG.md'),
           createIfMissing: false,
           updater: new Changelog({
             version,
@@ -419,4 +419,8 @@ function appendDependenciesSectionToChangelog(
   }
 
   return `${changelog}\n\n\n### Dependencies\n\n${notes}`;
+}
+
+function addPath(path: string, file: string): string {
+  return path === ROOT_PROJECT_PATH ? file : `${path}/${file}`;
 }

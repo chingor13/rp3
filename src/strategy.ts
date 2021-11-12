@@ -86,8 +86,9 @@ export abstract class Strategy {
   constructor(options: StrategyOptions) {
     this.path = options.path || ROOT_PROJECT_PATH;
     this.github = options.github;
-    this.component = options.component;
     this.packageName = options.packageName;
+    this.component =
+      options.component || this.normalizeComponent(this.packageName);
     this.versioningStrategy =
       options.versioningStrategy || new DefaultVersioningStrategy({});
     this.targetBranch = options.targetBranch;
@@ -178,14 +179,10 @@ export abstract class Strategy {
       parseConventionalCommits(commits)
     );
 
-    const newVersion = this.releaseAs
-      ? Version.parse(this.releaseAs)
-      : latestRelease
-      ? await this.versioningStrategy.bump(
-          latestRelease.tag.version,
-          conventionalCommits
-        )
-      : this.initialReleaseVersion();
+    const newVersion = await this.buildNewVersion(
+      conventionalCommits,
+      latestRelease
+    );
     const versionsMap = await this.buildVersionsMap(conventionalCommits);
     for (const versionKey of versionsMap.keys()) {
       const version = versionsMap.get(versionKey);
@@ -200,7 +197,7 @@ export abstract class Strategy {
       versionsMap.set(versionKey, newVersion);
     }
     const component = this.component || (await this.getDefaultComponent());
-    logger.info('component:', component);
+    logger.debug('component:', component);
 
     const newVersionTag = new TagName(newVersion, component);
     const pullRequestTitle = PullRequestTitle.ofComponentTargetBranchVersion(
@@ -218,10 +215,10 @@ export abstract class Strategy {
       latestRelease
     );
     if (this.changelogEmpty(releaseNotesBody)) {
-      logger.warn(
-        `no user facing commits found since ${
+      logger.info(
+        `No user facing commits found since ${
           latestRelease ? latestRelease.sha : 'beginning of time'
-        }`
+        } - skipping`
       );
       return undefined;
     }
@@ -252,6 +249,25 @@ export abstract class Strategy {
 
   protected changelogEmpty(changelogEntry: string): boolean {
     return changelogEntry.split('\n').length <= 1;
+  }
+
+  protected async buildNewVersion(
+    conventionalCommits: ConventionalCommit[],
+    latestRelease?: Release
+  ): Promise<Version> {
+    if (this.releaseAs) {
+      logger.warn(
+        `Setting version for ${this.path} from release-as configuration`
+      );
+      return Version.parse(this.releaseAs);
+    } else if (latestRelease) {
+      return await this.versioningStrategy.bump(
+        latestRelease.tag.version,
+        conventionalCommits
+      );
+    } else {
+      return this.initialReleaseVersion();
+    }
   }
 
   protected async buildVersionsMap(

@@ -304,20 +304,32 @@ export class Manifest {
 
     // Releases by path
     const releasesByPath: Record<string, Release> = {};
-    for await (const release of this.github.releaseIterator(100)) {
+    for await (const release of this.github.releaseIterator(400)) {
+      // logger.debug(release);
       const tagName = TagName.parse(release.tagName);
       if (!tagName) {
         logger.warn(`Unable to parse release name: ${release.name}`);
         continue;
       }
       const component = tagName.component || DEFAULT_COMPONENT_NAME;
+      console.log(component);
+      console.log(pathsByComponent);
       const path = pathsByComponent[component];
+      if (!path) {
+        logger.warn(
+          `Found release tag with component '${component}', but not configured in manifest`
+        );
+        continue;
+      }
       const expectedVersion = this.releasedVersions[path];
       if (!expectedVersion) {
-        logger.warn(`Unable to find component '${component}' in manifest`);
+        logger.warn(
+          `Unable to find expected version for path '${path}' in manifest`
+        );
         continue;
       }
       if (expectedVersion.toString() === tagName.version.toString()) {
+        logger.debug(`Found release for path ${path}, ${release.tagName}`);
         releaseShasByPath[path] = release.sha;
         releasesByPath[path] = {
           tag: tagName,
@@ -338,6 +350,14 @@ export class Manifest {
         `Expected ${expectedReleases} releases, only found ${releasesFound}`
       );
     }
+    for (const path in releasesByPath) {
+      const release = releasesByPath[path];
+      logger.debug(
+        `release for path: ${path}, version: ${release.tag.version.toString()}, sha: ${
+          release.sha
+        }`
+      );
+    }
 
     // iterate through commits and collect commits until we have
     // seen all release commits
@@ -348,6 +368,7 @@ export class Manifest {
       500
     );
     const releaseShas = new Set(Object.values(releaseShasByPath));
+    logger.debug(releaseShas);
     const expectedShas = releaseShas.size;
 
     // sha => release pull request
@@ -405,12 +426,15 @@ export class Manifest {
       logger.info(`Building candidate release pull request for path: ${path}`);
       logger.debug(`type: ${config.releaseType}`);
       logger.debug(`targetBranch: ${this.targetBranch}`);
-      const pathCommits =
-        path === ROOT_PROJECT_PATH ? commits : commitsPerPath[path];
+      const pathCommits = commitsAfterSha(
+        path === ROOT_PROJECT_PATH ? commits : commitsPerPath[path],
+        releaseShasByPath[path]
+      );
       if (!pathCommits || pathCommits.length === 0) {
         logger.info(`No commits for path: ${path}, skipping`);
         continue;
       }
+      logger.debug(`commits: ${pathCommits.length}`);
       const latestReleasePullRequest =
         releasePullRequestsBySha[releaseShasByPath[path]];
       if (!latestReleasePullRequest) {
@@ -420,7 +444,7 @@ export class Manifest {
       const strategy = strategiesByPath[path];
       const latestRelease = releasesByPath[path];
       const releasePullRequest = await strategy.buildReleasePullRequest(
-        commits,
+        pathCommits,
         latestRelease,
         config.draft,
         this.labels
@@ -686,9 +710,11 @@ export class Manifest {
 
   private async getStrategiesByPath(): Promise<Record<string, Strategy>> {
     if (!this._strategiesByPath) {
+      logger.info('Building strategies by path');
       this._strategiesByPath = {};
       for (const path in this.repositoryConfig) {
         const config = this.repositoryConfig[path];
+        logger.debug(`${path}: ${config.releaseType}`);
         const strategy = await buildStrategy({
           ...config,
           github: this.github,
@@ -706,24 +732,16 @@ export class Manifest {
       this._pathsByComponent = {};
       const strategiesByPath = await this.getStrategiesByPath();
       for (const path in this.repositoryConfig) {
-        const config = this.repositoryConfig[path];
         const strategy = strategiesByPath[path];
-        if (!config.component) {
-          logger.warn(`No configured component for path: ${path}`);
-          config.component = await strategy.getDefaultComponent();
-          if (config.component === undefined) {
-            logger.error(`No default component for path: ${path}`);
-            continue;
-          }
-        }
-        if (this._pathsByComponent[config.component]) {
+        const component =
+          strategy.component || (await strategy.getDefaultComponent()) || '';
+        if (this._pathsByComponent[component]) {
           logger.warn(
-            `Multiple paths for ${config.component}: ${
-              this._pathsByComponent[config.component]
-            }, ${path}`
+            `Multiple paths for ${component}: ${this._pathsByComponent[component]}, ${path}`
           );
         }
-        this._pathsByComponent[config.component] = path;
+        this._pathsByComponent[component] = path;
+        logger.info(this._pathsByComponent);
       }
     }
     return this._pathsByComponent;
@@ -903,4 +921,15 @@ function hasAllLabels(expected: string[], existing: string[]): boolean {
     }
   }
   return true;
+}
+
+function commitsAfterSha(commits: Commit[], lastReleaseSha: string) {
+  if (!commits) {
+    return [];
+  }
+  const index = commits.findIndex(commit => commit.sha === lastReleaseSha);
+  if (index === -1) {
+    return commits;
+  }
+  return commits.slice(0, index);
 }

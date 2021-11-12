@@ -55,7 +55,7 @@ export class CheckpointLogger implements Logger {
     if (this.includeDebug) console.debug(`${debugPrefix}`, ...args);
   };
   trace: LogFn = (...args: any[]) => {
-    if (this.includeTrace) console.trace(`${tracePrefix}`, ...args);
+    if (this.includeTrace) console.debug(`${tracePrefix}`, ...args);
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

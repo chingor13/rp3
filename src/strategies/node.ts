@@ -19,7 +19,6 @@ import {SamplesPackageJson} from '../updaters/node/samples-package-json';
 import {Changelog} from '../updaters/changelog';
 import {PackageJson} from '../updaters/node/package-json';
 import {GitHubFileContents} from '../github';
-import {logger} from '../util/logger';
 
 export class Node extends Strategy {
   private pkgJsonContents?: GitHubFileContents;
@@ -87,7 +86,6 @@ export class Node extends Strategy {
 
   private async getPkgJsonContents(): Promise<GitHubFileContents> {
     if (!this.pkgJsonContents) {
-      logger.info(`fetching file: ${this.addPath('package.json')}`);
       this.pkgJsonContents = await this.github.getFileContentsOnBranch(
         this.addPath('package.json'),
         this.targetBranch

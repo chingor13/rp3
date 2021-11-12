@@ -98,6 +98,18 @@ interface GraphQLPullRequest {
   };
 }
 
+interface GraphQLRelease {
+  name: string;
+  tag: {
+    name: string;
+  };
+  tagCommit: {
+    oid: string;
+  };
+  url: string;
+  description: string;
+}
+
 interface CommitHistory {
   pageInfo: {
     hasNextPage: boolean;
@@ -105,12 +117,21 @@ interface CommitHistory {
   };
   data: Commit[];
 }
+
 interface PullRequestHistory {
   pageInfo: {
     hasNextPage: boolean;
     endCursor: string | undefined;
   };
   data: PullRequest[];
+}
+
+interface ReleaseHistory {
+  pageInfo: {
+    hasNextPage: boolean;
+    endCursor: string | undefined;
+  };
+  data: GitHubRelease[];
 }
 
 export interface GitHubRelease {
@@ -531,19 +552,78 @@ export class GitHub {
    * @throws {GitHubAPIError} on an API error
    */
   async *releaseIterator(maxResults: number = Number.MAX_SAFE_INTEGER) {
-    let page = 1;
-    const results = 0;
+    let results = 0;
+    let cursor: string | undefined = undefined;
     while (results < maxResults) {
-      const tags = await this.listReleases(page);
-      // no response usually means we ran out of results
-      if (tags.length === 0) {
+      const response: ReleaseHistory | null = await this.releaseGraphQL(cursor);
+      if (!response) {
         break;
       }
-      for (let i = 0; i < tags.length; i++) {
-        yield tags[i];
+      for (let i = 0; i < response.data.length; i++) {
+        results += 1;
+        yield response.data[i];
       }
-      page += 1;
+      if (!response.pageInfo.hasNextPage) {
+        break;
+      }
+      cursor = response.pageInfo.endCursor;
     }
+  }
+
+  private async releaseGraphQL(
+    cursor?: string
+  ): Promise<ReleaseHistory | null> {
+    logger.debug(`Fetching releases with cursor ${cursor}`);
+    const response = await this.graphqlRequest({
+      query: `query releases($owner: String!, $repo: String!, $num: Int!, $cursor: String) {
+        repository(owner: $owner, name: $repo) {
+          releases(first: $num, after: $cursor, orderBy: {field: CREATED_AT, direction: DESC}) {
+            nodes {
+              name
+              tag {
+                name
+              }
+              tagCommit {
+                oid
+              }
+              url
+              description
+            }
+            pageInfo {
+              endCursor
+              hasNextPage
+            }
+          }
+        }
+      }`,
+      cursor,
+      owner: this.repository.owner,
+      repo: this.repository.repo,
+      num: 25,
+    });
+    if (!response.repository.releases) {
+      logger.warn('Could not find releases.');
+      return null;
+    }
+    const releases = (response.repository.releases.nodes ||
+      []) as GraphQLRelease[];
+    return {
+      pageInfo: response.repository.releases.pageInfo,
+      data: releases
+        .filter(release => !!release.tagCommit)
+        .map(release => {
+          if (!release.tag || !release.tagCommit) {
+            logger.debug(release);
+          }
+          return {
+            name: release.name || undefined,
+            tagName: release.tag ? release.tag.name : 'unknown',
+            sha: release.tagCommit.oid,
+            notes: release.description,
+            url: release.url,
+          };
+        }),
+    };
   }
 
   /**
@@ -551,7 +631,7 @@ export class GitHub {
    *
    * @param {number} page - Page of results. Defaults to 1.
    * @param {number} perPage - Number of results per page. Defaults to 100.
-   * @returns {Tag[]} - List of tags
+   * @returns {GitHubRelease[]} - List of tags
    * @throws {GitHubAPIError} on an API error
    */
   private listReleases = wrapAsync(
