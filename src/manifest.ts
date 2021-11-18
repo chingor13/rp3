@@ -508,6 +508,17 @@ export class Manifest {
       return [];
     }
 
+    // if there are any merged, pending release pull requests, don't open
+    // any new release PRs
+    const mergedPullRequestsGenerator = this.findMergedReleasePullRequests();
+    for await (const _pullRequest of mergedPullRequestsGenerator) {
+      logger.info(_pullRequest);
+      logger.warn(
+        'There are untagged, merged release PRs outstanding - aborting'
+      );
+      return [];
+    }
+
     // collect open release pull requests
     logger.info('Looking for open release pull requests');
     const openPullRequests: PullRequest[] = [];
@@ -575,23 +586,13 @@ export class Manifest {
     }
   }
 
-  /**
-   * Find merged, untagged releases and build candidate releases to tag.
-   *
-   * @returns {CandidateRelease[]} List of release candidates
-   */
-  async buildReleases(): Promise<CandidateRelease[]> {
-    logger.info('Building releases');
-    const strategiesByPath = await this.getStrategiesByPath();
-
+  private async *findMergedReleasePullRequests() {
     // Find merged release pull requests
     const pullRequestGenerator = this.github.pullRequestIterator(
       this.targetBranch,
       'MERGED',
       200
     );
-
-    const releases: CandidateRelease[] = [];
     for await (const pullRequest of pullRequestGenerator) {
       if (!hasAllLabels(this.labels, pullRequest.labels)) {
         continue;
@@ -605,7 +606,23 @@ export class Manifest {
         logger.debug('could not parse pull request body as a release PR');
         continue;
       }
+      yield pullRequest;
+    }
+  }
 
+  /**
+   * Find merged, untagged releases and build candidate releases to tag.
+   *
+   * @returns {CandidateRelease[]} List of release candidates
+   */
+  async buildReleases(): Promise<CandidateRelease[]> {
+    logger.info('Building releases');
+    const strategiesByPath = await this.getStrategiesByPath();
+
+    // Find merged release pull requests
+    const generator = await this.findMergedReleasePullRequests();
+    const releases: CandidateRelease[] = [];
+    for await (const pullRequest of generator) {
       logger.info('Looking at files touched by path');
       const cs = new CommitSplit({
         includeEmpty: true,
@@ -622,8 +639,8 @@ export class Manifest {
       for (const path in this.repositoryConfig) {
         const config = this.repositoryConfig[path];
         logger.info(`Building release for path: ${path}`);
-        logger.info(`type: ${config.releaseType}`);
-        logger.info(`targetBranch: ${this.targetBranch}`);
+        logger.debug(`type: ${config.releaseType}`);
+        logger.debug(`targetBranch: ${this.targetBranch}`);
         const pathCommits =
           path === ROOT_PROJECT_PATH ? commits : commitsPerPath[path];
         if (!pathCommits || pathCommits.length === 0) {

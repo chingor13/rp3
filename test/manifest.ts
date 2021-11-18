@@ -59,13 +59,27 @@ function mockReleases(github: GitHub, releases: GitHubRelease[]) {
   sandbox.stub(github, 'releaseIterator').returns(fakeGenerator());
 }
 
-function mockPullRequests(github: GitHub, pullRequests: PullRequest[]) {
+function mockPullRequests(
+  github: GitHub,
+  pullRequests: PullRequest[],
+  mergedPullRequests: PullRequest[] = []
+): sinon.SinonStub {
   async function* fakeGenerator() {
     for (const pullRequest of pullRequests) {
       yield pullRequest;
     }
   }
-  sandbox.stub(github, 'pullRequestIterator').returns(fakeGenerator());
+  async function* mergedGenerator() {
+    for (const pullRequest of mergedPullRequests) {
+      yield pullRequest;
+    }
+  }
+  return sandbox
+    .stub(github, 'pullRequestIterator')
+    .withArgs(sinon.match.string, 'OPEN')
+    .returns(fakeGenerator())
+    .withArgs(sinon.match.string, 'MERGED')
+    .returns(mergedGenerator());
 }
 
 function mockCreateRelease(
@@ -1306,17 +1320,21 @@ describe('Manifest', () => {
         .withArgs('README.md', 'main')
         .resolves(buildGitHubFileRaw('some-content'));
       stubSuggesterWithSnapshot(sandbox, this.test!.fullTitle());
-      mockPullRequests(github, [
-        {
-          number: 22,
-          title: 'pr title1',
-          body: new PullRequestBody([]).toString(),
-          headBranchName: 'release-please/branches/main',
-          baseBranchName: 'main',
-          labels: ['autorelease: pending'],
-          files: [],
-        },
-      ]);
+      mockPullRequests(
+        github,
+        [
+          {
+            number: 22,
+            title: 'pr title1',
+            body: new PullRequestBody([]).toString(),
+            headBranchName: 'release-please/branches/main',
+            baseBranchName: 'main',
+            labels: ['autorelease: pending'],
+            files: [],
+          },
+        ],
+        []
+      );
       sandbox
         .stub(github, 'updatePullRequest')
         .withArgs(22, sinon.match.any, sinon.match.any, sinon.match.any)
@@ -1374,22 +1392,92 @@ describe('Manifest', () => {
       const pullRequestNumbers = await manifest.createPullRequests();
       expect(pullRequestNumbers).lengthOf(1);
     });
+
+    it('skips pull requests if there are pending, closed pull requests', async () => {
+      sandbox
+        .stub(github, 'getFileContentsOnBranch')
+        .withArgs('README.md', 'main')
+        .resolves(buildGitHubFileRaw('some-content'));
+      mockPullRequests(
+        github,
+        [],
+        [
+          {
+            number: 22,
+            title: 'pr title1',
+            body: new PullRequestBody([]).toString(),
+            headBranchName: 'release-please/branches/main',
+            baseBranchName: 'main',
+            labels: ['autorelease: pending'],
+            files: [],
+          },
+        ]
+      );
+      const manifest = new Manifest(
+        github,
+        'main',
+        {
+          'path/a': {
+            releaseType: 'node',
+            component: 'pkg1',
+          },
+          'path/b': {
+            releaseType: 'node',
+            component: 'pkg2',
+          },
+        },
+        {
+          'path/a': Version.parse('1.0.0'),
+          'path/b': Version.parse('0.2.3'),
+        },
+        {
+          separatePullRequests: true,
+          plugins: ['node-workspace'],
+        }
+      );
+      sandbox.stub(manifest, 'buildPullRequests').resolves([
+        {
+          title: PullRequestTitle.ofTargetBranch('main'),
+          body: new PullRequestBody([
+            {
+              notes: 'Some release notes',
+            },
+          ]),
+          updates: [
+            {
+              path: 'README.md',
+              createIfMissing: false,
+              updater: new RawContent('some raw content'),
+            },
+          ],
+          labels: [],
+          headRefName: 'release-please/branches/main',
+          draft: false,
+        },
+      ]);
+      const pullRequestNumbers = await manifest.createPullRequests();
+      expect(pullRequestNumbers).lengthOf(0);
+    });
   });
 
   describe('buildReleases', () => {
     it('should handle a single manifest release', async () => {
-      mockPullRequests(github, [
-        {
-          headBranchName: 'release-please/branches/main',
-          baseBranchName: 'main',
-          number: 1234,
-          title: 'chore: release main',
-          body: pullRequestBody('release-notes/single-manifest.txt'),
-          labels: ['autorelease: pending'],
-          files: [],
-          sha: 'abc123',
-        },
-      ]);
+      mockPullRequests(
+        github,
+        [],
+        [
+          {
+            headBranchName: 'release-please/branches/main',
+            baseBranchName: 'main',
+            number: 1234,
+            title: 'chore: release main',
+            body: pullRequestBody('release-notes/single-manifest.txt'),
+            labels: ['autorelease: pending'],
+            files: [],
+            sha: 'abc123',
+          },
+        ]
+      );
       const getFileContentsStub = sandbox.stub(
         github,
         'getFileContentsOnBranch'
@@ -1422,23 +1510,27 @@ describe('Manifest', () => {
         .and.satisfy((msg: string) => msg.startsWith('### Bug Fixes'));
     });
     it('should handle a multiple manifest release', async () => {
-      mockPullRequests(github, [
-        {
-          headBranchName: 'release-please/branches/main',
-          baseBranchName: 'main',
-          number: 1234,
-          title: 'chore: release main',
-          body: pullRequestBody('release-notes/multiple.txt'),
-          labels: ['autorelease: pending'],
-          files: [
-            'packages/bot-config-utils/package.json',
-            'packages/label-utils/package.json',
-            'packages/object-selector/package.json',
-            'packages/datastore-lock/package.json',
-          ],
-          sha: 'abc123',
-        },
-      ]);
+      mockPullRequests(
+        github,
+        [],
+        [
+          {
+            headBranchName: 'release-please/branches/main',
+            baseBranchName: 'main',
+            number: 1234,
+            title: 'chore: release main',
+            body: pullRequestBody('release-notes/multiple.txt'),
+            labels: ['autorelease: pending'],
+            files: [
+              'packages/bot-config-utils/package.json',
+              'packages/label-utils/package.json',
+              'packages/object-selector/package.json',
+              'packages/datastore-lock/package.json',
+            ],
+            sha: 'abc123',
+          },
+        ]
+      );
       const getFileContentsStub = sandbox.stub(
         github,
         'getFileContentsOnBranch'
@@ -1516,18 +1608,22 @@ describe('Manifest', () => {
         .and.satisfy((msg: string) => msg.startsWith('### Features'));
     });
     it('should handle a single standalone release', async () => {
-      mockPullRequests(github, [
-        {
-          headBranchName: 'release-please/branches/main',
-          baseBranchName: 'main',
-          number: 1234,
-          title: 'chore(main): release 3.2.7',
-          body: pullRequestBody('release-notes/single.txt'),
-          labels: ['autorelease: pending'],
-          files: [],
-          sha: 'abc123',
-        },
-      ]);
+      mockPullRequests(
+        github,
+        [],
+        [
+          {
+            headBranchName: 'release-please/branches/main',
+            baseBranchName: 'main',
+            number: 1234,
+            title: 'chore(main): release 3.2.7',
+            body: pullRequestBody('release-notes/single.txt'),
+            labels: ['autorelease: pending'],
+            files: [],
+            sha: 'abc123',
+          },
+        ]
+      );
       const manifest = new Manifest(
         github,
         'main',
@@ -1550,23 +1646,27 @@ describe('Manifest', () => {
     });
 
     it('should allow skipping releases', async () => {
-      mockPullRequests(github, [
-        {
-          headBranchName: 'release-please/branches/main',
-          baseBranchName: 'main',
-          number: 1234,
-          title: 'chore: release main',
-          body: pullRequestBody('release-notes/multiple.txt'),
-          labels: ['autorelease: pending'],
-          files: [
-            'packages/bot-config-utils/package.json',
-            'packages/label-utils/package.json',
-            'packages/object-selector/package.json',
-            'packages/datastore-lock/package.json',
-          ],
-          sha: 'abc123',
-        },
-      ]);
+      mockPullRequests(
+        github,
+        [],
+        [
+          {
+            headBranchName: 'release-please/branches/main',
+            baseBranchName: 'main',
+            number: 1234,
+            title: 'chore: release main',
+            body: pullRequestBody('release-notes/multiple.txt'),
+            labels: ['autorelease: pending'],
+            files: [
+              'packages/bot-config-utils/package.json',
+              'packages/label-utils/package.json',
+              'packages/object-selector/package.json',
+              'packages/datastore-lock/package.json',
+            ],
+            sha: 'abc123',
+          },
+        ]
+      );
       const getFileContentsStub = sandbox.stub(
         github,
         'getFileContentsOnBranch'
@@ -1643,18 +1743,22 @@ describe('Manifest', () => {
 
   describe('createReleases', () => {
     it('should handle a single manifest release', async () => {
-      mockPullRequests(github, [
-        {
-          headBranchName: 'release-please/branches/main',
-          baseBranchName: 'main',
-          number: 1234,
-          title: 'chore: release main',
-          body: pullRequestBody('release-notes/single-manifest.txt'),
-          labels: ['autorelease: pending'],
-          files: [],
-          sha: 'abc123',
-        },
-      ]);
+      mockPullRequests(
+        github,
+        [],
+        [
+          {
+            headBranchName: 'release-please/branches/main',
+            baseBranchName: 'main',
+            number: 1234,
+            title: 'chore: release main',
+            body: pullRequestBody('release-notes/single-manifest.txt'),
+            labels: ['autorelease: pending'],
+            files: [],
+            sha: 'abc123',
+          },
+        ]
+      );
       const getFileContentsStub = sandbox.stub(
         github,
         'getFileContentsOnBranch'
@@ -1704,23 +1808,27 @@ describe('Manifest', () => {
       );
     });
     it('should handle a multiple manifest release', async () => {
-      mockPullRequests(github, [
-        {
-          headBranchName: 'release-please/branches/main',
-          baseBranchName: 'main',
-          number: 1234,
-          title: 'chore: release main',
-          body: pullRequestBody('release-notes/multiple.txt'),
-          labels: ['autorelease: pending'],
-          files: [
-            'packages/bot-config-utils/package.json',
-            'packages/label-utils/package.json',
-            'packages/object-selector/package.json',
-            'packages/datastore-lock/package.json',
-          ],
-          sha: 'abc123',
-        },
-      ]);
+      mockPullRequests(
+        github,
+        [],
+        [
+          {
+            headBranchName: 'release-please/branches/main',
+            baseBranchName: 'main',
+            number: 1234,
+            title: 'chore: release main',
+            body: pullRequestBody('release-notes/multiple.txt'),
+            labels: ['autorelease: pending'],
+            files: [
+              'packages/bot-config-utils/package.json',
+              'packages/label-utils/package.json',
+              'packages/object-selector/package.json',
+              'packages/datastore-lock/package.json',
+            ],
+            sha: 'abc123',
+          },
+        ]
+      );
       const getFileContentsStub = sandbox.stub(
         github,
         'getFileContentsOnBranch'
@@ -1813,18 +1921,22 @@ describe('Manifest', () => {
       );
     });
     it('should handle a single standalone release', async () => {
-      mockPullRequests(github, [
-        {
-          headBranchName: 'release-please/branches/main',
-          baseBranchName: 'main',
-          number: 1234,
-          title: 'chore(main): release 3.2.7',
-          body: pullRequestBody('release-notes/single.txt'),
-          labels: ['autorelease: pending'],
-          files: [],
-          sha: 'abc123',
-        },
-      ]);
+      mockPullRequests(
+        github,
+        [],
+        [
+          {
+            headBranchName: 'release-please/branches/main',
+            baseBranchName: 'main',
+            number: 1234,
+            title: 'chore(main): release 3.2.7',
+            body: pullRequestBody('release-notes/single.txt'),
+            labels: ['autorelease: pending'],
+            files: [],
+            sha: 'abc123',
+          },
+        ]
+      );
       const addLabelsStub = sandbox.stub(github, 'addIssueLabels').resolves();
       const removeLabelsStub = sandbox
         .stub(github, 'removeIssueLabels')
@@ -1861,18 +1973,22 @@ describe('Manifest', () => {
       );
     });
     it('should allow customizing pull request labels', async () => {
-      mockPullRequests(github, [
-        {
-          headBranchName: 'release-please/branches/main',
-          baseBranchName: 'main',
-          number: 1234,
-          title: 'chore: release main',
-          body: pullRequestBody('release-notes/single-manifest.txt'),
-          labels: ['some-pull-request-label'],
-          files: [],
-          sha: 'abc123',
-        },
-      ]);
+      mockPullRequests(
+        github,
+        [],
+        [
+          {
+            headBranchName: 'release-please/branches/main',
+            baseBranchName: 'main',
+            number: 1234,
+            title: 'chore: release main',
+            body: pullRequestBody('release-notes/single-manifest.txt'),
+            labels: ['some-pull-request-label'],
+            files: [],
+            sha: 'abc123',
+          },
+        ]
+      );
       const getFileContentsStub = sandbox.stub(
         github,
         'getFileContentsOnBranch'
