@@ -159,61 +159,6 @@ describe('GitHub', () => {
     });
   });
 
-  // describe('findOpenReleasePRs', () => {
-  //   it('returns PRs that have all release labels', async () => {
-  //     req.get('/repos/fake/fake/pulls?state=open&per_page=100').reply(200, [
-  //       {
-  //         number: 99,
-  //         labels: [{name: 'autorelease: pending'}, {name: 'process'}],
-  //         base: {
-  //           label: 'fake:main',
-  //         },
-  //       },
-  //       {
-  //         number: 100,
-  //         labels: [{name: 'autorelease: pending'}],
-  //         base: {
-  //           label: 'fake:main',
-  //         },
-  //       },
-  //     ]);
-  //     const prs = await github.findOpenReleasePRs([
-  //       'autorelease: pending',
-  //       'process',
-  //     ]);
-  //     const numbers = prs.map(pr => pr.number);
-  //     expect(numbers).to.include(99);
-  //     expect(numbers).to.not.include(100);
-  //     req.done();
-  //   });
-
-  //   it('returns PRs when only one release label is configured', async () => {
-  //     req.get('/repos/fake/fake/pulls?state=open&per_page=100').reply(200, [
-  //       {
-  //         number: 99,
-  //         labels: [{name: 'autorelease: pending'}, {name: 'process'}],
-  //         base: {
-  //           label: 'fake:main',
-  //         },
-  //       },
-  //       {
-  //         number: 100,
-  //         labels: [{name: 'autorelease: pending'}],
-  //         base: {
-  //           label: 'fake:main',
-  //         },
-  //       },
-  //     ]);
-  //     const prs = await github.findOpenReleasePRs(['autorelease: pending']);
-  //     const numbers = prs.map(pr => pr.number);
-  //     expect(numbers).to.include(99);
-  //     expect(numbers).to.include(100);
-  //     req.done();
-  //   });
-
-  //   // Todo - not finding things from other branches
-  // });
-
   describe('getFileContents', () => {
     it('should support Github Data API in case of a big file', async () => {
       const simpleAPIResponse = JSON.parse(
