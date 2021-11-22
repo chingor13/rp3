@@ -91,6 +91,10 @@ export function getReleaserTypes(): readonly ReleaseType[] {
   return allReleaseTypes;
 }
 
+export function getVersioningStrategyTypes(): readonly VersioningStrategyType[] {
+  return allVersioningTypes;
+}
+
 export interface StrategyFactoryOptions extends ReleaserConfig {
   github: GitHub;
   path?: string;
@@ -174,10 +178,12 @@ export async function buildStrategy(
   }
 }
 
-export type VersioningStrategyType =
-  | 'default'
-  | 'always-bump-patch'
-  | 'service-pack';
+const allVersioningTypes = [
+  'default',
+  'always-bump-patch',
+  'service-pack',
+] as const;
+export type VersioningStrategyType = typeof allVersioningTypes[number];
 interface VersioningStrategyFactoryOptions {
   type?: VersioningStrategyType;
   bumpMinorPreMajor?: boolean;

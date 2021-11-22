@@ -17,7 +17,7 @@ import {resolve} from 'path';
 import * as snapshot from 'snap-shot-it';
 import {describe, it} from 'mocha';
 import {Version} from '../../src/version';
-import { CsProj } from '../../src/updaters/dotnet/csproj';
+import {CsProj} from '../../src/updaters/dotnet/csproj';
 
 const fixturesPath = './test/updaters/fixtures';
 const FAKE_VERSION = Version.parse('1.2.3');
@@ -25,7 +25,10 @@ const FAKE_VERSION = Version.parse('1.2.3');
 describe('CsProj', () => {
   describe('updateContent', () => {
     it('updates a csproj file', () => {
-      const oldContent = readFileSync(resolve(fixturesPath, './Foo.csproj'), 'utf-8').replace(/\r\n/g, '\n');
+      const oldContent = readFileSync(
+        resolve(fixturesPath, './Foo.csproj'),
+        'utf-8'
+      ).replace(/\r\n/g, '\n');
       const updater = new CsProj({
         version: FAKE_VERSION,
       });
@@ -33,12 +36,15 @@ describe('CsProj', () => {
       snapshot(newContent);
     });
     it('updates a prerelease version', () => {
-      const oldContent = readFileSync(resolve(fixturesPath, './Prerelease.csproj'), 'utf-8').replace(/\r\n/g, '\n');
+      const oldContent = readFileSync(
+        resolve(fixturesPath, './Prerelease.csproj'),
+        'utf-8'
+      ).replace(/\r\n/g, '\n');
       const updater = new CsProj({
         version: FAKE_VERSION,
       });
       const newContent = updater.updateContent(oldContent);
       snapshot(newContent);
-    })
+    });
   });
 });

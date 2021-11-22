@@ -89,7 +89,7 @@ interface ReleaserConfigJson {
   'extra-files'?: string[];
 }
 
-interface ManifestOptions {
+export interface ManifestOptions {
   bootstrapSha?: string;
   lastReleaseSha?: string;
   alwaysLinkLocal?: boolean;
@@ -100,6 +100,8 @@ interface ManifestOptions {
   manifestPath?: string;
   labels?: string[];
   releaseLabels?: string[];
+  draft?: boolean;
+  releaseDraft?: boolean;
 }
 
 interface ReleaserPackageConfig extends ReleaserConfigJson {
@@ -126,8 +128,8 @@ export type ReleasedVersions = Record<string, Version>;
 // path => config
 export type RepositoryConfig = Record<string, ReleaserConfig>;
 
-const RELEASE_PLEASE_CONFIG = 'release-please-config.json';
-const RELEASE_PLEASE_MANIFEST = '.release-please-manifest.json';
+export const DEFAULT_RELEASE_PLEASE_CONFIG = 'release-please-config.json';
+export const DEFAULT_RELEASE_PLEASE_MANIFEST = '.release-please-manifest.json';
 export const ROOT_PROJECT_PATH = '.';
 const DEFAULT_COMPONENT_NAME = '';
 const DEFAULT_LABELS = ['autorelease: pending'];
@@ -191,7 +193,7 @@ export class Manifest {
     this.repositoryConfig = repositoryConfig;
     this.releasedVersions = releasedVersions;
     this.manifestPath =
-      manifestOptions?.manifestPath || RELEASE_PLEASE_MANIFEST;
+      manifestOptions?.manifestPath || DEFAULT_RELEASE_PLEASE_MANIFEST;
     this.separatePullRequests = manifestOptions?.separatePullRequests || false;
     this.plugins = manifestOptions?.plugins || [];
     this.fork = manifestOptions?.fork || false;
@@ -215,8 +217,9 @@ export class Manifest {
   static async fromManifest(
     github: GitHub,
     targetBranch: string,
-    configFile: string = RELEASE_PLEASE_CONFIG,
-    manifestFile: string = RELEASE_PLEASE_MANIFEST
+    configFile: string = DEFAULT_RELEASE_PLEASE_CONFIG,
+    manifestFile: string = DEFAULT_RELEASE_PLEASE_MANIFEST,
+    manifestOptionOverrides: ManifestOptions = {}
   ): Promise<Manifest> {
     const [
       {config: repositoryConfig, options: manifestOptions},
@@ -230,7 +233,7 @@ export class Manifest {
       targetBranch,
       repositoryConfig,
       releasedVersions,
-      manifestOptions
+      {...manifestOptions, ...manifestOptionOverrides}
     );
   }
 
@@ -263,10 +266,11 @@ export class Manifest {
     github: GitHub,
     targetBranch: string,
     config: ReleaserConfig,
-    manifestOptions?: ManifestOptions
+    manifestOptions?: ManifestOptions,
+    path: string = ROOT_PROJECT_PATH
   ): Promise<Manifest> {
     const repositoryConfig: RepositoryConfig = {};
-    repositoryConfig[ROOT_PROJECT_PATH] = config;
+    repositoryConfig[path] = config;
     const releasedVersions: ReleasedVersions = {};
     const latestVersion = await latestReleaseVersion(github, targetBranch);
     if (latestVersion) {

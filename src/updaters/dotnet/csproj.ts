@@ -26,6 +26,9 @@ export class CsProj extends DefaultUpdater {
    * @returns {string} The updated content
    */
   updateContent(content: string): string {
-    return content.replace(VERSION_ATTR_REGEX, `<Version>${this.version}</Version>`);
+    return content.replace(
+      VERSION_ATTR_REGEX,
+      `<Version>${this.version}</Version>`
+    );
   }
 }
